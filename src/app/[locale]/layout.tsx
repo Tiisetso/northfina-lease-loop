@@ -3,7 +3,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { LanguageSwitcher } from '@/components/language-switcher';
+import { AccountNavigation } from '@/components/account-navigation';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import '../globals.css';
@@ -43,7 +43,11 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
                 </span>
               </span>
             </Link>
-            <LanguageSwitcher current={locale} label={t('nav.language')} />
+            <AccountNavigation
+              locale={locale}
+              accountLabel={t('nav.account')}
+              languageLabel={t('nav.language')}
+            />
           </div>
         </header>
 
