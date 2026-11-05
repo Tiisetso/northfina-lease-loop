@@ -51,3 +51,41 @@ operations are exposed. Every write uses the transaction supplied by withAudit()
 
 Source references: [Better Auth security](https://www.better-auth.com/docs/reference/security),
 [Next.js authentication](https://nextjs.org/docs/app/guides/authentication).
+
+## Using this implementation
+
+Run `npm run db:setup` on a fresh checkout, or `npm run auth:setup` and
+`npm run db:migrate` on an existing local database. Setup creates a random local
+secret without displaying it and preserves it on subsequent runs.
+
+Visit `/en/register`, `/en/login` or `/en/account` (also available in fi, sv, et).
+The account icon in the header links to the protected account page.
+
+| Endpoint                  | Purpose                                                   |
+| ------------------------- | --------------------------------------------------------- |
+| POST /api/auth/register   | Name, email and password; creates a new personal customer |
+| POST /api/auth/login      | Email and password; creates a 24-hour session             |
+| GET /api/auth/me          | Current user and owned customer ID; no session token      |
+| POST /api/auth/profile    | Update the current user's name                            |
+| POST /api/auth/password   | Current and new password; revokes other sessions          |
+| POST /api/auth/logout     | Revoke this session and clear its cookie                  |
+| POST /api/auth/logout-all | Revoke every session and clear this browser's cookie      |
+
+All mutations require the configured Origin and JSON. All endpoints use the
+standard response envelope. Passwords are 15–128 characters; password hashes and
+signed session cookies are handled by Better Auth. The application never returns
+the raw library response containing a session token.
+
+`readIdentity`, `requireIdentity` and `requireStaff` in `src/server/auth-session.ts`
+are the entry points for future protected features. Query owned records using the
+returned customerId, never an untrusted customer ID supplied by the browser.
+Reads bypass cookie caches and do not refresh or delete expired database sessions.
+
+Inventory status changes now require staff and accept only `{ status }`.
+The global audit feed is staff-only. Neither endpoint trusts a client-supplied actor.
+
+Without a trusted IP header, throttling deliberately uses one shared per-path
+database bucket. This prevents bypass through spoofed forwarding headers, but can
+temporarily block all users on a busy deployment. Configure a trusted edge proxy
+and its verified IP header before public deployment. Add verified-email onboarding
+and recovery there too; local registration alone does not establish email ownership.
