@@ -15,6 +15,20 @@ You are helping a hackathon team build **Lease Loop**. The challenge is in `CHAL
 - Before saying a change is done, run `npm run check:all`; it's what CI runs.
 - Read `data/DATA.md` before using the data pack. Schemas for every data file are in `src/data/schemas.ts`.
 
+## Pull requests
+
+- Before creating or updating a PR, read `.github/pull_request_template.md` and use
+  its sections in order. This applies to every coding agent working in this repo.
+- Use a short conventional title, `type(scope): summary`, with an issue/ticket ID
+  when one exists. Describe the final diff, the customer impact and relevant trade-offs.
+- Fill every section with concrete information; use `N/A` with a reason rather than
+  leaving prompts or dropping headings. Give reproducible reviewer steps and outcomes.
+- Report only checks actually run. Identify failures and checks not run. Check boxes
+  only for completed work; do not invent issue links, screenshots or test results.
+- For UI changes, attach available visual evidence and report any visual review gaps.
+- Use `.github/hackathon_submission.md` for the final judging PR and follow the
+  submission title and deadline in `README.md`.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 ## This is NOT the Next.js you know
