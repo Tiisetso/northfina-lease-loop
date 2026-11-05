@@ -1,41 +1,38 @@
 'use client';
-
-// Links to the same page in each language: /fi/anything → /en/anything.
-// A client component only because it needs the current path.
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { localeNames, locales, type Locale } from '@/i18n/locales';
+import { NavPopover } from './nav-popover';
+import { UiIcon } from './ui-icon';
 
 export function LanguageSwitcher({ current, label }: { current: Locale; label: string }) {
   const pathname = usePathname();
   const rest = pathname.split('/').slice(2).join('/');
-
   return (
-    <nav aria-label={label}>
-      <ul className="flex">
-        {locales.map((locale) => {
-          const active = locale === current;
-          return (
-            <li key={locale}>
-              <Link
-                href={rest ? `/${locale}/${rest}` : `/${locale}`}
-                hrefLang={locale}
-                lang={locale}
-                aria-current={active ? 'page' : undefined}
-                className={
-                  'pressable flex min-h-target min-w-target items-center justify-center rounded-sm text-fine uppercase ' +
-                  (active
-                    ? 'bg-ink text-on-dark underline decoration-primary-on-dark decoration-2 underline-offset-8'
-                    : 'text-primary-on-dark')
-                }
-              >
-                <span aria-hidden="true">{locale}</span>
-                <span className="sr-only">{localeNames[locale]}</span>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
+    <NavPopover
+      label={`${label}: ${localeNames[current]}`}
+      trigger={
+        <>
+          <UiIcon name="globe" className="size-4" />
+          <span className="text-caption uppercase">{current}</span>
+          <UiIcon name="chevron" className="size-3" />
+        </>
+      }
+    >
+      <p className="px-3 py-2 text-caption font-semibold">{label}</p>
+      {locales.map((locale) => (
+        <Link
+          key={locale}
+          href={rest ? `/${locale}/${rest}` : `/${locale}`}
+          hrefLang={locale}
+          lang={locale}
+          aria-current={locale === current ? 'page' : undefined}
+          className={`flex min-h-target items-center justify-between rounded-sm px-3 text-caption hover:bg-parchment focus-visible:bg-parchment ${locale === current ? 'bg-parchment font-semibold' : ''}`}
+        >
+          <span>{localeNames[locale]}</span>
+          <span className="text-fine uppercase text-ink-muted">{locale}</span>
+        </Link>
+      ))}
+    </NavPopover>
   );
 }

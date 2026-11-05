@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { LeaseCalculator } from '@/components/lease-calculator';
 import { ProductDetails } from '@/components/product-details';
+import { ProductPhoto } from '@/components/product-photo';
 import { loadCoefficientTable, loadPriceLists } from '@/data/load';
 import { formatEuro } from '@/domain/money';
 import { listPriceOn } from '@/domain/price-list';
@@ -30,7 +31,7 @@ export default async function ProductPage({ params }: PageProps<'/[locale]/produ
 
   return (
     <div>
-      <div className="mx-auto max-w-content px-card pt-8 pb-section-compact tablet:pb-section">
+      <div className="mx-auto max-w-[1200px] px-4 pt-6 pb-section-compact sm:px-6 tablet:pb-section">
         <nav
           aria-label={t('product.breadcrumb')}
           className="flex flex-wrap items-center gap-3 text-caption"
@@ -53,25 +54,25 @@ export default async function ProductPage({ params }: PageProps<'/[locale]/produ
           <span className="text-ink-muted">{asset.model}</span>
         </nav>
 
-        <div className="mt-8 grid items-start gap-section-compact tablet:grid-cols-2 desktop:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] desktop:gap-section">
+        <div className="mt-8 grid items-start gap-10 tablet:grid-cols-2 desktop:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] desktop:gap-12">
           <div className="min-w-0">
-            {/* Intentionally blank: product photography will be supplied separately. */}
-            <div
-              role="img"
-              aria-label={t('product.imagePlaceholder')}
-              className="aspect-square rounded-lg bg-parchment"
+            <ProductPhoto
+              assetId={asset.id}
+              productName={`${asset.make} ${asset.model}`}
+              locale={locale}
+              sizes="(min-width: 1200px) 580px, (min-width: 834px) 50vw, 100vw"
             />
-            <div aria-hidden="true" className="mt-4 flex justify-center gap-3">
-              {[0, 1, 2].map((slot) => (
-                <div key={slot} className="size-16 rounded-sm bg-parchment" />
-              ))}
-            </div>
           </div>
 
           <section aria-labelledby="product-title" className="min-w-0">
             <div className="flex flex-wrap items-center justify-between gap-3 text-caption">
               <p className="text-ink-muted">{asset.make}</p>
-              <p className="rounded-pill bg-parchment px-4 py-2">{t(`status.${asset.status}`)}</p>
+              <p
+                className={`inline-flex items-center gap-2 rounded-pill px-3 py-2 ${asset.status === 'available' ? 'bg-emerald-50 text-emerald-800' : 'bg-parchment text-ink-muted'}`}
+              >
+                <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
+                {t(`status.${asset.status}`)}
+              </p>
             </div>
             <h1
               id="product-title"
@@ -101,6 +102,8 @@ export default async function ProductPage({ params }: PageProps<'/[locale]/produ
                 <LeaseCalculator
                   key={asset.id}
                   priceCents={price.priceCents}
+                  assetId={asset.id}
+                  available={asset.status === 'available'}
                   table={table}
                   locale={locale}
                 />
