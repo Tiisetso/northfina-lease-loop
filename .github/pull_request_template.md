@@ -8,14 +8,33 @@ Use "N/A — <reason>" where a section does not apply. Do not delete the heading
 For the final judging PR, use .github/hackathon_submission.md instead.
 -->
 
+## Summary
+
+<!-- In 1–3 sentences, say what this PR delivers and the resulting behavior.
+Keep this short; put the motivation and implementation in the sections below. -->
+
+## Issues addressed
+
+<!-- Link the primary issue and each relevant sub-issue, using #number within this
+repo or a full URL for another repo/tracker. Briefly say what this PR implements
+for each one. Write "None" if there are no linked issues or sub-issues.
+Use "Closes #<number>" only for issues fully resolved by this PR; use "Refs #<number>"
+for partial work or related context. Do not assume closing a parent closes its sub-issues. -->
+
+**Primary issue:**
+
+**Sub-issues addressed:**
+
+-
+
+**Related issues / partial work:**
+
 ## Context / Why
 
 <!-- Explain the customer need, business rule or bug. Why does this change matter?
-Include the relevant issue/ticket link, or say "No linked issue". -->
+Describe the problem and its impact; avoid repeating the summary. -->
 
 **Problem:**
-
-**Related issue:**
 
 ## Description / What
 

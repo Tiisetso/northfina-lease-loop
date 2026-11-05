@@ -21,6 +21,10 @@ You are helping a hackathon team build **Lease Loop**. The challenge is in `CHAL
   its sections in order. This applies to every coding agent working in this repo.
 - Use a short conventional title, `type(scope): summary`, with an issue/ticket ID
   when one exists. Describe the final diff, the customer impact and relevant trade-offs.
+- Start with a short summary and link the primary issue and each relevant sub-issue,
+  stating what the PR implements for each. Inspect existing issues before saying none
+  are linked. Use `Closes #<number>` only for fully resolved issues, and `Refs #<number>`
+  for partial work or related context; do not assume a parent closes its sub-issues.
 - Fill every section with concrete information; use `N/A` with a reason rather than
   leaving prompts or dropping headings. Give reproducible reviewer steps and outcomes.
 - Report only checks actually run. Identify failures and checks not run. Check boxes
