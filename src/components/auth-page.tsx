@@ -12,7 +12,7 @@ export async function AuthPage({ locale, mode }: { locale: string; mode: 'login'
   if (await readIdentity(db, await headers())) redirect(`/${locale}/account`);
   const t = getT(locale);
   return (
-    <div className="bg-parchment px-card py-section-compact tablet:py-section">
+    <div className="bg-parchment px-card py-section-compact text-ink tablet:py-section">
       <div className="mx-auto max-w-lg rounded-lg border border-hairline bg-canvas p-card tablet:p-12">
         <h1 className="font-display text-display-sm font-semibold">
           {t(mode === 'login' ? 'auth.loginTitle' : 'auth.registerTitle')}

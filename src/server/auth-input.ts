@@ -40,7 +40,38 @@ export async function readAuthInput(request: Request, operation: AuthOperation) 
   if (Number(request.headers.get('content-length') ?? 0) > 8192) {
     throw new ApiError(413, 'REQUEST_TOO_LARGE', 'Request is too large.');
   }
-  const input = await readJsonBody(request, authOperations[operation].schema);
+  // Count actual bytes too: Content-Length is optional and cannot be trusted.
+  const reader = request.body?.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  if (reader) {
+    try {
+      while (true) {
+        const next = await reader.read();
+        if (next.done) break;
+        size += next.value.byteLength;
+        if (size > 8192) {
+          await reader.cancel();
+          throw new ApiError(413, 'REQUEST_TOO_LARGE', 'Request is too large.');
+        }
+        chunks.push(next.value);
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  const boundedRequest = new Request(request.url, {
+    method: 'POST',
+    headers: request.headers,
+    body: new TextDecoder().decode(bytes),
+  });
+  const input = await readJsonBody(boundedRequest, authOperations[operation].schema);
   // A password change revokes other sessions; callers cannot disable this.
   return operation === 'password' ? { ...input, revokeOtherSessions: true } : input;
 }

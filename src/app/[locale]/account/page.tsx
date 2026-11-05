@@ -14,7 +14,7 @@ export default async function AccountPage({ params }: PageProps<'/[locale]/accou
   if (!identity) redirect(`/${locale}/login`);
   const t = getT(locale);
   return (
-    <div className="bg-parchment px-card py-section-compact tablet:py-section">
+    <div className="bg-parchment px-card py-section-compact text-ink tablet:py-section">
       <div className="mx-auto max-w-2xl">
         <h1 className="font-display text-display-sm font-semibold tablet:text-display-lg">
           {t('account.title')}
