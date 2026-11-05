@@ -1,6 +1,7 @@
 // The catalogue: every asset, grouped by category, with today's net list price.
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
+import Link from 'next/link';
 import { AssetCard } from '@/components/asset-card';
 import { loadPriceLists } from '@/data/load';
 import { assetCategorySchema } from '@/data/schemas';
@@ -27,62 +28,53 @@ export default async function CataloguePage({ params }: PageProps<'/[locale]'>) 
     .filter((group) => group.assets.length > 0);
 
   return (
-    <div>
-      <div className="bg-canvas px-card py-section-compact text-center tablet:py-section">
-        <div className="mx-auto max-w-copy">
-          <h1 className="font-display text-display-sm font-semibold phone:text-display-md grid:text-display-lg desktop:text-hero">
-            {t('catalogue.title')}
-          </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-body tablet:font-display tablet:text-lead">
-            {t('catalogue.intro')}
-          </p>
-          <p className="mt-8 text-caption text-ink-muted">
-            <time dateTime={today}>
-              {t('catalogue.pricesOn', { date: formatIsoDate(today, locale) })}
-            </time>
-          </p>
-        </div>
-      </div>
+    <div className="mx-auto w-full max-w-[1200px] px-4 py-10 sm:px-6 tablet:py-14">
+      <header>
+        <h1 className="font-display text-display-sm font-semibold tablet:text-display-lg">
+          {t('catalogue.title')}
+        </h1>
+        <p className="mt-3 max-w-2xl text-body">{t('catalogue.intro')}</p>
+        <p className="mt-4 text-caption text-ink-muted">
+          <time dateTime={today}>
+            {t('catalogue.pricesOn', { date: formatIsoDate(today, locale) })}
+          </time>
+        </p>
+        <p className="mt-2 text-caption text-ink-muted">
+          {t('catalogue.photosIllustrative')}{' '}
+          <Link
+            href={`/${locale}/photo-credits`}
+            className="text-primary underline underline-offset-2"
+          >
+            {t('catalogue.photoCredits')}
+          </Link>
+        </p>
+      </header>
 
       {groups.length === 0 ? (
-        <p className="mx-auto max-w-copy px-card py-section-compact text-center text-body text-ink-muted">
-          {t('catalogue.empty')}
-        </p>
+        <p className="mt-12 text-body text-ink-muted">{t('catalogue.empty')}</p>
       ) : null}
 
-      {groups.map((group, index) => (
+      {groups.map((group) => (
         <section
           key={group.category}
           aria-labelledby={`category-${group.category}`}
-          className={`px-card py-section-compact tablet:py-section ${index % 2 === 0 ? 'bg-parchment text-ink' : 'bg-tile text-on-dark'}`}
+          className="mt-12"
         >
-          <div className="mx-auto max-w-content">
-            <div className="flex flex-wrap items-baseline justify-between gap-3">
-              <h2
-                id={`category-${group.category}`}
-                className="font-display text-display-sm font-semibold tablet:text-display-lg"
-              >
-                {t(`category.${group.category}`)}
-              </h2>
-              <p
-                className={`text-caption ${index % 2 === 0 ? 'text-ink-muted' : 'text-body-muted'}`}
-              >
-                {t('catalogue.itemCount', { count: group.assets.length })}
-              </p>
-            </div>
-            <ul className="mt-12 grid gap-card grid:grid-cols-2 desktop:grid-cols-3 wide:grid-cols-4">
-              {group.assets.map((asset) => (
-                <li key={asset.id}>
-                  <AssetCard
-                    asset={asset}
-                    price={listPriceOn(priceLists, asset.id, today)}
-                    locale={locale}
-                    t={t}
-                  />
-                </li>
-              ))}
-            </ul>
-          </div>
+          <h2 id={`category-${group.category}`} className="font-display text-tagline font-semibold">
+            {t(`category.${group.category}`)}
+          </h2>
+          <ul className="mt-6 grid gap-x-5 gap-y-10 min-[30rem]:grid-cols-2 tablet:grid-cols-3 desktop:grid-cols-4">
+            {group.assets.map((asset) => (
+              <li key={asset.id}>
+                <AssetCard
+                  asset={asset}
+                  price={listPriceOn(priceLists, asset.id, today)}
+                  locale={locale}
+                  t={t}
+                />
+              </li>
+            ))}
+          </ul>
         </section>
       ))}
     </div>

@@ -9,6 +9,8 @@ type ProductPhotoProps = {
   productName: string;
   locale: Locale;
   sizes?: string;
+  variant?: 'default' | 'catalogue';
+  showCaption?: boolean;
 };
 
 /** Photos illustrate the fictional model, not the physical item or its condition. */
@@ -17,19 +19,23 @@ export function ProductPhoto({
   productName,
   locale,
   sizes = '(min-width: 1069px) 33vw, (min-width: 641px) 50vw, 100vw',
+  variant = 'default',
+  showCaption = true,
 }: ProductPhotoProps) {
   const t = getT(locale);
   const photo = photoForAsset(assetId);
   return (
     <figure>
-      <div className="relative aspect-[4/3] overflow-hidden rounded-sm bg-parchment">
+      <div
+        className={`relative aspect-square overflow-hidden bg-parchment ${variant === 'catalogue' ? 'rounded-lg' : 'rounded-sm'}`}
+      >
         {photo ? (
           <Image
             src={photo.src}
-            alt={t('photo.alt', { product: productName })}
+            alt={variant === 'catalogue' ? '' : t('photo.alt', { product: productName })}
             fill
             sizes={sizes}
-            className="object-contain"
+            className="object-cover"
           />
         ) : (
           <span className="absolute inset-0 flex items-center justify-center px-4 text-center text-caption text-ink-muted">
@@ -37,7 +43,7 @@ export function ProductPhoto({
           </span>
         )}
       </div>
-      {photo ? (
+      {photo && variant !== 'catalogue' && showCaption ? (
         <figcaption className="mt-2 text-fine text-ink-muted">
           {t('photo.representative')} ·{' '}
           <Link

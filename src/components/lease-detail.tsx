@@ -54,8 +54,7 @@ export function LeaseDetail({ locale, lease, rates, factors, today }: Props) {
       <div className="min-w-0 space-y-6">
         <section className={card}>
           <p className="text-caption text-ink-muted">
-            {lease.asset.make} ·{' '}
-            {t(lease.isDemo ? 'dashboard.demo' : `dashboard.status.${lease.status}`)}
+            {lease.asset.make} · {t(`dashboard.status.${lease.status}`)}
           </p>
           <h2 className="mt-2 font-display text-display-sm font-semibold">{lease.asset.model}</h2>
           <div className="mt-6">
@@ -64,11 +63,9 @@ export function LeaseDetail({ locale, lease, rates, factors, today }: Props) {
               productName={`${lease.asset.make} ${lease.asset.model}`}
               locale={locale}
               sizes="(min-width: 1069px) 60vw, 100vw"
+              showCaption={false}
             />
           </div>
-          {lease.isDemo ? (
-            <p className="mt-3 text-caption text-ink-muted">{t('dashboard.demoNotice')}</p>
-          ) : null}
           <dl className="mt-8 grid gap-6 grid:grid-cols-3">
             <Fact label={t('dashboard.monthlyNet')} value={currency(lease.monthlyNetCents)} />
             <Fact label={t('dashboard.started')} value={formatIsoDate(lease.startDate, locale)} />

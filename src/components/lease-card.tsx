@@ -28,12 +28,13 @@ export function LeaseCard({
           assetId={lease.asset.id}
           productName={`${lease.asset.make} ${lease.asset.model}`}
           locale={locale}
+          showCaption={false}
         />
       </div>
       <div className="flex flex-wrap justify-between gap-3">
         <p className="text-caption text-ink-muted">{lease.asset.make}</p>
         <span className="rounded-sm bg-parchment px-2 py-1 text-caption">
-          {t(lease.isDemo ? 'dashboard.demo' : `dashboard.status.${lease.status}`)}
+          {t(`dashboard.status.${lease.status}`)}
         </span>
       </div>
       <h3 className="mt-2 text-tagline font-semibold">{lease.asset.model}</h3>
