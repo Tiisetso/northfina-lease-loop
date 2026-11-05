@@ -35,6 +35,10 @@ You should see the asset catalogue in English. Switch to Finnish, Swedish or Est
 | `npm run db:reset`      | Wipe the local database and seed it again                      |
 | `npm run db:studio`     | Browse the database in your browser                            |
 
+After pulling database changes, run `npm run db:setup` before starting the app. It applies
+pending migrations and adds missing seed assets without resetting your data. `npm run dev`
+also regenerates the Prisma client on startup.
+
 ---
 
 ## 15-minute tour

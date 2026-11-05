@@ -3,7 +3,14 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { loadAssets } from '@/data/load';
 import type { Asset } from '@/data/schemas';
 import { createTestDb } from '../../tests/helpers/test-db';
-import { changeAssetStatus, listAssets, seedAssets, toAsset, toAssetRowData } from './assets';
+import {
+  changeAssetStatus,
+  findAsset,
+  listAssets,
+  seedAssets,
+  toAsset,
+  toAssetRowData,
+} from './assets';
 import type { PrismaClient } from './prisma-client';
 
 let db: PrismaClient;
@@ -51,6 +58,16 @@ describe('listAssets', () => {
     const laptops = await listAssets(db, { category: 'laptop' });
     expect(laptops).toHaveLength(10);
     expect(laptops.every((asset) => asset.category === 'laptop')).toBe(true);
+  });
+});
+
+describe('findAsset', () => {
+  it('finds an item by ID and returns null for an unknown item', async () => {
+    await seedAssets(db, dataPack);
+    expect(await findAsset(db, 'ebike-005')).toEqual(
+      dataPack.find((asset) => asset.id === 'ebike-005')
+    );
+    expect(await findAsset(db, 'missing')).toBeNull();
   });
 });
 
