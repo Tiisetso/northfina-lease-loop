@@ -81,4 +81,18 @@ describe('lease dashboard totals', () => {
       outstandingCents: 755,
     });
   });
+
+  it('uses an issued invoice snapshot in the forecast total even if VAT data changes', () => {
+    const lease = {
+      startDate: '2026-01-31',
+      termMonths: 2,
+      monthlyNetCents: 1000,
+      listPriceCents: 10000,
+      downPaymentCents: 0,
+      invoices: [invoice],
+      isDemo: false,
+    };
+    const changedRates = [{ valid_from: '2026-01-01', valid_to: null, rate_percent: 26 }];
+    expect(summarizeLease(lease, changedRates, '2026-02-01').forecastTotalCents).toBe(2515);
+  });
 });

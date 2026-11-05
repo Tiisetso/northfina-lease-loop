@@ -49,8 +49,12 @@ export function summarizeLease(lease: LeaseForSummary, rates: readonly VatRate[]
     lease.monthlyNetCents,
     rates
   );
+  const issuedByDueDate = new Map(issued.map((invoice) => [invoice.dueDate, invoice]));
   const forecastTotalCents = forecast.ok
-    ? forecast.invoices.reduce((sum, invoice) => sum + invoice.totalCents, lease.downPaymentCents)
+    ? forecast.invoices.reduce((sum, invoice) => {
+        const actual = issuedByDueDate.get(invoice.dueDate);
+        return sum + (actual ? actual.netCents + actual.vatCents : invoice.totalCents);
+      }, lease.downPaymentCents)
     : null;
   const datesIssued = new Set(issued.map((invoice) => invoice.dueDate));
   const unpaid = issued.flatMap((invoice) => {
