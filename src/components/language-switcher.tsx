@@ -12,7 +12,7 @@ export function LanguageSwitcher({ current, label }: { current: Locale; label: s
 
   return (
     <nav aria-label={label}>
-      <ul className="flex gap-1 rounded-full bg-stone-100 p-1 dark:bg-stone-800">
+      <ul className="flex">
         {locales.map((locale) => {
           const active = locale === current;
           return (
@@ -23,10 +23,10 @@ export function LanguageSwitcher({ current, label }: { current: Locale; label: s
                 lang={locale}
                 aria-current={active ? 'page' : undefined}
                 className={
-                  'block rounded-full px-3 py-1.5 text-sm font-medium uppercase transition-colors ' +
+                  'pressable flex min-h-target min-w-target items-center justify-center rounded-sm text-fine uppercase ' +
                   (active
-                    ? 'bg-white text-stone-900 shadow-sm dark:bg-stone-950 dark:text-white'
-                    : 'text-stone-700 hover:text-stone-950 dark:text-stone-300 dark:hover:text-white')
+                    ? 'bg-ink text-on-dark underline decoration-primary-on-dark decoration-2 underline-offset-8'
+                    : 'text-primary-on-dark')
                 }
               >
                 <span aria-hidden="true">{locale}</span>

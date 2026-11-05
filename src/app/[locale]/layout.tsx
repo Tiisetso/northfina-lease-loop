@@ -3,7 +3,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { LanguageSwitcher } from '@/components/language-switcher';
+import { AccountNavigation } from '@/components/account-navigation';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import '../globals.css';
@@ -22,38 +22,52 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
 
   return (
     <html lang={locale}>
-      <body className="flex min-h-dvh flex-col bg-stone-50 text-stone-900 antialiased dark:bg-stone-950 dark:text-stone-100">
+      <body className="flex min-h-dvh flex-col bg-canvas font-sans text-ink antialiased">
         <a
           href="#main"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-10 focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-stone-900 focus:shadow"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:flex focus:min-h-target focus:items-center focus:rounded-sm focus:bg-canvas focus:px-4 focus:text-primary"
         >
           {t('nav.skipToContent')}
         </a>
 
-        <header className="border-b border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
-            <Link href={`/${locale}`} className="flex items-center gap-3 rounded-lg">
-              <LoopMark />
-              <span>
-                <span className="block text-lg font-semibold tracking-tight">
+        <header className="sticky top-0 z-20">
+          <div className="bg-nav text-on-dark">
+            <div className="mx-auto flex min-h-target max-w-content flex-wrap items-center justify-between gap-x-3 px-card">
+              <Link
+                href={`/${locale}`}
+                className="pressable flex min-h-target items-center gap-2 rounded-sm text-primary-on-dark"
+              >
+                <LoopMark />
+                <span className="sr-only text-caption font-semibold phone:not-sr-only">
                   {t('brand.name')}
                 </span>
-                <span className="block text-sm text-stone-600 dark:text-stone-400">
-                  {t('brand.tagline')}
-                </span>
-              </span>
-            </Link>
-            <LanguageSwitcher current={locale} label={t('nav.language')} />
+              </Link>
+              <AccountNavigation
+                locale={locale}
+                accountLabel={t('nav.account')}
+                languageLabel={t('nav.language')}
+              />
+            </div>
+          </div>
+          <div className="border-b border-hairline bg-parchment/80 backdrop-blur-[20px] backdrop-saturate-180">
+            <div className="mx-auto flex min-h-13 max-w-content items-center justify-between gap-6 px-card py-3">
+              <p className="font-display text-tagline font-semibold">{t('catalogue.title')}</p>
+              <p className="hidden text-caption text-ink-muted tablet:block">
+                {t('brand.tagline')}
+              </p>
+            </div>
           </div>
         </header>
 
-        <main id="main" className="flex-1">
+        <main id="main" tabIndex={-1} className="flex-1">
           {children}
         </main>
 
-        <footer className="border-t border-stone-200 dark:border-stone-800">
-          <div className="mx-auto max-w-6xl px-4 py-6 text-sm text-stone-600 sm:px-6 dark:text-stone-400">
-            {t('footer.skeleton')}
+        <footer className="bg-parchment text-ink-muted">
+          <div className="mx-auto max-w-content px-card py-16">
+            <p className="text-caption font-semibold">{t('brand.name')}</p>
+            <p className="mt-3 max-w-copy text-caption">{t('brand.tagline')}</p>
+            <p className="mt-8 border-t border-hairline pt-6 text-fine">{t('footer.skeleton')}</p>
           </div>
         </footer>
       </body>
@@ -67,7 +81,7 @@ function LoopMark() {
     <svg
       aria-hidden="true"
       viewBox="0 0 32 32"
-      className="size-9 shrink-0 rounded-xl bg-emerald-700 p-1.5 text-white"
+      className="size-7 shrink-0"
       fill="none"
       stroke="currentColor"
       strokeWidth="2.5"

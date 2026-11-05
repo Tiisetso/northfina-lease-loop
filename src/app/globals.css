@@ -1,12 +1,21 @@
 @import 'tailwindcss';
+@import './theme.css';
 
-@theme {
-  --font-sans:
-    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-}
+@layer base {
+  html {
+    /* Dark tiles are explicit surfaces, rather than a system-wide palette inversion. */
+    color-scheme: light;
+    scroll-padding-top: 112px;
+  }
 
-/* A visible keyboard focus everywhere, in both color schemes. */
-:focus-visible {
-  outline: 2px solid var(--color-emerald-600);
-  outline-offset: 2px;
+  body {
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    letter-spacing: var(--text-body--letter-spacing);
+  }
+
+  ::selection {
+    background: var(--color-primary);
+    color: var(--color-on-dark);
+  }
 }

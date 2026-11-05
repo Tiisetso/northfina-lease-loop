@@ -27,51 +27,62 @@ export default async function CataloguePage({ params }: PageProps<'/[locale]'>) 
     .filter((group) => group.assets.length > 0);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
-      <div className="max-w-2xl">
-        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-          {t('catalogue.title')}
-        </h1>
-        <p className="mt-3 text-lg text-stone-700 dark:text-stone-300">{t('catalogue.intro')}</p>
-        <p className="mt-5 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-900 ring-1 ring-emerald-200 ring-inset dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800">
-          <time dateTime={today}>
-            {t('catalogue.pricesOn', { date: formatIsoDate(today, locale) })}
-          </time>
-        </p>
+    <div>
+      <div className="bg-canvas px-card py-section-compact text-center tablet:py-section">
+        <div className="mx-auto max-w-copy">
+          <h1 className="font-display text-display-sm font-semibold phone:text-display-md grid:text-display-lg desktop:text-hero">
+            {t('catalogue.title')}
+          </h1>
+          <p className="mx-auto mt-6 max-w-2xl text-body tablet:font-display tablet:text-lead">
+            {t('catalogue.intro')}
+          </p>
+          <p className="mt-8 text-caption text-ink-muted">
+            <time dateTime={today}>
+              {t('catalogue.pricesOn', { date: formatIsoDate(today, locale) })}
+            </time>
+          </p>
+        </div>
       </div>
 
       {groups.length === 0 ? (
-        <p className="mt-10 rounded-xl border border-dashed border-stone-300 p-6 text-stone-700 dark:border-stone-700 dark:text-stone-300">
+        <p className="mx-auto max-w-copy px-card py-section-compact text-center text-body text-ink-muted">
           {t('catalogue.empty')}
         </p>
       ) : null}
 
-      {groups.map((group) => (
+      {groups.map((group, index) => (
         <section
           key={group.category}
           aria-labelledby={`category-${group.category}`}
-          className="mt-12"
+          className={`px-card py-section-compact tablet:py-section ${index % 2 === 0 ? 'bg-parchment text-ink' : 'bg-tile text-on-dark'}`}
         >
-          <div className="flex items-baseline justify-between gap-4 border-b border-stone-200 pb-3 dark:border-stone-800">
-            <h2 id={`category-${group.category}`} className="text-xl font-semibold">
-              {t(`category.${group.category}`)}
-            </h2>
-            <p className="text-sm text-stone-600 dark:text-stone-400">
-              {t('catalogue.itemCount', { count: group.assets.length })}
-            </p>
+          <div className="mx-auto max-w-content">
+            <div className="flex flex-wrap items-baseline justify-between gap-3">
+              <h2
+                id={`category-${group.category}`}
+                className="font-display text-display-sm font-semibold tablet:text-display-lg"
+              >
+                {t(`category.${group.category}`)}
+              </h2>
+              <p
+                className={`text-caption ${index % 2 === 0 ? 'text-ink-muted' : 'text-body-muted'}`}
+              >
+                {t('catalogue.itemCount', { count: group.assets.length })}
+              </p>
+            </div>
+            <ul className="mt-12 grid gap-card grid:grid-cols-2 desktop:grid-cols-3 wide:grid-cols-4">
+              {group.assets.map((asset) => (
+                <li key={asset.id}>
+                  <AssetCard
+                    asset={asset}
+                    price={listPriceOn(priceLists, asset.id, today)}
+                    locale={locale}
+                    t={t}
+                  />
+                </li>
+              ))}
+            </ul>
           </div>
-          <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {group.assets.map((asset) => (
-              <li key={asset.id}>
-                <AssetCard
-                  asset={asset}
-                  price={listPriceOn(priceLists, asset.id, today)}
-                  locale={locale}
-                  t={t}
-                />
-              </li>
-            ))}
-          </ul>
         </section>
       ))}
     </div>
