@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { dueDateForMonth, forecastInvoices, invoiceAmounts, paymentStatus } from './lease-billing';
+import {
+  dueDateForMonth,
+  forecastInvoices,
+  invoiceAmounts,
+  paymentStatus,
+  quoteAmounts,
+} from './lease-billing';
 
 const rates = [
   { valid_from: '2024-09-01', valid_to: '2026-12-31', rate_percent: 25.5 },
@@ -7,6 +13,13 @@ const rates = [
 ];
 
 describe('lease billing', () => {
+  it('uses the data-pack factor with intentional cent rounding', () => {
+    expect(quoteAmounts(389000, 0.027584, 15)).toEqual({
+      monthlyNetCents: 10730,
+      buyoutCents: 58350,
+    });
+    expect(() => quoteAmounts(100, 0.1234567, 10)).toThrow();
+  });
   it('clamps short months without losing the original billing day', () => {
     expect(dueDateForMonth('2026-01-31', 1)).toBe('2026-02-28');
     expect(dueDateForMonth('2026-01-31', 2)).toBe('2026-03-31');

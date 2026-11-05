@@ -8,6 +8,30 @@ export type ForecastInvoice = {
   totalCents: number;
 };
 
+/** Coefficients use six decimal places; round each result once, half up, to a cent. */
+export function quoteAmounts(financedCents: number, monthlyFactor: number, buyoutPercent: number) {
+  if (!Number.isSafeInteger(financedCents) || financedCents < 0)
+    throw new RangeError('Invalid financed amount');
+  const factorMillionths = Math.round(monthlyFactor * 1_000_000);
+  const buyoutBasisPoints = Math.round(buyoutPercent * 100);
+  if (
+    !Number.isSafeInteger(factorMillionths) ||
+    factorMillionths < 0 ||
+    Math.abs(factorMillionths / 1_000_000 - monthlyFactor) > 1e-12 ||
+    !Number.isSafeInteger(buyoutBasisPoints) ||
+    buyoutBasisPoints < 0 ||
+    buyoutBasisPoints > 10_000 ||
+    Math.abs(buyoutBasisPoints / 100 - buyoutPercent) > 1e-9
+  )
+    throw new RangeError('Invalid quote factor');
+  const financed = BigInt(financedCents);
+  const monthlyNetCents = Number((financed * BigInt(factorMillionths) + 500_000n) / 1_000_000n);
+  const buyoutCents = Number((financed * BigInt(buyoutBasisPoints) + 5_000n) / 10_000n);
+  if (!Number.isSafeInteger(monthlyNetCents) || !Number.isSafeInteger(buyoutCents))
+    throw new RangeError('Quote exceeds safe integer range');
+  return { monthlyNetCents, buyoutCents };
+}
+
 /** Calendar months retain the original day, clamped to the last day in short months. */
 export function dueDateForMonth(startDate: string, offset: number): string {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !Number.isInteger(offset) || offset < 0) {
