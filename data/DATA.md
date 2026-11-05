@@ -21,18 +21,18 @@ When adding an asset, add a mapping and make sure its photograph has suitable re
 
 ## Files
 
-| File                       | What it is                                                                                                                                                                                                          |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `assets.json`              | 30 items (e-bikes, laptops, farm machines) with condition, usage, previous lives and status. **No prices here.**                                                                                                    |
-| `price-lists.json`         | Net list price per asset. Version 1 is valid until Thu 5 Nov 2026; **version 2 starts Fri 6 Nov 2026** (e-bikes +5 %, laptops −8 %).                                                                                |
-| `coefficient-table.json`   | How the monthly rent is calculated: `monthly_net_rent = financed_amount × factor`. Pick the band by financed amount and the factor by term (12/24/36/48 months). Includes the buyout price at the end of each term. |
-| `vat-rates.json`           | Finnish general VAT rate with validity dates, including a **fictional** change to 26 % on 1 Jan 2027.                                                                                                               |
-| `residual-curves.json`     | What a used item is worth on the market: age curve × condition multiplier × usage adjustment.                                                                                                                       |
-| `refurbishment-costs.json` | What it costs to bring a returned item back to leasable condition, including mandatory steps.                                                                                                                       |
-| `second-life-demand.json`  | The waiting list: people who want a used item, their budget, minimum condition, term and deadline.                                                                                                                  |
-| `questions.json`           | The application question bank in 4 languages, the targeting rules (`ask_when`) and the eligibility rules.                                                                                                           |
-| `customers.json`           | Ten personas, each with a `story`. Several of them are edge cases on purpose.                                                                                                                                       |
-| `co2-factors.json`         | **Fictional** manufacturing footprints, for the circular-impact problem.                                                                                                                                            |
+| File                       | What it is                                                                                                                                                                                                             |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `assets.json`              | 30 items (e-bikes, laptops, farm machines) with condition, usage, previous lives and status. **No prices here.**                                                                                                       |
+| `price-lists.json`         | Net list price per asset. Version 1 is valid until Thu 5 Nov 2026; **version 2 starts Fri 6 Nov 2026** (e-bikes +5 %, laptops −8 %).                                                                                   |
+| `coefficient-table.json`   | How the monthly rent is calculated: `monthly_net_rent = financed_amount × factor`. Pick the band by financed amount and the factor by term (12/24/36/48/60 months). Includes the buyout price at the end of each term. |
+| `vat-rates.json`           | Finnish general VAT rate with validity dates, including a **fictional** change to 26 % on 1 Jan 2027.                                                                                                                  |
+| `residual-curves.json`     | What a used item is worth on the market: age curve × condition multiplier × usage adjustment.                                                                                                                          |
+| `refurbishment-costs.json` | What it costs to bring a returned item back to leasable condition, including mandatory steps.                                                                                                                          |
+| `second-life-demand.json`  | The waiting list: people who want a used item, their budget, minimum condition, term and deadline.                                                                                                                     |
+| `questions.json`           | The application question bank in 4 languages, the targeting rules (`ask_when`) and the eligibility rules.                                                                                                              |
+| `customers.json`           | Ten personas, each with a `story`. Several of them are edge cases on purpose.                                                                                                                                          |
+| `co2-factors.json`         | **Fictional** manufacturing footprints, for the circular-impact problem.                                                                                                                                               |
 
 ## Worked example: the monthly price
 
@@ -68,3 +68,15 @@ We're not listing them all. A few to start with:
 - One item is reserved and can't be leased.
 - One business ID has a wrong check digit. Finnish Y-tunnus check digits follow a public algorithm.
 - Two waiting-list entries are identical except for one thing.
+
+## Product-page extension: 60-month leases
+
+The product page supports a maximum term of 60 months (5 years). The added
+60-month coefficients are synthetic demo values. They retain each band's annual
+interest rate and the 48-month buyout percentage of 8% of the financed amount.
+Existing 12–48 month coefficients are unchanged.
+
+For this extension, with monthly rate `r = annual_interest_percent / 1200`, the
+factor is `(1 - 0.08 / (1 + r)^60) * r / (1 - (1 + r)^-60)`.
+Store the factor rounded to six decimal places; monthly rent then uses that stored
+factor and rounds once to whole cents, with halves rounded upwards.
