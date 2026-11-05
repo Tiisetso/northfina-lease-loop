@@ -5,7 +5,7 @@
   html {
     /* Dark tiles are explicit surfaces, rather than a system-wide palette inversion. */
     color-scheme: light;
-    scroll-padding-top: 112px;
+    scroll-padding-top: 140px;
   }
 
   body {

@@ -43,7 +43,9 @@ export function AuthForm({ mode, locale }: { mode: 'login' | 'register'; locale:
         return;
       }
       form.reset();
-      router.replace(`/${locale}/account`);
+      const destination =
+        new URLSearchParams(window.location.search).get('next') === 'cart' ? 'cart' : 'account';
+      router.replace(`/${locale}/${destination}`);
       router.refresh();
     } catch {
       setError('auth.networkError');
@@ -88,6 +90,12 @@ export function AuthForm({ mode, locale }: { mode: 'login' | 'register'; locale:
         <Link
           className="inline-flex min-h-target items-center text-primary underline underline-offset-4"
           href={`/${locale}/${registering ? 'login' : 'register'}`}
+          onClick={(event) => {
+            if (new URLSearchParams(window.location.search).get('next') === 'cart') {
+              event.preventDefault();
+              router.push(`/${locale}/${registering ? 'login' : 'register'}?next=cart`);
+            }
+          }}
         >
           {t(registering ? 'auth.login' : 'auth.register')}
         </Link>

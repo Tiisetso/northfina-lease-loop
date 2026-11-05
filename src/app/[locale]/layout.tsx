@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { AccountNavigation } from '@/components/account-navigation';
+import { UiIcon } from '@/components/ui-icon';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import '../globals.css';
@@ -30,15 +31,15 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
           {t('nav.skipToContent')}
         </a>
 
-        <header className="sticky top-0 z-20">
-          <div className="bg-nav text-on-dark">
-            <div className="mx-auto flex min-h-target max-w-content flex-wrap items-center justify-between gap-x-3 px-card">
+        <header className="sticky top-0 z-20 border-b border-hairline bg-canvas/95 backdrop-blur-xl">
+          <div>
+            <div className="mx-auto flex min-h-18 max-w-[1200px] items-center justify-between gap-x-3 px-4 sm:px-6">
               <Link
                 href={`/${locale}`}
-                className="pressable flex min-h-target items-center gap-2 rounded-sm text-primary-on-dark"
+                className="pressable flex min-h-target items-center gap-2.5 rounded-sm text-primary"
               >
                 <LoopMark />
-                <span className="sr-only text-caption font-semibold phone:not-sr-only">
+                <span className="sr-only text-body font-semibold tracking-tight text-ink min-[23rem]:not-sr-only">
                   {t('brand.name')}
                 </span>
               </Link>
@@ -49,14 +50,26 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
               />
             </div>
           </div>
-          <div className="border-b border-hairline bg-parchment/80 backdrop-blur-[20px] backdrop-saturate-180">
-            <div className="mx-auto flex min-h-13 max-w-content items-center justify-between gap-6 px-card py-3">
-              <p className="font-display text-tagline font-semibold">{t('catalogue.title')}</p>
-              <p className="hidden text-caption text-ink-muted tablet:block">
-                {t('brand.tagline')}
-              </p>
+          <nav aria-label={t('nav.categories')} className="border-t border-divider">
+            <div className="mx-auto flex max-w-[1200px] items-center gap-1 overflow-x-auto px-4 py-1 sm:gap-4 sm:px-6">
+              {(
+                [
+                  ['e_bike', 'bike'],
+                  ['laptop', 'laptop'],
+                  ['farm_machine', 'tractor'],
+                ] as const
+              ).map(([category, icon]) => (
+                <Link
+                  key={category}
+                  href={`/${locale}#category-${category}`}
+                  className="flex min-h-target shrink-0 items-center gap-2 rounded-pill px-3 text-caption text-ink-muted hover:bg-parchment hover:text-ink focus-visible:bg-parchment"
+                >
+                  <UiIcon name={icon} className="size-4" />
+                  {t(`category.${category}`)}
+                </Link>
+              ))}
             </div>
-          </div>
+          </nav>
         </header>
 
         <main id="main" tabIndex={-1} className="flex-1">

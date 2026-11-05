@@ -15,7 +15,7 @@ export default async function SettingsPage({ params }: PageProps<'/[locale]/acco
   const t = getT(locale);
   return (
     <DashboardShell locale={locale} active="settings">
-      <div className="max-w-2xl">
+      <div className="mx-auto max-w-2xl">
         <h2 className="text-tagline font-semibold">{t('dashboard.settings')}</h2>
         <p className="mt-4 text-body">{t('account.welcome', { name: identity.name })}</p>
         <p className="mt-3 text-caption text-ink-muted wrap-anywhere">{identity.email}</p>

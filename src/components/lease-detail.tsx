@@ -1,5 +1,6 @@
 import type { Co2Factors, VatRate } from '@/data/schemas';
 import { paymentStatus } from '@/domain/lease-billing';
+import { forecastPaymentChanges } from '@/domain/forecast-changes';
 import { paidForInvoice, summarizeLease } from '@/domain/lease-dashboard';
 import { reuseEstimate } from '@/domain/lease-insights';
 import { formatEuro } from '@/domain/money';
@@ -49,6 +50,15 @@ export function LeaseDetail({ locale, lease, rates, factors, today }: Props) {
     })),
   ].sort((a, b) => b.date.localeCompare(a.date));
   const projectedTotal = info.forecastTotalCents;
+  const forecastPeriods = info.forecast.ok
+    ? forecastPaymentChanges(
+        info.forecast.invoices,
+        lease.invoices
+          .filter((invoice) => invoice.status === 'issued')
+          .map((invoice) => invoice.dueDate),
+        today
+      )
+    : [];
   return (
     <div className="mt-6 grid gap-card desktop:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
       <div className="min-w-0 space-y-6">
@@ -152,27 +162,47 @@ export function LeaseDetail({ locale, lease, rates, factors, today }: Props) {
               {t('dashboard.forecastSchedule')}
             </summary>
             <p className="mt-3 text-caption text-ink-muted">{t('dashboard.forecastNote')}</p>
+            <p className="mt-2 text-caption text-ink-muted">{t('dashboard.forecastChangesNote')}</p>
             {info.forecast.ok ? (
-              <ul className="mt-3 divide-y divide-divider">
-                {info.forecast.invoices
-                  .filter(
-                    (invoice) =>
-                      !lease.invoices.some(
-                        (actual) => actual.dueDate === invoice.dueDate && actual.status === 'issued'
-                      )
-                  )
-                  .map((invoice) => (
-                    <li
-                      key={invoice.dueDate}
-                      className="flex flex-wrap justify-between gap-2 py-3 text-caption"
-                    >
-                      <span>{formatIsoDate(invoice.dueDate, locale)}</span>
-                      <span>
-                        {currency(invoice.totalCents)} · {t('dashboard.estimated')}
-                      </span>
+              forecastPeriods.length ? (
+                <ul className="mt-3 divide-y divide-divider">
+                  {forecastPeriods.map((period) => (
+                    <li key={period.startDate} className="py-4 text-caption">
+                      <div className="flex flex-wrap justify-between gap-3">
+                        <p>
+                          <time dateTime={period.startDate}>
+                            {formatIsoDate(period.startDate, locale)}
+                          </time>
+                          {period.endDate !== period.startDate ? (
+                            <>
+                              {' '}
+                              –{' '}
+                              <time dateTime={period.endDate}>
+                                {formatIsoDate(period.endDate, locale)}
+                              </time>
+                            </>
+                          ) : null}
+                        </p>
+                        <p className="font-semibold">
+                          {currency(period.totalCents)} / {t('dashboard.month')}
+                        </p>
+                      </div>
+                      <p className="mt-2 text-ink-muted">
+                        {t('dashboard.vatBreakdown', {
+                          net: currency(period.netCents),
+                          rate: formatNumber(period.vatBasisPoints / 100, locale),
+                          vat: currency(period.vatCents),
+                        })}{' '}
+                        · {t('dashboard.estimated')}
+                      </p>
                     </li>
                   ))}
-              </ul>
+                </ul>
+              ) : (
+                <p className="mt-3 text-caption text-ink-muted">
+                  {t('dashboard.noForecastPayments')}
+                </p>
+              )
             ) : (
               <p className="mt-3 text-caption">{t('dashboard.forecastUnavailable')}</p>
             )}

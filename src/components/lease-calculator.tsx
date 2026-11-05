@@ -6,15 +6,20 @@ import { formatEuro } from '@/domain/money';
 import { MAX_LEASE_TERM_MONTHS, quoteLease } from '@/domain/pricing';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
+import { AddToCart } from './add-to-cart';
 
 export function LeaseCalculator({
   priceCents,
   table,
   locale,
+  assetId,
+  available,
 }: {
   priceCents: number;
   table: CoefficientTable;
   locale: Locale;
+  assetId: string;
+  available: boolean;
 }) {
   const terms = [
     ...new Set(table.bands.flatMap((band) => Object.keys(band.monthly_factor_by_term).map(Number))),
@@ -90,6 +95,13 @@ export function LeaseCalculator({
         )}
       </div>
       <p className="text-fine text-ink-muted">{t('product.estimate')}</p>
+      <AddToCart
+        id={assetId}
+        locale={locale}
+        available={available && quote.ok}
+        termMonths={term}
+        downPaymentCents={downPayment}
+      />
     </div>
   );
 }
