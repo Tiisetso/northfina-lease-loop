@@ -155,5 +155,19 @@
   "dashboard.event.payment": "Maksu kirjattu",
   "dashboard.event.returned": "Tuote palautettu",
   "dashboard.event.refurbished": "Tuote kunnostettu",
-  "dashboard.event.invoice": "Lasku lähetetty"
+  "dashboard.event.invoice": "Lasku lähetetty",
+  "photo.representative": "Havainnekuva",
+  "photo.alt": "Tuotteen {product} havainnekuva",
+  "photo.credits": "Kuvan tiedot",
+  "photo.missing": "Kuvaa ei ole saatavilla",
+  "photo.title": "Kuvien tiedot",
+  "photo.intro": "Nämä kuvat havainnollistavat kuvitteellisia tuotteita eivätkä esitä todellisia tuotteita. Kuvien kokoa on muutettu sivustoa varten.",
+  "photo.source": "Alkuperäinen kuva",
+  "photo.license": "Lisenssi",
+  "photo.by": "Kuva: {author}",
+  "photo.creditAlt": "Kuvaaja: {author}",
+  "catalogue.viewProduct": "Näytä tuote",
+  "product.back": "Takaisin valikoimaan",
+  "product.details": "Tuotteen tiedot",
+  "product.pricesOn": "Listahinta {date}"
 }

@@ -8,6 +8,7 @@ import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import type { CustomerLease } from '@/server/leases';
 import { LeaseRequestControls } from './lease-controls';
+import { ProductPhoto } from './product-photo';
 
 type Props = {
   locale: Locale;
@@ -57,6 +58,14 @@ export function LeaseDetail({ locale, lease, rates, factors, today }: Props) {
             {t(lease.isDemo ? 'dashboard.demo' : `dashboard.status.${lease.status}`)}
           </p>
           <h2 className="mt-2 font-display text-display-sm font-semibold">{lease.asset.model}</h2>
+          <div className="mt-6">
+            <ProductPhoto
+              assetId={lease.asset.id}
+              productName={`${lease.asset.make} ${lease.asset.model}`}
+              locale={locale}
+              sizes="(min-width: 1069px) 60vw, 100vw"
+            />
+          </div>
           {lease.isDemo ? (
             <p className="mt-3 text-caption text-ink-muted">{t('dashboard.demoNotice')}</p>
           ) : null}

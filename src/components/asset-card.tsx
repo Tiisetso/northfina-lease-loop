@@ -1,10 +1,12 @@
 // One catalogue item. A server component: it renders to HTML and ships no JavaScript.
+import Link from 'next/link';
 import type { Asset } from '@/data/schemas';
 import { formatEuro } from '@/domain/money';
 import type { ListPriceResult } from '@/domain/price-list';
 import { formatNumber } from '@/i18n/format';
 import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
+import { ProductPhoto } from './product-photo';
 
 type AssetCardProps = {
   asset: Asset;
@@ -21,6 +23,13 @@ export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
       aria-labelledby={headingId}
       className="flex h-full min-w-0 flex-col rounded-lg border border-hairline bg-canvas p-card text-ink"
     >
+      <div className="mb-6">
+        <ProductPhoto
+          assetId={asset.id}
+          productName={`${asset.make} ${asset.model}`}
+          locale={locale}
+        />
+      </div>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-caption text-ink-muted">{asset.make}</p>
@@ -55,6 +64,12 @@ export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
           {price.ok ? formatEuro(price.priceCents, intlLocale[locale]) : t('asset.noPrice')}
         </p>
       </div>
+      <Link
+        href={`/${locale}/products/${encodeURIComponent(asset.id)}`}
+        className="mt-3 inline-flex min-h-target items-center text-body text-primary"
+      >
+        {t('catalogue.viewProduct')} →
+      </Link>
     </article>
   );
 }

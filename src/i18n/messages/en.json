@@ -155,5 +155,19 @@
   "dashboard.event.payment": "Payment recorded",
   "dashboard.event.returned": "Item returned",
   "dashboard.event.refurbished": "Item refurbished",
-  "dashboard.event.invoice": "Invoice issued"
+  "dashboard.event.invoice": "Invoice issued",
+  "photo.representative": "Illustrative photo",
+  "photo.alt": "Illustrative photo for {product}",
+  "photo.credits": "Photo credit",
+  "photo.missing": "Photo not available",
+  "photo.title": "Photo credits",
+  "photo.intro": "These photographs illustrate fictional products; they do not show the actual items. Images have been resized for the site.",
+  "photo.source": "Original photograph",
+  "photo.license": "License",
+  "photo.by": "Photo by {author}",
+  "photo.creditAlt": "Photograph by {author}",
+  "catalogue.viewProduct": "View item",
+  "product.back": "Back to catalogue",
+  "product.details": "Item details",
+  "product.pricesOn": "List price on {date}"
 }

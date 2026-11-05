@@ -155,5 +155,19 @@
   "dashboard.event.payment": "Betalning registrerad",
   "dashboard.event.returned": "Produkten returnerad",
   "dashboard.event.refurbished": "Produkten renoverad",
-  "dashboard.event.invoice": "Faktura utfärdad"
+  "dashboard.event.invoice": "Faktura utfärdad",
+  "photo.representative": "Illustrationsbild",
+  "photo.alt": "Illustrationsbild för {product}",
+  "photo.credits": "Bildinformation",
+  "photo.missing": "Bild saknas",
+  "photo.title": "Bildinformation",
+  "photo.intro": "Bilderna illustrerar fiktiva produkter och föreställer inte de faktiska produkterna. Bildernas storlek har ändrats för webbplatsen.",
+  "photo.source": "Originalbild",
+  "photo.license": "Licens",
+  "photo.by": "Bild: {author}",
+  "photo.creditAlt": "Bild av {author}",
+  "catalogue.viewProduct": "Visa produkt",
+  "product.back": "Tillbaka till katalogen",
+  "product.details": "Produktinformation",
+  "product.pricesOn": "Listpris den {date}"
 }

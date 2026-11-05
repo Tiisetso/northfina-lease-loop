@@ -6,6 +6,7 @@ import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import type { CustomerLease } from '@/server/leases';
+import { ProductPhoto } from './product-photo';
 
 export function LeaseCard({
   lease,
@@ -22,6 +23,13 @@ export function LeaseCard({
   const info = summarizeLease(lease, rates, today);
   return (
     <article className="flex h-full flex-col rounded-lg border border-hairline bg-canvas p-card">
+      <div className="mb-6">
+        <ProductPhoto
+          assetId={lease.asset.id}
+          productName={`${lease.asset.make} ${lease.asset.model}`}
+          locale={locale}
+        />
+      </div>
       <div className="flex flex-wrap justify-between gap-3">
         <p className="text-caption text-ink-muted">{lease.asset.make}</p>
         <span className="rounded-sm bg-parchment px-2 py-1 text-caption">

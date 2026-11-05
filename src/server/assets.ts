@@ -48,6 +48,12 @@ export async function listAssets(
   return rows.map(toAsset);
 }
 
+/** Fetch one asset in the same validated shape used by the catalogue. */
+export async function findAsset(db: PrismaClient, id: string): Promise<Asset | null> {
+  const row = await db.asset.findUnique({ where: { id } });
+  return row ? toAsset(row) : null;
+}
+
 export type ChangeAssetStatusResult =
   { ok: true; asset: Asset } | { ok: false; reason: 'not_found' };
 

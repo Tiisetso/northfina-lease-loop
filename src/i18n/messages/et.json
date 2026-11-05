@@ -155,5 +155,19 @@
   "dashboard.event.payment": "Makse registreeritud",
   "dashboard.event.returned": "Toode tagastatud",
   "dashboard.event.refurbished": "Toode renoveeritud",
-  "dashboard.event.invoice": "Arve väljastatud"
+  "dashboard.event.invoice": "Arve väljastatud",
+  "photo.representative": "Illustratiivne foto",
+  "photo.alt": "Toote {product} illustratiivne foto",
+  "photo.credits": "Foto andmed",
+  "photo.missing": "Foto pole saadaval",
+  "photo.title": "Fotode andmed",
+  "photo.intro": "Need fotod illustreerivad väljamõeldud tooteid ega kujuta tegelikke esemeid. Piltide suurust on veebilehe jaoks muudetud.",
+  "photo.source": "Originaalfoto",
+  "photo.license": "Litsents",
+  "photo.by": "Foto: {author}",
+  "photo.creditAlt": "Foto autor: {author}",
+  "catalogue.viewProduct": "Vaata toodet",
+  "product.back": "Tagasi kataloogi",
+  "product.details": "Toote üksikasjad",
+  "product.pricesOn": "Hinnakirjahind kuupäeval {date}"
 }
