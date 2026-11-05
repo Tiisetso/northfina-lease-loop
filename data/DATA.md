@@ -4,6 +4,15 @@ Everything here is **synthetic**. The brands, people, companies and business IDs
 
 Typed loaders and Zod schemas for every file live in `src/data/`. Read those for the exact field types.
 
+## Product photographs
+
+The product photographs are real, licensed photographs chosen to illustrate the
+fictional products; they do not show the actual item or its condition. They are stored
+locally in `public/product-images/` so the app does not depend on an image service at
+runtime. `src/data/product-photos.ts` maps asset IDs to photographs and records each
+photographer, source and license. The in-app photo credits page displays that information.
+When adding an asset, add a mapping and make sure its photograph has suitable reuse terms.
+
 ## Conventions
 
 - **Money is integer euro cents.** `389000` means €3,890.00. Prices are **net (VAT excluded)** unless a field says otherwise.
