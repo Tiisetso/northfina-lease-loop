@@ -1,4 +1,58 @@
-<!-- Title: "Team <name>: <your product name>" -->
+<!--
+Title: Short, descriptive summary; include a ticket/issue number when applicable.
+Example: [T1038] Fix user login crash
+For the final hackathon submission, use: Team <name>: <your product name>
+Remove instructions and sections that do not apply before submitting.
+-->
+
+## Context / Why
+
+<!-- Explain the customer need, business rule, or bug and why it matters.
+Link the relevant ticket/issue. Describe the previous behavior when useful. -->
+
+Related issue:
+
+## Description / What
+
+<!-- Summarize the resulting behavior and implementation.
+Include key decisions, trade-offs, migrations, or configuration changes reviewers need to know. -->
+
+## Testing Instructions
+
+<!-- Give reproducible steps, including setup, route, inputs and expected results.
+Report checks actually run and any failures or checks that could not run.
+Do not include real secrets or credentials. -->
+
+1. Set up the application:
+2. Open the relevant page or run the relevant command:
+3. Perform the change's main interaction and verify the expected result:
+4. Verify relevant edge cases:
+
+**Automated checks and results:**
+
+<!-- Run npm run check:all. Record its result and any blockers here. -->
+
+## Screenshots / Recordings
+
+<!-- For UI changes, attach before/after screenshots or a recording.
+Include mobile views when relevant. For changes without a UI, write N/A. -->
+
+## Checklist
+
+<!-- Check only completed items. Explain any items that do not apply. -->
+
+- [ ] Unit tests added or updated where applicable
+- [ ] Documentation updated where applicable
+- [ ] Code self-reviewed
+- [ ] `npm run check:all` passes locally
+- [ ] CI is green
+- [ ] UI changes checked on desktop and mobile, where applicable
+- [ ] UI translations updated in English, Finnish, Swedish and Estonian, where applicable
+- [ ] No secrets committed and no Git hooks bypassed
+- [ ] No AI, ML or LLM features added inside the app
+
+<details>
+<summary>Final hackathon submission — complete this section for the judging PR</summary>
 
 ## Team
 
@@ -57,3 +111,5 @@ npm run dev
 - [ ] No AI, ML or LLM features inside the app
 
 ## Anything else the judges should know?
+
+</details>
