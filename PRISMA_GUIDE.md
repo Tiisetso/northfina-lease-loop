@@ -68,6 +68,10 @@ ownership. See `src/server/auth-session.ts` and `AUTHENTICATION.md`.
 
 ## Troubleshooting
 
+- Use the Node 22 version selected by `.nvmrc` (`nvm install` then `nvm use`).
+  Run `npm ci` under that same runtime: SQLite includes a native module that must
+  match Node. A `NODE_MODULE_VERSION` mismatch means installation and execution
+  used different Node versions.
 - Check that dependencies are installed, the generated client matches the schema,
   and the intended database has all migrations applied.
 - Check the database URL and environment loading without printing secrets. Keep
@@ -89,3 +93,15 @@ Source packages: [prisma/skills](https://github.com/prisma/skills).
 Further references: [Prisma documentation](https://www.prisma.io/docs),
 [Prisma Client](https://www.prisma.io/docs/orm/prisma-client),
 [Prisma Migrate](https://www.prisma.io/docs/orm/prisma-migrate).
+
+## Test database engine workaround
+
+The test setup in `tests/global-setup.ts` sets `RUST_LOG=info` for its Prisma
+migration subprocess. On affected Prisma versions, SQLite database creation can
+fail with a generic schema-engine error when engine logging is suppressed.
+See [upstream issue 29355](https://github.com/prisma/prisma/issues/29355).
+
+This setting applies only to test database initialization. It does not change app
+logging, skip migrations or reset the development database. To check that an
+inherited logging level cannot break setup, run `RUST_LOG=error npm run test:coverage`
+in a POSIX shell; the test setup explicitly overrides it for the migration command.
