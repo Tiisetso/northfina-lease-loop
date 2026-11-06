@@ -19,9 +19,14 @@ jobs:
         with:
           node-version-file: .nvmrc
       - name: Validate records and published history
-        run: node scripts/decisions/cli.mjs validate --base "$DECISIONS_BASE_SHA"
+        # checkout uses GitHub's test merge. Its first parent is the exact base
+        # represented by this checkout; the event payload's base SHA can be older.
+        run: |
+          git rev-parse --verify HEAD^2 > /dev/null
+          base_sha="$(git rev-parse HEAD^1)"
+          echo "Validating against checked-out base: $base_sha"
+          node scripts/decisions/cli.mjs validate --base "$base_sha"
         env:
-          DECISIONS_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           DECISIONS_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
