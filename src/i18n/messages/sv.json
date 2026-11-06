@@ -25,6 +25,7 @@
   "status.available": "Tillgänglig",
   "status.reserved": "Reserverad",
   "status.returned": "Returnerad",
+  "status.sold": "Såld",
   "asset.modelYear": "Årsmodell",
   "asset.usage": "Användning",
   "asset.previousLives": "Tidigare leasingperioder",
@@ -836,5 +837,10 @@
   "secondLife.failed.deadline": "Deras datum har passerat",
   "secondLife.rule": "Så väljer vi: man kvalificerar sig om skicket, datumet och hyran för den önskade löptiden (exkl. moms) passar. Tidigaste datum vinner; vid samma datum vinner den som anmälde sig först.",
   "vatChange.note": "Momsen ändras från {from} % till {to} %, så månadsbetalningen ändras med {difference}. Din nettohyra är fortfarande {net}: bara skatten ändrades.",
-  "vatChange.fictional": "Momssatsen {to} % är fiktiv, påhittad för detta hackathon."
+  "vatChange.fictional": "Momssatsen {to} % är fiktiv, påhittad för detta hackathon.",
+  "termEnded.title": "Ditt leasingavtal upphörde {date}",
+  "termEnded.body": "Du bestämmer vad som händer med {item} nu. Du kan köpa den för {amount} inkl. moms, priset som avtalades i ditt kontrakt, eller lämna tillbaka den till oss.",
+  "termEnded.noBilling": "Ingen mer månadshyra faktureras. Tills du väljer stannar produkten hos dig.",
+  "termEnded.buy": "Köp den",
+  "termEnded.return": "Lämna tillbaka"
 }

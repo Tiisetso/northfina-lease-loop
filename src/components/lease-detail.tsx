@@ -3,10 +3,12 @@ import { holderShareCents, sharesOn } from '@/domain/co-lease';
 import { invoiceAmounts, paymentStatus } from '@/domain/lease-billing';
 import { paidForInvoice, summarizeLease } from '@/domain/lease-dashboard';
 import { forecastPaymentChanges } from '@/domain/forecast-changes';
+import { endOfTerm } from '@/domain/end-of-term';
 import { reuseEstimate } from '@/domain/lease-insights';
 import { VatChangeNote } from './vat-change-note';
 import { formatEuro } from '@/domain/money';
 import Link from 'next/link';
+import { TermEndedNotice } from './term-ended-notice';
 import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT, type MessageKey } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
@@ -45,6 +47,7 @@ export function LeaseDetail({
   const t = getT(locale);
   const info = summarizeLease(lease, rates, today);
   const people = sharesOn(lease.coLeaseShares, today);
+  const termEnd = endOfTerm(lease, today);
   const currency = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const currentRate = rates.find(
     (rate) => rate.valid_from <= today && (rate.valid_to === null || rate.valid_to >= today)
@@ -149,6 +152,19 @@ export function LeaseDetail({
           </section>
         ) : null}
         {signing ? <SignatoryStatus t={t} signing={signing} /> : null}
+        {termEnd.ended && !pending ? (
+          <TermEndedNotice
+            locale={locale}
+            leaseId={lease.id}
+            endDate={termEnd.endDate}
+            itemName={`${lease.asset.make} ${lease.asset.model}`}
+            buyoutTotal={
+              liveBuyoutTotalCents !== undefined
+                ? currency(liveBuyoutTotalCents)
+                : gross(lease.buyoutCents, endRate)
+            }
+          />
+        ) : null}
         <section className={panel}>
           <div className="flex items-start gap-5">
             <div className="w-28 shrink-0 sm:w-40">
