@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import type { Asset } from '@/data/schemas';
 import { formatEuro } from '@/domain/money';
+import { invoiceAmounts } from '@/domain/lease-billing';
 import type { ListPriceResult } from '@/domain/price-list';
 import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
@@ -12,9 +13,10 @@ type AssetCardProps = {
   price: ListPriceResult;
   locale: Locale;
   t: Translate;
+  vatBasisPoints: number | null;
 };
 
-export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
+export function AssetCard({ asset, price, locale, t, vatBasisPoints }: AssetCardProps) {
   const headingId = `asset-${asset.id}`;
   const priceId = `${headingId}-price`;
   const detailId = `${headingId}-detail`;
@@ -48,9 +50,14 @@ export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
         </h3>
         <p id={priceId} className="mt-1">
           <span className="block text-body font-semibold tabular-nums">
-            {price.ok ? formatEuro(price.priceCents, intlLocale[locale]) : t('asset.noPrice')}
+            {price.ok && vatBasisPoints !== null
+              ? formatEuro(
+                  invoiceAmounts(price.priceCents, vatBasisPoints).totalCents,
+                  intlLocale[locale]
+                )
+              : t('asset.noPrice')}
           </span>
-          <span className="block text-caption text-ink-muted">{t('asset.listPrice')}</span>
+          <span className="block text-caption text-ink-muted">{t('pricing.listGross')}</span>
         </p>
         {detail ? (
           <p id={detailId} className="mt-1 text-caption text-ink-muted">

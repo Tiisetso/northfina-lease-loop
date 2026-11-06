@@ -37,7 +37,8 @@
     "decisions:preview": "node scripts/decisions/cli.mjs preview",
     "decisions:reconcile": "node scripts/decisions/cli.mjs reconcile",
     "decisions:reconcile:check": "node scripts/decisions/cli.mjs reconcile:check",
-    "decisions:test": "vitest run --config scripts/decisions/vitest.config.mjs"
+    "decisions:test": "vitest run --config scripts/decisions/vitest.config.mjs",
+    "staff:grant": "tsx scripts/grant-staff.ts"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.10.1",

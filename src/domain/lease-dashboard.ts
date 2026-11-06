@@ -1,5 +1,5 @@
 import type { VatRate } from '@/data/schemas';
-import { dueDateForMonth, forecastInvoices, paymentStatus } from './lease-billing';
+import { dueDateForMonth, forecastInvoices, invoiceAmounts, paymentStatus } from './lease-billing';
 
 type Payment = { amountCents: number; isSimulated: boolean };
 type Invoice = {
@@ -50,12 +50,18 @@ export function summarizeLease(lease: LeaseForSummary, rates: readonly VatRate[]
     rates
   );
   const issuedByDueDate = new Map(issued.map((invoice) => [invoice.dueDate, invoice]));
-  const forecastTotalCents = forecast.ok
-    ? forecast.invoices.reduce((sum, invoice) => {
-        const actual = issuedByDueDate.get(invoice.dueDate);
-        return sum + (actual ? actual.netCents + actual.vatCents : invoice.totalCents);
-      }, lease.downPaymentCents)
-    : null;
+  const startVatBasisPoints = forecast.ok ? forecast.invoices[0]?.vatBasisPoints : undefined;
+  const downPaymentTotalCents =
+    startVatBasisPoints === undefined
+      ? null
+      : invoiceAmounts(lease.downPaymentCents, startVatBasisPoints).totalCents;
+  const forecastTotalCents =
+    forecast.ok && downPaymentTotalCents !== null
+      ? forecast.invoices.reduce((sum, invoice) => {
+          const actual = issuedByDueDate.get(invoice.dueDate);
+          return sum + (actual ? actual.netCents + actual.vatCents : invoice.totalCents);
+        }, downPaymentTotalCents)
+      : null;
   const datesIssued = new Set(issued.map((invoice) => invoice.dueDate));
   const unpaid = issued.flatMap((invoice) => {
     const total = invoice.netCents + invoice.vatCents;
@@ -104,6 +110,7 @@ export function summarizeLease(lease: LeaseForSummary, rates: readonly VatRate[]
     endDate: dueDateForMonth(lease.startDate, lease.termMonths),
     forecast,
     forecastTotalCents,
+    downPaymentTotalCents,
     financedCents: lease.listPriceCents - lease.downPaymentCents,
   };
 }

@@ -77,7 +77,12 @@ make build ARGS=--webpack
 The Webpack option is useful in environments that block Turbopack's internal worker
 ports. `make check` always runs the unchanged `check:all` script and its default build.
 
-## After pulling changes
+## Returns and second life
+
+See [RECOVERY.md](RECOVERY.md) for customer returns, staff assessment access,
+the valuation and settlement formulas, and publishing a second-life offer.
+
+## Project decisions
 
 Stop the running app before refreshing dependencies or database models.
 

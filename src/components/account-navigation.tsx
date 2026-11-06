@@ -11,10 +11,12 @@ export function AccountNavigation({
   locale,
   accountLabel,
   languageLabel,
+  staff = false,
 }: {
   locale: Locale;
   accountLabel: string;
   languageLabel: string;
+  staff?: boolean;
 }) {
   const t = getT(locale);
   const cart = useCart();
@@ -58,6 +60,15 @@ export function AccountNavigation({
             {t(`dashboard.${link.label}`)}
           </Link>
         ))}
+        {staff ? (
+          <Link
+            href={`/${locale}/staff`}
+            className="mt-2 flex min-h-target items-center gap-3 rounded-sm border-t border-hairline px-3 text-caption text-primary hover:bg-parchment"
+          >
+            <UiIcon name="leases" className="size-5" />
+            {t('recovery.staff')}
+          </Link>
+        ) : null}
       </NavPopover>
       <LanguageSwitcher current={locale} label={languageLabel} />
     </nav>

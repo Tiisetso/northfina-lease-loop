@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { VatRate } from '@/data/schemas';
+import { invoiceAmounts } from '@/domain/lease-billing';
 import { summarizeLease } from '@/domain/lease-dashboard';
 import { formatEuro } from '@/domain/money';
 import { formatIsoDate } from '@/i18n/format';
@@ -21,52 +22,77 @@ export function LeaseCard({
 }) {
   const t = getT(locale);
   const info = summarizeLease(lease, rates, today);
+  const rate = rates.find(
+    (item) => item.valid_from <= today && (item.valid_to === null || item.valid_to >= today)
+  );
+  const monthly = rate
+    ? invoiceAmounts(lease.monthlyNetCents, Math.round(rate.rate_percent * 100)).totalCents
+    : null;
+  const money = (cents: number) => formatEuro(cents, intlLocale[locale]);
   return (
-    <article className="flex h-full flex-col rounded-lg border border-hairline bg-canvas p-card">
-      <div className="mb-6">
-        <ProductPhoto
-          assetId={lease.asset.id}
-          productName={`${lease.asset.make} ${lease.asset.model}`}
-          locale={locale}
-          showCaption={false}
-        />
+    <article className="h-full rounded-lg border border-hairline bg-canvas p-5">
+      <div className="flex items-start gap-4">
+        <div className="w-24 shrink-0 sm:w-28">
+          <ProductPhoto
+            assetId={lease.asset.id}
+            productName={`${lease.asset.make} ${lease.asset.model}`}
+            locale={locale}
+            showCaption={false}
+            sizes="112px"
+          />
+        </div>
+        <div className="min-w-0 flex-1">
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1 text-fine font-semibold ${lease.status === 'active' ? 'bg-emerald-50 text-emerald-800' : 'bg-parchment text-ink-muted'}`}
+          >
+            <span
+              aria-hidden="true"
+              className={`size-1.5 rounded-full ${lease.status === 'active' ? 'bg-emerald-600' : 'bg-ink-muted'}`}
+            />
+            {t(`dashboard.status.${lease.status}`)}
+          </span>
+          <h3 className="mt-2 text-body font-semibold wrap-anywhere">
+            {lease.asset.make} {lease.asset.model}
+          </h3>
+          <p className="mt-2 text-body font-semibold tabular-nums">
+            {monthly === null
+              ? t('dashboard.forecastUnavailable')
+              : `${money(monthly)} / ${t('dashboard.month')}`}
+          </p>
+          <p className="text-fine text-ink-muted">{t('dashboard.includesVat')}</p>
+        </div>
       </div>
-      <div className="flex flex-wrap justify-between gap-3">
-        <p className="text-caption text-ink-muted">{lease.asset.make}</p>
-        <span className="rounded-sm bg-parchment px-2 py-1 text-caption">
-          {t(`dashboard.status.${lease.status}`)}
-        </span>
-      </div>
-      <h3 className="mt-2 text-tagline font-semibold">{lease.asset.model}</h3>
-      <p className="mt-4 text-caption text-ink-muted">{t('dashboard.monthlyNet')}</p>
-      <p className="text-body font-semibold">
-        {formatEuro(lease.monthlyNetCents, intlLocale[locale])} / {t('dashboard.month')}
-      </p>
-      <div className="mt-6">
-        <div className="flex justify-between gap-3 text-caption">
-          <span>{t('dashboard.progress')}</span>
-          <span>
+      <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-divider pt-4 text-caption">
+        <div>
+          <dt className="text-ink-muted">{t('dashboard.nextPayment')}</dt>
+          <dd className="mt-1 font-semibold">
+            {lease.status === 'active' && info.next
+              ? money(info.next.amountCents)
+              : t('dashboard.noNext')}
+          </dd>
+          {lease.status === 'active' && info.next ? (
+            <dd className="mt-1 text-fine text-ink-muted">
+              {formatIsoDate(info.next.dueDate, locale)} ·{' '}
+              {t(info.next.kind === 'forecast' ? 'dashboard.estimated' : 'dashboard.issued')}
+            </dd>
+          ) : null}
+        </div>
+        <div>
+          <dt className="text-ink-muted">{t('dashboard.ends')}</dt>
+          <dd className="mt-1 font-semibold">{formatIsoDate(info.endDate, locale)}</dd>
+          <dd className="mt-1 text-fine text-ink-muted">
             {t('dashboard.monthsProgress', {
               completed: info.elapsedMonths,
               total: lease.termMonths,
             })}
-          </span>
+          </dd>
         </div>
-        <progress
-          aria-label={t('dashboard.progress')}
-          className="mt-2 h-2 w-full accent-primary"
-          value={info.elapsedMonths}
-          max={lease.termMonths}
-        />
-      </div>
-      <p className="mt-4 text-caption text-ink-muted">
-        {t('dashboard.endsOn', { date: formatIsoDate(info.endDate, locale) })}
-      </p>
+      </dl>
       <Link
-        className="mt-auto inline-flex min-h-target items-center pt-5 text-body text-primary"
+        className="mt-3 inline-flex min-h-target items-center gap-2 text-caption font-semibold text-primary"
         href={`/${locale}/account/leases/${encodeURIComponent(lease.id)}`}
       >
-        {t('dashboard.viewLease')} →
+        {t('dashboard.viewLease')} <span aria-hidden="true">→</span>
       </Link>
     </article>
   );

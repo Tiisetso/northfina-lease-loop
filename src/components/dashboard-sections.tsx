@@ -78,7 +78,7 @@ function LeaseList({ locale, leases, rates, today }: Props) {
       </div>
     );
   return (
-    <ul className="mt-6 grid gap-card grid:grid-cols-2 desktop:grid-cols-3">
+    <ul className="mt-5 grid gap-5 tablet:grid-cols-2">
       {leases.map((lease) => (
         <li key={lease.id}>
           <LeaseCard lease={lease} rates={rates} today={today} locale={locale} />
@@ -123,8 +123,8 @@ function Overview({ locale, leases, rates, today, name }: Props & { name: string
           }
         />
       </div>
-      <div className="mt-12 flex flex-wrap items-baseline justify-between gap-3">
-        <h2 className="font-display text-display-sm font-semibold">{t('dashboard.leases')}</h2>
+      <div className="mt-8 flex flex-wrap items-baseline justify-between gap-3">
+        <h2 className="text-tagline font-semibold">{t('dashboard.leases')}</h2>
         <Link href={`/${locale}/account/leases`} className="text-body text-primary">
           {t('dashboard.viewAll')} →
         </Link>
