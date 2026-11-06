@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { withoutGitEnv } from '../git-env.mjs';
 import { renderTable } from './model.mjs';
 import { paginated } from './repository.mjs';
 
@@ -24,8 +25,11 @@ describe('repository boundary', () => {
   });
   it('validates real git baselines, rollout without an old index, and immutable merged files', () => {
     const dir = mkdtempSync(join(tmpdir(), 'lease-loop-decisions-test-'));
+    // Never inherit GIT_DIR & co. from a hook: they would redirect every command below to
+    // the real repository (see scripts/git-env.mjs).
+    const env = withoutGitEnv();
     const runGit = (...args) =>
-      execFileSync('git', ['-C', dir, ...args], { encoding: 'utf8' }).trim();
+      execFileSync('git', ['-C', dir, ...args], { encoding: 'utf8', env }).trim();
     const adapter = pathToFileURL(resolve('scripts/decisions/repository.mjs')).href;
     try {
       runGit('init', '-q');
@@ -47,7 +51,7 @@ describe('repository boundary', () => {
             '-e',
             `import {validateLocal,sourcesAt} from ${JSON.stringify(adapter)}; ${script}`,
           ],
-          { cwd: dir, encoding: 'utf8', stdio: 'pipe' }
+          { cwd: dir, encoding: 'utf8', stdio: 'pipe', env }
         );
       expect(child(`validateLocal('team/repo','main','${base}'); console.log('valid');`)).toContain(
         'valid'
