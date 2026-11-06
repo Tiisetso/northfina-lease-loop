@@ -1,6 +1,6 @@
-import { expect, it } from 'vitest';
+import { expect, expectTypeOf, it } from 'vitest';
 import costsData from '../../data/refurbishment-costs.json';
-import { refurbishmentCostsSchema } from '@/data/schemas';
+import { refurbishmentCostsSchema, type AssetCondition } from '@/data/schemas';
 import { conditionReport, conditionDamageCost, type ConditionAnswers } from './condition-report';
 const costs = refurbishmentCostsSchema.parse(costsData);
 const answers: ConditionAnswers = {
@@ -16,6 +16,24 @@ const answers: ConditionAnswers = {
   cosmetic: 'same',
   accessories: 'complete',
 };
+it.each(['new', 'like_new'] as const)(
+  'reports an undamaged %s item as like new without a damage charge',
+  (baseline) => {
+    const result = conditionReport(
+      'laptop',
+      baseline,
+      { ...answers, batteryKnown: true, batteryHealth: 95 },
+      costs
+    );
+    expectTypeOf(result.condition).toEqualTypeOf<Exclude<AssetCondition, 'new'>>();
+    expect(result).toMatchObject({
+      condition: 'like_new',
+      issues: [],
+      damageNetCents: 0,
+      inspectionRequired: false,
+    });
+  }
+);
 it('does not charge pre-existing wear or ordinary light use', () => {
   expect(conditionDamageCost('fair', 'fair', costs.laptop)).toBe(0);
   expect(
