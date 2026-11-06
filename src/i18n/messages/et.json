@@ -391,6 +391,7 @@
   "pricing.downGross": "Sissemakse koos käibemaksuga",
   "pricing.financedGross": "Finantseeritav summa koos käibemaksuga: {amount}",
   "pricing.includesVat": "Koos käibemaksuga",
+  "pricing.roundingRule": "Kuidas me ümardame: kuumaksed algavad lepingu alguskuupäevast täiskuudena (osalise kuu tasu pole) ja iga summa ümardatakse üks kord lähima sendini, pool senti üles.",
   "recovery.staff": "Töötaja töölaud",
   "recovery.queue": "Tagastused ja taastamine",
   "recovery.queueIntro": "Vaata kliendi teadet, hinda toodet ja valmista ette järgmine kasutuskord.",

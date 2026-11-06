@@ -139,6 +139,7 @@ export default async function ProductPage({ params }: PageProps<'/[locale]/produ
                 ? ` · ${t('asset.priceListVersion', { version: price.priceListVersion })}`
                 : null}
             </p>
+            <p className="mt-2 text-fine text-ink-muted">{t('pricing.roundingRule')}</p>
           </section>
         </div>
       </div>

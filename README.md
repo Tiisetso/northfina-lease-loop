@@ -33,8 +33,7 @@ follow **[DEMO_TIPS.md](DEMO_TIPS.md)**.
 ## Smart Problems
 
 We chose **4 (smart question flow)**, **1 (lock the price, not the tax)** and **2 (fair
-early exit)**, also solved **3 (second-life matchmaking)**, and went part of the way on 5,
-6 and 7.
+early exit)**, also solved **3 (second-life matchmaking)** and **5 (money that adds up)**, and went part of the way on 6 and 7.
 
 ### 🧠 4. The smart question flow ✅
 
@@ -83,12 +82,23 @@ inputs, in exact rational arithmetic, rounded once:
   A well-kept item returned early costs little; a worn one costs more.
 - The buyout and return pages show the formula and every amount (`PriceFormula`).
 
-### 💶 5. Money that adds up ⚠️ partly
+### 💶 5. Money that adds up ✅
 
-Integer euro cents everywhere, with `BigInt` arithmetic and a documented "round once, half
-up" rule for rent, VAT, buyout and settlements. Due dates keep the start day and clamp to
-the month's end (31 Jan → 28 Feb 2026 → … → 29 Feb 2028), all tested. **Not yet:**
-property-based tests over thousands of random contracts (#47).
+Integer euro cents everywhere, with `BigInt` arithmetic and one documented rounding rule:
+every amount (rent, VAT per invoice, buyout, settlements) is rounded **once**, to the
+nearest cent, half up. The first month is a full month from the start date (no pro-rata),
+and due dates keep the start day, clamped to the month's end (31 Jan → 28 Feb 2026 → … →
+29 Feb 2028). The product page tells customers the rule.
+
+**Property-based tests** (`src/domain/money.property.test.ts`, fast-check) check
+thousands of random contracts on every run: any financed amount, term, and start date
+(including the 29th–31st and leap years). For every one:
+
+- each invoice is whole non-negative cents, with VAT within half a cent of exact;
+- net invoices sum exactly to rent × term, and the quoted total to the invoices;
+- due dates rise one calendar month at a time, clamped to the month end;
+- billing month by month gives exactly the invoices of one catch-up run, never duplicates;
+- paying off early never costs more than paying monthly, and equals the buyout at the end.
 
 ### 🔍 6. Explain my price ⚠️ partly
 

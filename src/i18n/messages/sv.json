@@ -391,6 +391,7 @@
   "pricing.downGross": "Kontantinsats inklusive moms",
   "pricing.financedGross": "Finansierat belopp inklusive moms: {amount}",
   "pricing.includesVat": "Inklusive moms",
+  "pricing.roundingRule": "Så avrundar vi: månadsbetalningarna börjar på avtalets startdag som hela månader (ingen avgift för del av månad), och varje belopp avrundas en gång till närmaste cent, en halv cent uppåt.",
   "recovery.staff": "Personalens arbetsyta",
   "recovery.queue": "Returer och renovering",
   "recovery.queueIntro": "Granska kundens uppgifter, bedöm produkten och förbered nästa liv.",
