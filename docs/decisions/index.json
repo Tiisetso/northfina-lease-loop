@@ -249,6 +249,25 @@
           "decision": "Sign demo personas in through the library's normal sign-up and sign-in with a password derived from the server auth secret, so persona switching creates no hand-made sessions and no shared credential is stored or committed."
         }
       ]
+    },
+    {
+      "source": "docs/decisions/records/co-lease-invoice-split.json",
+      "sha256": "281619594bc27ee12a2ef4e82375863eca7a7497fd86b5f4510083b901d921d6",
+      "prNumber": 67,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/67",
+      "mergedAt": "2026-11-06T10:21:16.000Z",
+      "decisions": [
+        {
+          "id": "D-67-01",
+          "category": "Database",
+          "decision": "Store co-lease shares as dated versions per contract so a later change never rewrites how already-due invoices were divided."
+        },
+        {
+          "id": "D-67-02",
+          "category": "Contract",
+          "decision": "Divide each invoice with a largest-remainder split in whole cents, while the lease holder stays responsible for the contract, because participants in this version are dummy accounts with no checks or charges."
+        }
+      ]
     }
   ]
 }
