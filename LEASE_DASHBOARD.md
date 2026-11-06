@@ -50,3 +50,9 @@ leases. `POST /api/leases/:id/requests` accepts `{ "kind": "return" | "buyout" |
 "exchange" }`, checks the request origin and owner, and creates the request with
 an audit row. `POST /api/leases/demo` is available only in development. Each API
 uses the standard response envelope.
+
+## Co-lease
+
+An active lease can be shared from its detail page. The holder picks people and whole-percent shares that total exactly 100 %; each person's amount comes from dividing the invoice's total in whole cents, with leftover cents going to the largest remainders and ties to the holder first. A change applies to invoices due from that day, and earlier invoices keep their split. Next payment and invoice lists show the holder's share.
+
+This version is a demo. Participants are seeded dummy accounts that are not invited, credit-checked or charged, the holder stays responsible for the whole contract, and returns, buyouts and exchanges are unaffected. The people show initials rather than photos.

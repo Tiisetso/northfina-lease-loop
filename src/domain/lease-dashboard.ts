@@ -1,4 +1,5 @@
 import type { VatRate } from '@/data/schemas';
+import { holderShareCents, type CoLeaseShare } from './co-lease';
 import { dueDateForMonth, forecastInvoices, invoiceAmounts, paymentStatus } from './lease-billing';
 
 type Payment = { amountCents: number; isSimulated: boolean };
@@ -17,6 +18,7 @@ export type LeaseForSummary = {
   downPaymentCents: number;
   isDemo: boolean;
   invoices: Invoice[];
+  coLeaseShares?: readonly CoLeaseShare[];
 };
 
 /** Simulated payments count only on explicitly marked demo leases. */
@@ -87,8 +89,13 @@ export function summarizeLease(lease: LeaseForSummary, rates: readonly VatRate[]
           status: 'forecast' as const,
         }))
     : [];
-  const next =
+  const earliest =
     [...unpaid, ...upcoming].sort((a, b) => a.dueDate.localeCompare(b.dueDate))[0] ?? null;
+  const next = earliest && {
+    ...earliest,
+    /** What the lease holder pays of this amount once a co-lease split applies. */
+    shareCents: holderShareCents(earliest.amountCents, lease.coLeaseShares ?? [], earliest.dueDate),
+  };
   const elapsed =
     today < lease.startDate
       ? 0

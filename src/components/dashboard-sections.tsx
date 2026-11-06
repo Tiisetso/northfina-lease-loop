@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { loadVatRates } from '@/data/load';
 import { paymentStatus } from '@/domain/lease-billing';
+import { holderShareCents, sharesOn } from '@/domain/co-lease';
 import { paidForInvoice, summarizePortfolio } from '@/domain/lease-dashboard';
 import { formatEuro } from '@/domain/money';
 import { formatIsoDate } from '@/i18n/format';
@@ -115,7 +116,7 @@ function Overview({ locale, leases, rates, today, name }: Props & { name: string
         />
         <Metric
           label={t('dashboard.nextPayment')}
-          value={next ? formatEuro(next.amountCents, intlLocale[locale]) : t('dashboard.noNext')}
+          value={next ? formatEuro(next.shareCents, intlLocale[locale]) : t('dashboard.noNext')}
           note={next ? formatIsoDate(next.dueDate, locale) : undefined}
         />
       </div>
@@ -190,6 +191,16 @@ function Payments({
                 <p className="mt-4 text-caption text-ink-muted">
                   {t('dashboard.paidAmount', { amount: formatEuro(paid, intlLocale[locale]) })}
                 </p>
+                {sharesOn(lease.coLeaseShares, invoice.dueDate).length > 1 ? (
+                  <p className="mt-1 text-caption text-ink-muted">
+                    {t('colease.yourShare', {
+                      amount: formatEuro(
+                        holderShareCents(total, lease.coLeaseShares, invoice.dueDate),
+                        intlLocale[locale]
+                      ),
+                    })}
+                  </p>
+                ) : null}
               </li>
             );
           })}
