@@ -95,4 +95,43 @@ describe('lease dashboard totals', () => {
     const changedRates = [{ valid_from: '2026-01-01', valid_to: null, rate_percent: 26 }];
     expect(summarizeLease(lease, changedRates, '2026-02-01').forecastTotalCents).toBe(2515);
   });
+
+  it('includes VAT on the initial down payment using the contract start date', () => {
+    const summary = summarizeLease(
+      {
+        startDate: '2026-12-15',
+        termMonths: 2,
+        monthlyNetCents: 1000,
+        listPriceCents: 100000,
+        downPaymentCents: 10000,
+        invoices: [],
+        isDemo: false,
+      },
+      [
+        { valid_from: '2026-01-01', valid_to: '2026-12-31', rate_percent: 25.5 },
+        { valid_from: '2027-01-01', valid_to: null, rate_percent: 26 },
+      ],
+      '2027-01-01'
+    );
+    expect(summary.downPaymentTotalCents).toBe(12550);
+    expect(summary.forecastTotalCents).toBe(12550 + 1255 + 1260);
+  });
+
+  it('does not invent a gross total when the down payment tax rate is unavailable', () => {
+    const summary = summarizeLease(
+      {
+        startDate: '2026-12-15',
+        termMonths: 2,
+        monthlyNetCents: 1000,
+        listPriceCents: 100000,
+        downPaymentCents: 10000,
+        invoices: [],
+        isDemo: false,
+      },
+      [{ valid_from: '2027-01-01', valid_to: null, rate_percent: 26 }],
+      '2027-01-01'
+    );
+    expect(summary.downPaymentTotalCents).toBeNull();
+    expect(summary.forecastTotalCents).toBeNull();
+  });
 });
