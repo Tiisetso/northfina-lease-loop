@@ -52,8 +52,8 @@ Representative merged work, checked against the commits inside each PR:
 | --- | --------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1   | **Catalogue**   | ✅     | All assets with today's price including VAT, from the dated price lists (`listPriceOn`). Reserved and returned items are labelled; returned items come back with a second-life price.                                                                                                                                                                                                                                              |
 | 2   | **Price**       | ✅     | Product-page sliders for term and down payment update the monthly rent live from the coefficient bands (`monthlyFactorFor`, `quoteAmounts`). Amounts outside the bands are explained, not hidden.                                                                                                                                                                                                                                  |
-| 3   | **Application** | ✅     | The `questions.json` question engine gives yes, no or "a person will check", always with reasons (see Smart Problem 4). Applications that need a person wait in a staff review queue, where staff approve or reject with a note (card 7).                                                                                                                                                                                          |
-| 4   | **Contract**    | ✅     | Signing locks the price list of the signing day and stores the list price, rent, buyout, interest rate and price-list version; later price lists never touch it. A price that differs from the quote is shown and must be accepted (card 2). A company contract waits for its named signatory.                                                                                                                                     |
+| 3   | **Application** | ✅     | The `questions.json` question engine gives yes, no or "a person will check", always with reasons (see Smart Problem 4). Applications that need a person wait in a staff review queue, where staff approve or reject with a note (Scenario 7).                                                                                                                                                                                      |
+| 4   | **Contract**    | ✅     | Signing locks the price list of the signing day and stores the list price, rent, buyout, interest rate and price-list version; later price lists never touch it. A price that differs from the quote is shown and must be accepted (Scenario 2). A company contract waits for its named signatory.                                                                                                                                 |
 | 5   | **Invoices**    | ✅     | Each month's invoice is issued on its due date from the locked contract (`invoicesDue`): net rent, VAT at the rate on that due date stored on the invoice, due dates clamped to month end. Billing runs idempotently when the customer opens their account, with an audit row.                                                                                                                                                     |
 | 6   | **End of term** | ✅     | **Buy** (self-service, priced and paid in one step), **return** (guided condition check, then staff inspection) or **exchange** for another item, which passes the old one on to its next life. Co-leasing splits invoices between participants. When the term ends without a choice, the lease page says so and offers buy (the locked buyout) or return; billing has stopped. A bought item is marked sold and leaves the fleet. |
 | 7   | **Second life** | ✅     | Staff inspect a returned item, sign off the refurbishment, see the new price (original price × age × condition × usage from `residual-curves.json`, minus the work) and put it back in the catalogue, where it can be leased again.                                                                                                                                                                                                |
@@ -81,9 +81,9 @@ early exit)**, also solved **3 (second-life matchmaking)** and **5 (money that a
     **Applications** tab and approve or reject with a note, which the audit trail keeps;
   - an applicant who **can't sign** for their company names who can. The application
     page says it's waiting for that person, not "approved", and the contract stays
-    inactive until they sign by their personal link (card 6, `src/domain/signatory.ts`);
+    inactive until they sign by their personal link (Scenario 6, `src/domain/signatory.ts`);
   - an applicant **under 18** gets a gentle explanation, the date they can apply and a
-    ready-written email to a parent or guardian (card 5).
+    ready-written email to a parent or guardian (Scenario 5).
 
 ### 🧾 1. Lock the price, not the tax ✅
 
@@ -144,7 +144,7 @@ fleet-wide totals.
 
 ### ♻️ 3. Second-life matchmaking ✅
 
-On a returned item's staff page (card 9, `src/domain/second-life.ts`):
+On a returned item's staff page (Scenario 9, `src/domain/second-life.ts`):
 
 - **Refurbish or not** (`refurbishDecision`): yes when the item can be leased again and its
   price after the work (residual curves) is more than the work costs (refurbishment costs).
@@ -154,10 +154,10 @@ On a returned item's staff page (card 9, `src/domain/second-life.ts`):
   term is financeable and their deadline hasn't passed. **Tie-break:** the earliest
   needed-by date wins; on the same date, whoever signed up first wins (list order). Every
   candidate shows the rent and the check they failed.
-- **Card 9 answer:** `wait-13` gets it, 24 months at €68.39 a month excl. VAT. `wait-02` has
+- **Scenario 9 answer:** `wait-13` gets it, 24 months at €68.39 a month excl. VAT. `wait-02` has
   the same budget and deadline but wants 12 months, which makes the rent €104.57, over
   their €90.00. `wait-04` also qualifies but needs it later.
-- **Item passport** (`itemPassport`, bonus, card 10): the product page of a used item lists
+- **Item passport** (`itemPassport`, bonus, Scenario 10): the product page of a used item lists
   every life (dates, term, starting condition, outcome; never who leased it), including
   lives before our records, and the CO₂ avoided: for each life after the first, the
   manufacturing CO₂ minus the refurbishment share, scaled by the condition it started in.
@@ -169,7 +169,7 @@ person leases it from the catalogue).
 
 - **Time travel and personas for demos.** A demo bar sets the date the whole app treats as
   today and signs in as any of the ten data-pack personas, each starting at their
-  scenario card (Aino already has her bike; Mikko, Norvi and Haapala have their item in
+  scenario (Aino already has her bike; Mikko, Norvi and Haapala have their item in
   the cart). **Going back in time undoes**: an earlier date removes that account's demo
   actions after it (a later lease, invoices, payments, a buyout or a signature), and going
   forward sets the scenario up again. **Current user** lets a presenter use the clock on
@@ -180,19 +180,19 @@ person leases it from the catalogue).
 - **Staff workspace:** returns queue, inspection, refurbishment sign-off and relisting,
   an overview with 24 months of simulated history (revenue and active leases), and an
   **audit trail** tab showing who changed what and when (RULES §7).
-- **Application review** (card 7): applications that need a person (large amount, PEP)
+- **Application review** (Scenario 7): applications that need a person (large amount, PEP)
   wait in a staff queue with their reasons; staff approve or reject with a note, and the
   customer then continues to signing.
 
-## Scenario cards
+## scenarios
 
-| Card | Scenario         | Status | Card              | Status |
-| ---- | ---------------- | ------ | ----------------- | ------ |
-| 1    | Happy path       | ✅     | 6 · Who can sign? | ✅     |
-| 2    | The price lock   | ✅     | 7 · Big ticket    | ✅     |
-| 3    | Tax is not price | ✅     | 8 · Early exit    | ✅     |
-| 4    | Calendar traps   | ✅     | 9 · Second life   | ✅     |
-| 5    | Too young        | ✅     | 10 · Third life   | ✅     |
+| Scenario | Scenario         | Status | Scenario          | Status |
+| -------- | ---------------- | ------ | ----------------- | ------ |
+| 1        | Happy path       | ✅     | 6 · Who can sign? | ✅     |
+| 2        | The price lock   | ✅     | 7 · Big ticket    | ✅     |
+| 3        | Tax is not price | ✅     | 8 · Early exit    | ✅     |
+| 4        | Calendar traps   | ✅     | 9 · Second life   | ✅     |
+| 5        | Too young        | ✅     | 10 · Third life   | ✅     |
 
 Step-by-step instructions, what to point out and the exact gaps: [DEMO_TIPS.md](DEMO_TIPS.md).
 
@@ -204,7 +204,7 @@ What we know doesn't work yet, so nothing in the demo surprises you:
 - **Smart Problem 7:** CO₂ is shown per item and per item passport, not fleet-wide.
 - **Second life:** the waiting-list winner is chosen and explained, but staff still
   publish the item to the catalogue rather than assigning it to that person directly.
-- **Card 6:** the signatory signs the contract through a personal, secret-protected link;
+- **Scenario 6:** the signatory signs the contract through a personal, secret-protected link;
   they don't log in to an account to approve the application itself.
 - Rewinding the demo clock doesn't undo a **completed return**: its inspection already
   changed the item.
