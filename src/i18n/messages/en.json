@@ -834,5 +834,7 @@
   "secondLife.failed.budget": "Rent over their budget",
   "secondLife.failed.term": "Term not offered",
   "secondLife.failed.deadline": "Their deadline has passed",
-  "secondLife.rule": "How we choose: someone qualifies if the condition, their deadline and the rent at their preferred term (excl. VAT) all fit. The earliest needed-by date wins; on the same date, whoever signed up first wins."
+  "secondLife.rule": "How we choose: someone qualifies if the condition, their deadline and the rent at their preferred term (excl. VAT) all fit. The earliest needed-by date wins; on the same date, whoever signed up first wins.",
+  "vatChange.note": "VAT goes from {from} % to {to} %, so the monthly payment changes by {difference}. Your net rent stays {net}: only the tax changed.",
+  "vatChange.fictional": "The {to} % rate is fictional, made up for this hackathon."
 }

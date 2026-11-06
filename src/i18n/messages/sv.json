@@ -834,5 +834,7 @@
   "secondLife.failed.budget": "Hyran över budget",
   "secondLife.failed.term": "Löptiden erbjuds inte",
   "secondLife.failed.deadline": "Deras datum har passerat",
-  "secondLife.rule": "Så väljer vi: man kvalificerar sig om skicket, datumet och hyran för den önskade löptiden (exkl. moms) passar. Tidigaste datum vinner; vid samma datum vinner den som anmälde sig först."
+  "secondLife.rule": "Så väljer vi: man kvalificerar sig om skicket, datumet och hyran för den önskade löptiden (exkl. moms) passar. Tidigaste datum vinner; vid samma datum vinner den som anmälde sig först.",
+  "vatChange.note": "Momsen ändras från {from} % till {to} %, så månadsbetalningen ändras med {difference}. Din nettohyra är fortfarande {net}: bara skatten ändrades.",
+  "vatChange.fictional": "Momssatsen {to} % är fiktiv, påhittad för detta hackathon."
 }
