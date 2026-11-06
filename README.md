@@ -148,7 +148,7 @@ tested in `src/domain/`, use the shared API envelope, put every data change thro
 and use `make migrate` for database changes; never hand-write migration SQL.
 
 Run `make check` before requesting review. It checks formatting, lint, types, file
-size, no-AI rules, decision records, test coverage and the production build. Coverage
+size, no-AI rules, secret scanning, decision records, test coverage and the production build. Coverage
 must reach 60% for lines, statements, functions and branches. GitHub CI additionally
 validates commit messages. Use conventional commits such as
 `feat(pricing): explain monthly rent`; keep Git hooks enabled.
@@ -156,7 +156,9 @@ validates commit messages. Use conventional commits such as
 Follow [CONTRIBUTING.md](CONTRIBUTING.md) for the commit and PR workflow. Start each
 team PR with a plain-language summary of what changed and why it matters: 1–2 short
 sentences, at most 50 words. Use the [team PR template](.github/pull_request_template.md)
-in order and report actual checks and relevant visual evidence. Keep the PR title
+in order; PR title, section structure and summary length are checked automatically.
+Use CI for automated results and include useful local observations or visual evidence.
+No manual checklist or checkbox signoff is required for team PRs. Keep the PR title
 and any squash commit title conventional so the resulting history passes CI.
 Meaningful choices follow the
 [decision-record guide](docs/decisions/README.md); accepted choices appear in the
