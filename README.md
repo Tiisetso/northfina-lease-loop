@@ -45,15 +45,15 @@ Representative merged work, checked against the commits inside each PR:
 
 ## The Spine
 
-| #   | Step            | Status | What we built                                                                                                                                                                                                                                                                                  |
-| --- | --------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | **Catalogue**   | ✅     | All assets with today's price including VAT, from the dated price lists (`listPriceOn`). Reserved and returned items are labelled; returned items come back with a second-life price.                                                                                                          |
-| 2   | **Price**       | ✅     | Product-page sliders for term and down payment update the monthly rent live from the coefficient bands (`monthlyFactorFor`, `quoteAmounts`). Amounts outside the bands are explained, not hidden.                                                                                              |
-| 3   | **Application** | ✅     | The `questions.json` question engine gives yes, no or "a person will check", always with reasons (see Smart Problem 4).                                                                                                                                                                        |
-| 4   | **Contract**    | ✅     | Signing locks the price list of the signing day and stores the list price, rent, buyout, interest rate and price-list version; later price lists never touch it. A price that differs from the quote is shown and must be accepted (card 2). A company contract waits for its named signatory. |
-| 5   | **Invoices**    | ✅     | Each month's invoice is issued on its due date from the locked contract (`invoicesDue`): net rent, VAT at the rate on that due date stored on the invoice, due dates clamped to month end. Billing runs idempotently when the customer opens their account, with an audit row.                 |
-| 6   | **End of term** | ✅     | **Buy** (self-service, priced and paid in one step), **return** (guided condition check, then staff inspection) or **exchange** for another item, which passes the old one on to its next life. Co-leasing splits invoices between participants.                                               |
-| 7   | **Second life** | ✅     | Staff inspect a returned item, sign off the refurbishment, see the new price (original price × age × condition × usage from `residual-curves.json`, minus the work) and put it back in the catalogue, where it can be leased again.                                                            |
+| #   | Step            | Status | What we built                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| --- | --------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Catalogue**   | ✅     | All assets with today's price including VAT, from the dated price lists (`listPriceOn`). Reserved and returned items are labelled; returned items come back with a second-life price.                                                                                                                                                                                                                                              |
+| 2   | **Price**       | ✅     | Product-page sliders for term and down payment update the monthly rent live from the coefficient bands (`monthlyFactorFor`, `quoteAmounts`). Amounts outside the bands are explained, not hidden.                                                                                                                                                                                                                                  |
+| 3   | **Application** | ✅     | The `questions.json` question engine gives yes, no or "a person will check", always with reasons (see Smart Problem 4).                                                                                                                                                                                                                                                                                                            |
+| 4   | **Contract**    | ✅     | Signing locks the price list of the signing day and stores the list price, rent, buyout, interest rate and price-list version; later price lists never touch it. A price that differs from the quote is shown and must be accepted (card 2). A company contract waits for its named signatory.                                                                                                                                     |
+| 5   | **Invoices**    | ✅     | Each month's invoice is issued on its due date from the locked contract (`invoicesDue`): net rent, VAT at the rate on that due date stored on the invoice, due dates clamped to month end. Billing runs idempotently when the customer opens their account, with an audit row.                                                                                                                                                     |
+| 6   | **End of term** | ✅     | **Buy** (self-service, priced and paid in one step), **return** (guided condition check, then staff inspection) or **exchange** for another item, which passes the old one on to its next life. Co-leasing splits invoices between participants. When the term ends without a choice, the lease page says so and offers buy (the locked buyout) or return; billing has stopped. A bought item is marked sold and leaves the fleet. |
+| 7   | **Second life** | ✅     | Staff inspect a returned item, sign off the refurbishment, see the new price (original price × age × condition × usage from `residual-curves.json`, minus the work) and put it back in the catalogue, where it can be leased again.                                                                                                                                                                                                |
 
 ## Smart Problems
 
@@ -165,7 +165,11 @@ person leases it from the catalogue).
 - **Time travel and personas for demos.** A demo bar sets the date the whole app treats as
   today and signs in as any of the ten data-pack personas, each starting at their
   scenario card (Aino already has her bike; Mikko, Norvi and Haapala have their item in
-  the cart). Both are audited and off in production unless `LEASE_LOOP_DEMO=true`.
+  the cart). **Going back in time undoes**: an earlier date removes that account's demo
+  actions after it (a later lease, invoices, payments, a buyout or a signature), and going
+  forward sets the scenario up again. **Current user** lets a presenter use the clock on
+  their own account and return to it after acting as personas. All of it is audited and
+  off in production unless `LEASE_LOOP_DEMO=true`.
 - **Signing by link** for a company's authorised signatory, with no account needed.
 - **Co-lease:** share a lease and split its invoices between participants.
 - **Staff workspace:** returns queue, inspection, refurbishment sign-off and relisting,
@@ -183,11 +187,25 @@ person leases it from the catalogue).
 
 Step-by-step instructions, what to point out and the exact gaps: [DEMO_TIPS.md](DEMO_TIPS.md).
 
+## Known limitations
+
+What we know doesn't work yet, so nothing in the demo surprises you:
+
+- **Applications sent to manual review** (card 7's big ticket, PEP) wait for a person, but
+  there is no staff screen to approve them yet (#19). The outcome and reasons are shown.
+- **Smart Problem 6:** no side-by-side comparison of terms (#56).
+- **Smart Problem 7:** CO₂ is shown per item and per item passport, not fleet-wide.
+- **Second life:** the waiting-list winner is chosen and explained, but staff still
+  publish the item to the catalogue rather than assigning it to that person directly.
+- Rewinding the demo clock doesn't undo a **completed return**: its inspection already
+  changed the item.
+
 ## Engineering
 
 - **Pure, tested domain logic** in `src/domain/`: no I/O, no clock; dates are arguments.
-  Vitest tests sit next to every module (492 tests at the last run; coverage gate 60 %,
-  currently above 90 % for lines).
+  Vitest tests sit next to every module (576 tests at the last run; coverage gate 60 %,
+  currently 95 % of lines), plus **property-based tests** (fast-check) that check the money
+  rules over thousands of random contracts on every run.
 - **Money** in integer cents with one deliberate rounding step per amount.
 - **One API envelope**: `ok()` / `fail()` / `handleRoute()`; no raw errors reach the browser.
 - **Audit trail**: every data change goes through `withAudit()` in the same transaction,
@@ -227,7 +245,9 @@ controls. **Demo date** makes the whole app treat a date from 2026-01-01 to 2031
 today. **Act as** signs in as one of the ten personas in `data/customers.json` or as
 _Staff (demo)_: an account is created on first use, its password is derived from
 `BETTER_AUTH_SECRET` (never stored or shared), and the application form starts with the
-answers the persona's record can give. `LEASE_LOOP_DEMO=false` turns demo mode off;
+answers the persona's record can give. Choosing an **earlier date undoes** the signed-in
+account's demo actions after it, and **Current user** returns a presenter to their own
+account. `LEASE_LOOP_DEMO=false` turns demo mode off;
 `LEASE_LOOP_DEMO=true` allows it in a production build.
 
 ### Local configuration
