@@ -1,4 +1,24 @@
 {
   "schemaVersion": 1,
-  "records": []
+  "records": [
+    {
+      "source": "docs/decisions/records/reviewed-decision-log.json",
+      "sha256": "3510ea4f8cc62cafa6947f6992ade30623d4856ceb475f4156aa2b8699d75fbf",
+      "prNumber": 26,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/26",
+      "mergedAt": "2026-11-06T01:10:30.000Z",
+      "decisions": [
+        {
+          "id": "D-26-01",
+          "category": "Process",
+          "decision": "Review one structured decision record alongside each implementation so the accepted wording is preserved without parallel PRs editing a shared table."
+        },
+        {
+          "id": "D-26-02",
+          "category": "Infrastructure",
+          "decision": "Publish generated decision history through one rolling documentation PR because main requires PRs and prohibits direct bot writes."
+        }
+      ]
+    }
+  ]
 }
