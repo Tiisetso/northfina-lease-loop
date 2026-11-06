@@ -22,7 +22,7 @@
     "test:coverage": "vitest run --coverage",
     "check:file-size": "node scripts/check-file-size.mjs",
     "check:no-ai": "node scripts/check-no-ai.mjs",
-    "check:all": "npm run format:check && npm run lint && npm run typecheck && npm run check:file-size && npm run check:no-ai && npm run test:coverage && npm run build",
+    "check:all": "npm run format:check && npm run lint && npm run typecheck && npm run check:file-size && npm run check:no-ai && npm run decisions:validate && npm run test:coverage && npm run build",
     "auth:setup": "node scripts/setup-auth.mjs",
     "db:setup": "node scripts/ensure-env.mjs && npm run auth:setup && prisma generate && prisma migrate deploy && prisma db seed",
     "db:seed": "prisma db seed",
@@ -30,7 +30,12 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",
-    "prepare": "node .husky/install.mjs"
+    "prepare": "node .husky/install.mjs",
+    "decisions:validate": "node scripts/decisions/cli.mjs validate",
+    "decisions:preview": "node scripts/decisions/cli.mjs preview",
+    "decisions:reconcile": "node scripts/decisions/cli.mjs reconcile",
+    "decisions:reconcile:check": "node scripts/decisions/cli.mjs reconcile:check",
+    "decisions:test": "vitest run --config scripts/decisions/vitest.config.mjs"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.10.1",
