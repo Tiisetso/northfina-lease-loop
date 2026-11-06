@@ -32,7 +32,7 @@ export default async function Page({ params }: PageProps<'/[locale]/applications
   // to ask a parent or guardian, instead of a bare rule.
   const underAge = reasons.includes('under_age');
   const answers = z
-    .object({ q_birth_date: z.string().optional() })
+    .object({ q_birth_date: z.string().optional(), q_signatory_email: z.string().optional() })
     .catch({})
     .parse(JSON.parse(application.answersJson));
   const adultFrom = answers.q_birth_date ? dateOfAge(answers.q_birth_date, 18) : null;
@@ -64,7 +64,13 @@ export default async function Page({ params }: PageProps<'/[locale]/applications
       {otherReasons.length ? (
         <ul className="mt-6 list-disc space-y-3 pl-5">
           {otherReasons.map((reason) => (
-            <li key={reason}>{t(`application.reason.${reason}` as MessageKey)}</li>
+            <li key={reason}>
+              {reason === 'signatory_pending'
+                ? t('application.reason.signatory_pending', {
+                    email: answers.q_signatory_email ?? '',
+                  })
+                : t(`application.reason.${reason}` as MessageKey)}
+            </li>
           ))}
         </ul>
       ) : null}

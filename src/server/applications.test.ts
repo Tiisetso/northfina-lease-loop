@@ -172,12 +172,24 @@ describe('application API and checkout approval boundary', () => {
     expect((await checkout(cookie, data.id, 24)).status).toBe(409);
     expect((await checkout(cookie, data.id)).status).toBe(201);
   });
-  it('persists rejected/manual-review outcomes and cannot bypass them at checkout', async () => {
+  it('persists a rejected outcome and cannot bypass it at checkout', async () => {
     const { cookie } = await customer();
-    for (const [input, status] of [
-      [{ ...answers, q_birth_date: '2009-11-06' }, 'rejected'],
-      [
-        {
+    const result = await APPLY(
+      request(cookie, { items: selection, answers: { ...answers, q_birth_date: '2009-11-06' } }),
+      undefined
+    );
+    expect(result.status).toBe(201);
+    const { data } = await result.json();
+    expect(data.status).toBe('rejected');
+    expect((await checkout(cookie, data.id)).status).toBe(403);
+    expect(await fixture.db.contract.count()).toBe(0);
+  });
+  it('approves a company applicant who cannot sign, pending the named signatory', async () => {
+    const { cookie } = await customer();
+    const result = await APPLY(
+      request(cookie, {
+        items: selection,
+        answers: {
           q_customer_type: 'company',
           q_company_name: 'Company',
           q_business_id: '1234567-1',
@@ -187,16 +199,13 @@ describe('application API and checkout approval boundary', () => {
           q_vat_registered: 'yes',
           q_usage_purpose: 'delivery',
         },
-        'manual_review',
-      ],
-    ] as const) {
-      const result = await APPLY(request(cookie, { items: selection, answers: input }), undefined);
-      expect(result.status).toBe(201);
-      const { data } = await result.json();
-      expect(data.status).toBe(status);
-      expect((await checkout(cookie, data.id)).status).toBe(403);
-    }
-    expect(await fixture.db.contract.count()).toBe(0);
+      }),
+      undefined
+    );
+    const { data } = await result.json();
+    expect(data.status).toBe('approved');
+    const stored = await fixture.db.leaseApplication.findUniqueOrThrow({ where: { id: data.id } });
+    expect(JSON.parse(stored.reasonsJson)).toEqual(['signatory_pending']);
   });
   it('rejects unavailable assets and expired approvals', async () => {
     const { cookie } = await customer();

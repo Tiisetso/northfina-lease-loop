@@ -154,14 +154,24 @@ describe('assessApplication', () => {
       assessApplication(bank, { ...context, monthlyTotalCents: 30001 }, answers)
     ).toMatchObject({ status: 'rejected', reasons: ['affordability'] });
   });
-  it('routes PEPs, unauthorized signatories and the big-ticket farm scenario to people', () => {
-    expect(
-      assessApplication(bank, context, {
-        ...company,
-        q_can_sign: 'no',
-        q_signatory_email: 'sign@example.com',
-      }).reasons
-    ).toContain('signatory');
+  it('approves an applicant who cannot sign, noting that the named signatory must sign', () => {
+    const answers = { ...company, q_can_sign: 'no', q_signatory_email: 'sign@example.com' };
+    expect(assessApplication(bank, context, answers)).toMatchObject({
+      status: 'approved',
+      reasons: ['signatory_pending'],
+    });
+    // Without the signatory's e-mail the application is incomplete, never approved.
+    const { q_signatory_email: _email, ...missing } = answers;
+    expect(assessApplication(bank, context, missing)).toMatchObject({
+      status: 'incomplete',
+      missing: ['q_signatory_email'],
+    });
+    // A review reason still wins: the note is only shown on approvals.
+    expect(assessApplication(bank, { ...context, financedCents: 5000000 }, answers).status).toBe(
+      'manual_review'
+    );
+  });
+  it('routes PEPs and the big-ticket farm scenario to people', () => {
     expect(
       assessApplication(
         bank,

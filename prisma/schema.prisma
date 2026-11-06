@@ -102,6 +102,10 @@ model Contract {
   startUsageValue       Int?
   // The date the lease stopped running, for month-by-month reporting. Null while active.
   endedOn               String?
+  // A company applicant who can't sign names the person who can. The contract waits for them
+  // (status "awaiting_signature") and becomes active on the day they sign.
+  signatoryEmail        String?
+  signedOn              String?
   createdAt             DateTime             @default(now())
   invoices              Invoice[]
   requests              LeaseRequest[]
