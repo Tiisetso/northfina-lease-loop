@@ -268,6 +268,25 @@
           "decision": "Divide each invoice with a largest-remainder split in whole cents, while the lease holder stays responsible for the contract, because participants in this version are dummy accounts with no checks or charges."
         }
       ]
+    },
+    {
+      "source": "docs/decisions/records/signatory-waiting-contract.json",
+      "sha256": "37be4745dbfd4eb0f850ec08aa3ab1db56b9ec5f06b496142b7ed829c2aee246",
+      "prNumber": 79,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/79",
+      "mergedAt": "2026-11-06T11:19:19.000Z",
+      "decisions": [
+        {
+          "id": "D-79-01",
+          "category": "Contract",
+          "decision": "Prepare a company contract whose applicant cannot sign with its price locked and item reserved but status awaiting_signature and no billing, and activate it with billing from the signing day when the named signatory signs, so card 6 explains what happens next instead of blocking in manual review."
+        },
+        {
+          "id": "D-79-02",
+          "category": "Auth",
+          "decision": "Let the account-less signatory sign through a link whose token is an HMAC of the contract ID with the server auth secret, compared in constant time, so links can't be guessed or reused across contracts and no extra secret is stored."
+        }
+      ]
     }
   ]
 }
