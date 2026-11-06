@@ -153,8 +153,12 @@ must reach 60% for lines, statements, functions and branches. GitHub CI addition
 validates commit messages. Use conventional commits such as
 `feat(pricing): explain monthly rent`; keep Git hooks enabled.
 
-Use the [team PR template](.github/pull_request_template.md) and report actual checks
-and relevant visual evidence. Meaningful choices follow the
+Follow [CONTRIBUTING.md](CONTRIBUTING.md) for the commit and PR workflow. Start each
+team PR with a plain-language summary of what changed and why it matters: 1–2 short
+sentences, at most 50 words. Use the [team PR template](.github/pull_request_template.md)
+in order and report actual checks and relevant visual evidence. Keep the PR title
+and any squash commit title conventional so the resulting history passes CI.
+Meaningful choices follow the
 [decision-record guide](docs/decisions/README.md); accepted choices appear in the
 [generated decision log](docs/DECISIONS.md).
 
