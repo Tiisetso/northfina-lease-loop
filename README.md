@@ -14,9 +14,11 @@ follow **[DEMO_TIPS.md](DEMO_TIPS.md)**.
 
 ## Team
 
-| Name | GitHub | Main focus |
-| ---- | ------ | ---------- |
-| TODO | TODO   | TODO       |
+| Name               | GitHub                                                | Main focus |
+| ------------------ | ----------------------------------------------------- | ---------- |
+| Tiisetso Murray    | [Tiisetso](https://github.com/Tiisetso)               | —          |
+| Crisitian Dohanici | [cristichitz](https://github.com/cristichitz)         | —          |
+| Daniel Kwon        | [OneEyedWilly293](https://github.com/OneEyedWilly293) | —          |
 
 ## The Spine
 
