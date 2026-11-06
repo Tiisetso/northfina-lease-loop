@@ -6,7 +6,7 @@
   "nav.skipToContent": "Siirry sisältöön",
   "nav.language": "Kieli",
   "catalogue.title": "Haluamaasi teknologiaa. Ilman sitoumuksia.",
-  "catalogue.intro": "Vuokraa suosikkilaitteesi. Huolettomasti.",
+  "catalogue.intro": "Vuokraa suosikkisi. Huolettomasti.",
   "catalogue.pricesOn": "Hinnat sisältäen ALV:n {date}",
   "catalogue.photosIllustrative": "Tuotekuvat ovat havainnekuvia.",
   "catalogue.photoCredits": "Kuvien tiedot",
@@ -918,5 +918,7 @@
   "review.error": "Se ei onnistunut. Päivitä sivu ja yritä uudelleen.",
   "review.empty": "Yksikään hakemus ei odota tarkistusta.",
   "application.status.awaiting_signatory": "Odottaa, että {email} allekirjoittaa",
-  "application.outcome.awaiting_signatory": "Hakemuksesi täyttää vaatimuksemme, mutta et voi allekirjoittaa yrityksen puolesta. Mitään ei hyväksytä yritykselle ennen kuin {email} allekirjoittaa. Kun jatkat, lukitsemme hinnan, varaamme tuotteen ja saat henkilökohtaisen allekirjoituslinkin lähetettäväksi hänelle. Sopimus tulee voimaan, eikä mitään veloiteta, vasta kun hän allekirjoittaa."
+  "application.outcome.awaiting_signatory": "Hakemuksesi täyttää vaatimuksemme, mutta et voi allekirjoittaa yrityksen puolesta. Mitään ei hyväksytä yritykselle ennen kuin {email} allekirjoittaa. Kun jatkat, lukitsemme hinnan, varaamme tuotteen ja saat henkilökohtaisen allekirjoituslinkin lähetettäväksi hänelle. Sopimus tulee voimaan, eikä mitään veloiteta, vasta kun hän allekirjoittaa.",
+  "catalogue.pauseMotion": "Pysäytä animaatio",
+  "catalogue.playMotion": "Toista animaatio"
 }

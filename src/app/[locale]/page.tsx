@@ -2,11 +2,10 @@
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import Link from 'next/link';
-import Image from 'next/image';
+import { InfinityHero } from '@/components/infinity-hero';
 import { AssetCard } from '@/components/asset-card';
 import { UiIcon } from '@/components/ui-icon';
 import { loadPriceLists, loadVatRates } from '@/data/load';
-import { photoForAsset } from '@/data/product-photos';
 import { assetCategorySchema } from '@/data/schemas';
 import { assetOfferPrice } from '@/domain/asset-offer';
 import { formatIsoDate } from '@/i18n/format';
@@ -49,50 +48,22 @@ export default async function CataloguePage({ params }: PageProps<'/[locale]'>) 
 
   return (
     <div className="mx-auto w-full max-w-[1200px] px-4 py-10 sm:px-6 tablet:py-14">
-      <header className="grid items-center gap-10 rounded-lg bg-parchment px-6 py-8 sm:px-10 sm:py-12 tablet:grid-cols-[1.1fr_1fr] tablet:gap-12">
-        <div>
-          <p className="text-caption font-semibold tracking-wide text-primary">{t('brand.name')}</p>
-          <h1 className="mt-5 max-w-[15ch] text-balance font-display text-display-lg font-semibold tracking-tight tablet:text-hero">
-            <span className="block">{t('catalogue.heroLead')}</span>
-            <span className="mt-1 block text-primary">{t('catalogue.heroAccent')}</span>
-          </h1>
-          <p className="mt-6 max-w-[30ch] text-body text-ink-muted">{t('catalogue.intro')}</p>
-          <Link
-            href="#catalogue"
-            className="pressable mt-7 inline-flex min-h-target items-center gap-4 rounded-pill bg-primary px-6 py-3 text-caption font-semibold text-white"
-          >
-            {t('dashboard.browse')}
-            <UiIcon name="arrow" className="size-4" />
-          </Link>
-        </div>
-        <div className="grid grid-cols-3 gap-3 tablet:grid-cols-2">
-          {groups.map((group, index) => {
-            const asset = group.assets.find((item) => photoForAsset(item.id));
-            const photo = asset && photoForAsset(asset.id);
-            if (!photo) return null;
-            return (
-              <Link
-                key={group.category}
-                href={`#category-${group.category}`}
-                aria-label={t(`category.${group.category}`)}
-                className={`group relative overflow-hidden rounded-lg bg-canvas ${index === 0 ? 'aspect-square tablet:row-span-2 tablet:aspect-auto' : 'aspect-square'}`}
-              >
-                <Image
-                  src={photo.src}
-                  alt=""
-                  fill
-                  loading="eager"
-                  sizes="(min-width: 834px) 220px, 30vw"
-                  className="object-cover motion-safe:transition-transform motion-safe:duration-300 motion-safe:group-hover:scale-105"
-                />
-                <span className="absolute inset-x-2 bottom-2 rounded-sm bg-canvas/95 px-2 py-2 text-center text-fine font-semibold tablet:inset-x-3 tablet:bottom-3 tablet:text-caption">
-                  {t(`category.${group.category}`)}
-                </span>
-              </Link>
-            );
-          })}
-        </div>
-      </header>
+      <InfinityHero pauseLabel={t('catalogue.pauseMotion')} playLabel={t('catalogue.playMotion')}>
+        <h1 className="text-balance font-display text-[clamp(2.5rem,5.5vw,4.75rem)] leading-[1.06] font-semibold tracking-[-0.045em]">
+          <span className="block">{t('catalogue.heroLead')}</span>
+          <span className="mt-2 block text-primary">{t('catalogue.heroAccent')}</span>
+        </h1>
+        <p className="mx-auto mt-7 max-w-[36ch] text-body text-ink-muted sm:text-[20px]">
+          {t('catalogue.intro')}
+        </p>
+        <Link
+          href="#catalogue"
+          className="pressable mt-8 inline-flex min-h-target items-center gap-4 rounded-pill bg-primary px-7 py-4 text-caption font-semibold text-white"
+        >
+          {t('dashboard.browse')}
+          <UiIcon name="arrow" className="size-4" />
+        </Link>
+      </InfinityHero>
       <div
         id="catalogue"
         className="mt-12 flex scroll-mt-4 flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-divider pb-5"
