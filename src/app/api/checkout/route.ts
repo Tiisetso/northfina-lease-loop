@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { applicationCart } from '@/domain/application-cart';
+import { requireApplicationApproval } from '@/server/applications';
 import { checkoutQuote } from '@/domain/checkout-quote';
 import { ApiError, handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { authSettings } from '@/server/auth-config';
@@ -11,6 +13,7 @@ import { todayIso } from '@/server/today';
 
 const schema = z.strictObject({
   token: z.uuid(),
+  applicationId: z.string().min(1).max(80),
   date: z.iso.date(),
   items: z
     .array(
@@ -111,6 +114,15 @@ export const POST = handleRoute(async (request) => {
       details: { delivery: input.delivery, payment: input.payment, count: quotes.length },
     },
     async (tx) => {
+      const application = applicationCart(data, input.items);
+      if (!application) throw new ApiError(409, 'QUOTE_CHANGED', 'Please review your cart.');
+      await requireApplicationApproval(
+        tx,
+        identity.customerId,
+        input.applicationId,
+        application.items,
+        today
+      );
       const existing = await tx.contract.findMany({
         where: { id: { in: ids } },
         select: { id: true, customerId: true },
