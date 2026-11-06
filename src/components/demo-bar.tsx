@@ -143,7 +143,13 @@ export function DemoBar({
               </option>
             ))}
           </select>
-          <button type="submit" disabled={busy || !persona} className={button}>
+          <button
+            type="submit"
+            disabled={
+              busy || !persona || (persona === 'current-user' && persona === currentPersonaId)
+            }
+            className={button}
+          >
             {labels.switchPersona}
           </button>
         </form>

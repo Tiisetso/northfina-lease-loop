@@ -769,6 +769,7 @@
   "demo.persona": "Tegutse kui",
   "demo.choosePersona": "Vali isik",
   "demo.switch": "Vaheta",
+  "demo.currentUser": "Praegune kasutaja · {name}",
   "demo.staff": "Töötaja (demo)",
   "demo.error": "See ei õnnestunud. Proovi uuesti.",
   "demo.rateLimited": "Liiga palju vahetusi. Oota minut ja proovi uuesti.",
