@@ -33,7 +33,8 @@ follow **[DEMO_TIPS.md](DEMO_TIPS.md)**.
 ## Smart Problems
 
 We chose **4 (smart question flow)**, **1 (lock the price, not the tax)** and **2 (fair
-early exit)**, and went part of the way on 5, 6 and 7.
+early exit)**, also solved **3 (second-life matchmaking)**, and went part of the way on 5,
+6 and 7.
 
 ### 🧠 4. The smart question flow ✅
 
@@ -98,10 +99,28 @@ Each reused item's lease page shows the CO₂ avoided by not making a new one, r
 worse condition (`reuseEstimate`, fictional factors from `co2-factors.json`). **Not yet:**
 fleet-wide totals.
 
-### ♻️ 3. Second-life matchmaking ❌ not yet
+### ♻️ 3. Second-life matchmaking ✅
 
-Refurbish-and-re-price works (Spine 7). Choosing who on the waiting list gets the item and
-the item passport are #48.
+On a returned item's staff page (card 9, `src/domain/second-life.ts`):
+
+- **Refurbish or not** (`refurbishDecision`): yes when the item can be leased again and its
+  price after the work (residual curves) is more than the work costs (refurbishment costs).
+  `ebike-007`: worth €1,866.60 after €670.00 of work, so refurbish.
+- **Who gets it** (`matchWaitingList`): someone qualifies when the item meets their minimum
+  condition (after the work), the net rent at **their preferred term** fits their budget, the
+  term is financeable and their deadline hasn't passed. **Tie-break:** the earliest
+  needed-by date wins; on the same date, whoever signed up first wins (list order). Every
+  candidate shows the rent and the check they failed.
+- **Card 9 answer:** `wait-13` gets it, 24 months at €68.39 a month excl. VAT. `wait-02` has
+  the same budget and deadline but wants 12 months, which makes the rent €104.57, over
+  their €90.00. `wait-04` also qualifies but needs it later.
+- **Item passport** (`itemPassport`, bonus, card 10): the product page of a used item lists
+  every life (dates, term, starting condition, outcome; never who leased it), including
+  lives before our records, and the CO₂ avoided: for each life after the first, the
+  manufacturing CO₂ minus the refurbishment share, scaled by the condition it started in.
+
+**Not yet:** assigning the item to the winner from the panel (staff publish it and the
+person leases it from the catalogue).
 
 ## Wildcards
 
@@ -121,8 +140,8 @@ the item passport are #48.
 | 1    | Happy path       | ✅     | 6 · Who can sign? | ✅     |
 | 2    | The price lock   | ✅     | 7 · Big ticket    | ✅     |
 | 3    | Tax is not price | ✅     | 8 · Early exit    | ✅     |
-| 4    | Calendar traps   | ✅     | 9 · Second life   | ⚠️ #48 |
-| 5    | Too young        | ✅     | 10 · Third life   | ⚠️ #48 |
+| 4    | Calendar traps   | ✅     | 9 · Second life   | ✅     |
+| 5    | Too young        | ✅     | 10 · Third life   | ✅     |
 
 Step-by-step instructions, what to point out and the exact gaps: [DEMO_TIPS.md](DEMO_TIPS.md).
 
