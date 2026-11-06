@@ -5,14 +5,14 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { AssetCard } from '@/components/asset-card';
 import { UiIcon } from '@/components/ui-icon';
-import { loadPriceLists } from '@/data/load';
+import { loadPriceLists, loadVatRates } from '@/data/load';
 import { photoForAsset } from '@/data/product-photos';
 import { assetCategorySchema } from '@/data/schemas';
-import { listPriceOn } from '@/domain/price-list';
+import { assetOfferPrice } from '@/domain/asset-offer';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
-import { listAssets } from '@/server/assets';
+import { toAsset } from '@/server/assets';
 import { db } from '@/server/db';
 import { todayIso } from '@/server/today';
 
@@ -25,7 +25,20 @@ export default async function CataloguePage({ params }: PageProps<'/[locale]'>) 
 
   const t = getT(locale);
   const today = todayIso(); // the page decides what "today" is; domain code never reads the clock
-  const [assets, priceLists] = await Promise.all([listAssets(db), loadPriceLists()]);
+  const [rows, priceLists, vat] = await Promise.all([
+    db.asset.findMany({
+      where: { status: 'available', contracts: { none: { status: 'active' } } },
+      orderBy: { id: 'asc' },
+    }),
+    loadPriceLists(),
+    loadVatRates(),
+  ]);
+  const assets = rows.map(toAsset);
+  const rowById = new Map(rows.map((row) => [row.id, row]));
+  const rate = vat.rates.find(
+    (rate) => rate.valid_from <= today && (rate.valid_to === null || rate.valid_to >= today)
+  );
+  const vatBasisPoints = rate ? Math.round(rate.rate_percent * 100) : null;
   const groups = assetCategorySchema.options
     .map((category) => ({ category, assets: assets.filter((a) => a.category === category) }))
     .filter((group) => group.assets.length > 0);
@@ -117,7 +130,8 @@ export default async function CataloguePage({ params }: PageProps<'/[locale]'>) 
               <li key={asset.id}>
                 <AssetCard
                   asset={asset}
-                  price={listPriceOn(priceLists, asset.id, today)}
+                  price={assetOfferPrice(rowById.get(asset.id)!, priceLists, today)}
+                  vatBasisPoints={vatBasisPoints}
                   locale={locale}
                   t={t}
                 />

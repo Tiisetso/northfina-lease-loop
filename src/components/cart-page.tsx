@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { formatEuro } from '@/domain/money';
+import { invoiceAmounts, dueDateForMonth } from '@/domain/lease-billing';
 import { checkoutQuote } from '@/domain/checkout-quote';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
@@ -39,6 +40,21 @@ export function CartPage({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<'error' | 'login' | 'changed' | null>(null);
   const money = (cents: number) => formatEuro(cents, intlLocale[locale]);
+  const rate = data.rates.find(
+    (rate) =>
+      rate.valid_from <= data.today && (rate.valid_to === null || rate.valid_to >= data.today)
+  );
+  const vatBasisPoints = rate ? Math.round(rate.rate_percent * 100) : 0;
+  const gross = (cents: number) => invoiceAmounts(cents, vatBasisPoints).totalCents;
+  const buyoutGross = (cents: number, months: number) => {
+    const end = dueDateForMonth(data.today, months);
+    const rate = data.rates.find(
+      (rate) => rate.valid_from <= end && (rate.valid_to === null || rate.valid_to >= end)
+    );
+    return rate
+      ? money(invoiceAmounts(cents, Math.round(rate.rate_percent * 100)).totalCents)
+      : t('asset.noPrice');
+  };
   const valid = items.every((item) => item?.available);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -92,7 +108,7 @@ export function CartPage({
     }
   }
   const monthlyTotal = items.reduce((sum, item) => sum + (item?.monthlyTotalCents ?? 0), 0);
-  const downTotal = items.reduce((sum, item) => sum + (item?.downPaymentCents ?? 0), 0);
+  const downTotal = items.reduce((sum, item) => sum + gross(item?.downPaymentCents ?? 0), 0);
   const buttonClass =
     'pressable flex min-h-target w-full items-center justify-center gap-2 rounded-pill bg-primary px-6 py-3 font-semibold text-white hover:bg-primary-focus disabled:cursor-not-allowed disabled:opacity-50';
 
@@ -225,7 +241,7 @@ export function CartPage({
                             {t('product.months', { count: item.termMonths })}
                           </p>
                           <p className="mt-1 text-caption text-ink-muted">
-                            {t('cart.downTotal')}: {money(item.downPaymentCents)}
+                            {t('pricing.downGross')}: {money(gross(item.downPaymentCents))}
                           </p>
                           {!item.available ? (
                             <p className="mt-3 text-caption font-semibold">
@@ -411,7 +427,7 @@ export function CartPage({
             <p className="mt-2 text-caption text-ink-muted">{t('cart.monthlyInfo')}</p>
             <dl className="mt-6 border-y border-hairline py-5">
               <div className="flex flex-wrap justify-between gap-3 text-caption">
-                <dt>{t('cart.downTotal')}</dt>
+                <dt>{t('pricing.downGross')}</dt>
                 <dd className="font-semibold tabular-nums">{money(downTotal)}</dd>
               </div>
             </dl>
@@ -433,9 +449,9 @@ export function CartPage({
                           </dd>
                         </div>
                         <div>
-                          <dt>{t('cart.buyout')}</dt>
+                          <dt>{t('dashboard.buyoutGross')}</dt>
                           <dd className="font-semibold tabular-nums text-ink">
-                            {money(item.buyoutCents)}
+                            {buyoutGross(item.buyoutCents, item.termMonths)}
                           </dd>
                         </div>
                       </dl>

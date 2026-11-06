@@ -1,24 +1,28 @@
 import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
-import { listPriceOn } from '@/domain/price-list';
-import { listAssets } from './assets';
+import { assetOfferPrice } from '@/domain/asset-offer';
+import { toAsset } from './assets';
 import { db } from './db';
 
 export async function checkoutOptions(today: string) {
   const [assets, prices, table, vat] = await Promise.all([
-    listAssets(db),
+    db.asset.findMany({
+      orderBy: { id: 'asc' },
+      include: { contracts: { where: { status: 'active' }, select: { id: true } } },
+    }),
     loadPriceLists(),
     loadCoefficientTable(),
     loadVatRates(),
   ]);
-  const options = assets.flatMap((asset) => {
-    const price = listPriceOn(prices, asset.id, today);
+  const options = assets.flatMap((row) => {
+    const asset = toAsset(row);
+    const price = assetOfferPrice(row, prices, today);
     if (!price.ok) return [];
     return [
       {
         id: asset.id,
         category: asset.category,
         name: `${asset.make} ${asset.model}`,
-        available: asset.status === 'available',
+        available: asset.status === 'available' && row.contracts.length === 0,
         priceCents: price.priceCents,
         priceListVersion: price.priceListVersion,
       },

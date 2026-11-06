@@ -3,10 +3,13 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { headers } from 'next/headers';
 import { AccountNavigation } from '@/components/account-navigation';
 import { UiIcon } from '@/components/ui-icon';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
+import { readIdentity } from '@/server/auth-session';
+import { db } from '@/server/db';
 import '../globals.css';
 
 export async function generateMetadata({ params }: LayoutProps<'/[locale]'>): Promise<Metadata> {
@@ -20,6 +23,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const t = getT(locale);
+  const identity = await readIdentity(db, await headers());
 
   return (
     <html lang={locale}>
@@ -47,6 +51,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
                 locale={locale}
                 accountLabel={t('nav.account')}
                 languageLabel={t('nav.language')}
+                staff={identity?.role === 'staff'}
               />
             </div>
           </div>

@@ -21,15 +21,14 @@ export function DashboardShell({
     { id: 'settings', label: t('dashboard.settings'), href: `/${locale}/account/settings` },
   ] as const;
   return (
-    <div className="min-h-full bg-parchment text-ink">
-      <div className="mx-auto max-w-content px-card py-section-compact tablet:py-section">
-        <p className="text-caption font-semibold text-ink-muted">{t('brand.name')}</p>
-        <h1 className="mt-2 font-display text-display-sm font-semibold tablet:text-display-lg">
+    <div className="min-h-full bg-canvas text-ink">
+      <div className="mx-auto w-full max-w-[1200px] px-4 pt-7 pb-12 sm:px-6 tablet:pt-9">
+        <h1 className="font-display text-display-sm font-semibold tablet:text-display-lg">
           {t('dashboard.title')}
         </h1>
         <nav
           aria-label={t('dashboard.navigation')}
-          className="mt-8 overflow-x-auto border-b border-hairline"
+          className="mt-5 overflow-x-auto border-b border-hairline"
         >
           <ul className="flex min-w-max gap-2">
             {links.map((link) => (
@@ -45,7 +44,7 @@ export function DashboardShell({
             ))}
           </ul>
         </nav>
-        <div className="mt-8">{children}</div>
+        <div className="mt-6">{children}</div>
       </div>
     </div>
   );

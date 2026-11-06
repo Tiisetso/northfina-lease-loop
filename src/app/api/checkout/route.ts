@@ -72,6 +72,26 @@ export const POST = handleRoute(async (request) => {
   const input = await checkoutBody(request);
   if (new Set(input.items.map((item) => item.id)).size !== input.items.length)
     throw new ApiError(400, 'INVALID_CART', 'Duplicate items.');
+  const existingIds = input.items.map((item) => `demo-${input.token}-${item.id}`);
+  const completed = await db.contract.findMany({ where: { id: { in: existingIds } } });
+  if (completed.length) {
+    if (
+      completed.length !== input.items.length ||
+      completed.some((contract) => {
+        const item = input.items.find((item) => item.id === contract.assetId);
+        return (
+          !item ||
+          contract.customerId !== identity.customerId ||
+          contract.termMonths !== item.termMonths ||
+          contract.downPaymentCents !== item.downPaymentCents ||
+          contract.listPriceCents !== item.priceCents ||
+          contract.priceListVersion !== item.version
+        );
+      })
+    )
+      throw new ApiError(409, 'CHECKOUT_CONFLICT', 'Checkout cannot be repeated.');
+    return ok({ ids: existingIds }, { status: 201, headers: { 'Cache-Control': 'no-store' } });
+  }
   const today = todayIso();
   if (input.date !== today) throw new ApiError(409, 'QUOTE_CHANGED', 'The quote date has changed.');
   const data = await checkoutOptions(today);
@@ -99,6 +119,13 @@ export const POST = handleRoute(async (request) => {
     return {
       ...option,
       ...calculated,
+      annualRateBasisPoints: Math.round(
+        data.table.bands.find(
+          (band) =>
+            option.priceCents - item.downPaymentCents >= band.min_financed_cents &&
+            option.priceCents - item.downPaymentCents <= band.max_financed_cents
+        )!.annual_interest_percent * 100
+      ),
       termMonths: item.termMonths,
       downPaymentCents: item.downPaymentCents,
     };
@@ -138,10 +165,18 @@ export const POST = handleRoute(async (request) => {
       for (const [index, quote] of quotes.entries()) {
         const asset = await tx.asset.findUnique({
           where: { id: quote.id },
-          select: { status: true },
+          select: { status: true, originalPriceCents: true, firstLeaseDate: true },
         });
         if (!asset || asset.status !== 'available')
           throw new ApiError(409, 'QUOTE_CHANGED', 'A product is unavailable.');
+        await tx.asset.update({
+          where: { id: quote.id },
+          data: {
+            status: 'reserved',
+            originalPriceCents: asset.originalPriceCents ?? quote.priceCents,
+            firstLeaseDate: asset.firstLeaseDate ?? today,
+          },
+        });
         await tx.contract.create({
           data: {
             id: ids[index]!,
@@ -151,6 +186,7 @@ export const POST = handleRoute(async (request) => {
             termMonths: quote.termMonths,
             listPriceCents: quote.priceCents,
             downPaymentCents: quote.downPaymentCents,
+            annualRateBasisPoints: quote.annualRateBasisPoints,
             monthlyNetCents: quote.monthlyNetCents,
             buyoutCents: quote.buyoutCents,
             priceListVersion: quote.priceListVersion,

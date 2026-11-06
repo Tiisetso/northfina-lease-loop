@@ -3,10 +3,12 @@ import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { LeaseCalculator } from '@/components/lease-calculator';
 import { ProductDetails } from '@/components/product-details';
+import { RecoveryHistory } from '@/components/recovery-history';
 import { ProductPhoto } from '@/components/product-photo';
-import { loadCoefficientTable, loadPriceLists } from '@/data/load';
+import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
 import { formatEuro } from '@/domain/money';
-import { listPriceOn } from '@/domain/price-list';
+import { assetOfferPrice } from '@/domain/asset-offer';
+import { invoiceAmounts } from '@/domain/lease-billing';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
@@ -18,15 +20,24 @@ export default async function ProductPage({ params }: PageProps<'/[locale]/produ
   const { locale, id } = await params;
   if (!isLocale(locale)) notFound();
   await connection();
-  const [row, lists, table] = await Promise.all([
-    db.asset.findUnique({ where: { id } }),
+  const [row, lists, table, vat] = await Promise.all([
+    db.asset.findUnique({
+      where: { id },
+      include: { contracts: { where: { status: 'active' }, select: { id: true } } },
+    }),
     loadPriceLists(),
     loadCoefficientTable(),
+    loadVatRates(),
   ]);
   if (!row) notFound();
   const asset = toAsset(row);
+  const available = asset.status === 'available' && row.contracts.length === 0;
   const today = todayIso();
-  const price = listPriceOn(lists, id, today);
+  const price = assetOfferPrice(row, lists, today);
+  const rate = vat.rates.find(
+    (rate) => rate.valid_from <= today && (rate.valid_to === null || rate.valid_to >= today)
+  );
+  const vatBasisPoints = rate ? Math.round(rate.rate_percent * 100) : 0;
   const t = getT(locale);
 
   return (
@@ -67,12 +78,6 @@ export default async function ProductPage({ params }: PageProps<'/[locale]/produ
           <section aria-labelledby="product-title" className="min-w-0">
             <div className="flex flex-wrap items-center justify-between gap-3 text-caption">
               <p className="text-ink-muted">{asset.make}</p>
-              <p
-                className={`inline-flex items-center gap-2 rounded-pill px-3 py-2 ${asset.status === 'available' ? 'bg-emerald-50 text-emerald-800' : 'bg-parchment text-ink-muted'}`}
-              >
-                <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
-                {t(`status.${asset.status}`)}
-              </p>
             </div>
             <h1
               id="product-title"
@@ -93,7 +98,7 @@ export default async function ProductPage({ params }: PageProps<'/[locale]/produ
             </dl>
             <div className="mt-8 rounded-lg border border-hairline p-card">
               <h2 className="text-tagline font-semibold">{t('product.configure')}</h2>
-              {asset.status !== 'available' ? (
+              {!available ? (
                 <p className="mt-4 text-caption text-ink-muted" role="status">
                   {t('product.unavailable')}
                 </p>
@@ -103,7 +108,8 @@ export default async function ProductPage({ params }: PageProps<'/[locale]/produ
                   key={asset.id}
                   priceCents={price.priceCents}
                   assetId={asset.id}
-                  available={asset.status === 'available'}
+                  available={available}
+                  vatBasisPoints={vatBasisPoints}
                   table={table}
                   locale={locale}
                 />
@@ -112,9 +118,14 @@ export default async function ProductPage({ params }: PageProps<'/[locale]/produ
               )}
             </div>
             <div className="mt-6 flex flex-wrap justify-between gap-3 text-caption text-ink-muted">
-              <span>{t('asset.listPrice')}</span>
+              <span>{t('pricing.listGross')}</span>
               <span className="font-semibold tabular-nums text-ink">
-                {price.ok ? formatEuro(price.priceCents, intlLocale[locale]) : t('asset.noPrice')}
+                {price.ok
+                  ? formatEuro(
+                      invoiceAmounts(price.priceCents, vatBasisPoints).totalCents,
+                      intlLocale[locale]
+                    )
+                  : t('asset.noPrice')}
               </span>
             </div>
             <p className="mt-2 text-fine text-ink-muted">
@@ -128,6 +139,9 @@ export default async function ProductPage({ params }: PageProps<'/[locale]/produ
           </section>
         </div>
       </div>
+      {row.secondLifePriceCents !== null ? (
+        <RecoveryHistory assetId={asset.id} locale={locale} vatBasisPoints={vatBasisPoints} />
+      ) : null}
       <ProductDetails asset={asset} locale={locale} />
     </div>
   );
