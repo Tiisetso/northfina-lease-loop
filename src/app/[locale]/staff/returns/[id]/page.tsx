@@ -3,6 +3,7 @@ import { loadVatRates } from '@/data/load';
 import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { RecoveryWorkbench } from '@/components/recovery-workbench';
+import { SecondLifePanel } from '@/components/second-life-panel';
 import { recoveryAgeMonths } from '@/domain/asset-recovery';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
@@ -14,7 +15,7 @@ import {
   recoveryCalculationSchema,
   recoveryReportSchema,
 } from '@/server/recovery-input';
-import { relistOfferFor } from '@/server/relisting';
+import { relistOfferFor, secondLifePlanFor } from '@/server/relisting';
 import { appToday } from '@/server/demo-mode';
 
 export default async function Page({ params }: PageProps<'/[locale]/staff/returns/[id]'>) {
@@ -45,6 +46,8 @@ export default async function Page({ params }: PageProps<'/[locale]/staff/return
   const offer = ['received', 'ready'].includes(status)
     ? await relistOfferFor(db, id, today).catch(() => null)
     : null;
+  // Card 9: only once the item is back, while it can still go to someone on the waiting list.
+  const plan = offer ? await secondLifePlanFor(db, id, today).catch(() => null) : null;
   const t = getT(locale);
   const itemName = `${request.contract.asset.make} ${request.contract.asset.model}`;
   return (
@@ -80,6 +83,7 @@ export default async function Page({ params }: PageProps<'/[locale]/staff/return
         }
         defaultAge={recoveryAgeMonths(firstDate, today)}
       />
+      {plan ? <SecondLifePanel plan={plan} locale={locale} /> : null}
     </div>
   );
 }

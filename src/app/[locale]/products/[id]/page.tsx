@@ -4,6 +4,7 @@ import { DemoItemId } from '@/components/demo-item-id';
 import { connection } from 'next/server';
 import { LeaseCalculator } from '@/components/lease-calculator';
 import { ProductDetails } from '@/components/product-details';
+import { ItemPassport } from '@/components/item-passport';
 import { RecoveryHistory } from '@/components/recovery-history';
 import { ProductPhoto } from '@/components/product-photo';
 import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
@@ -144,6 +145,7 @@ export default async function ProductPage({ params }: PageProps<'/[locale]/produ
       {row.secondLifePriceCents !== null ? (
         <RecoveryHistory assetId={asset.id} locale={locale} vatBasisPoints={vatBasisPoints} />
       ) : null}
+      <ItemPassport asset={asset} locale={locale} />
       <ProductDetails asset={asset} locale={locale} />
     </div>
   );

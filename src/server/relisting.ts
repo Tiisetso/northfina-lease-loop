@@ -3,11 +3,13 @@ import {
   loadCoefficientTable,
   loadRefurbishmentCosts,
   loadResidualCurves,
+  loadSecondLifeDemand,
   loadVatRates,
 } from '@/data/load';
 import { assetCategorySchema } from '@/data/schemas';
 import { requiredSignoff, signoffGaps } from '@/domain/inspection';
 import { relistOffer } from '@/domain/relist-offer';
+import { matchWaitingList, refurbishDecision } from '@/domain/second-life';
 import { ApiError } from './api-response';
 import { withAudit, type TransactionClient } from './audit';
 import { inspectionSchema, recoveryCalculationSchema, workRecordSchema } from './recovery-input';
@@ -75,6 +77,35 @@ async function marketData() {
 export async function relistOfferFor(db: PrismaClient, requestId: string, today: string) {
   return offerFor(await loadCase(db, requestId), today, await marketData());
 }
+
+/**
+ * Card 9: whether refurbishing pays off, and who on the waiting list should get the item.
+ * Matching uses the condition the work brings it to, at the price it would be published at.
+ */
+export async function secondLifePlanFor(db: PrismaClient, requestId: string, today: string) {
+  const [found, data, demand] = await Promise.all([
+    loadCase(db, requestId),
+    marketData(),
+    loadSecondLifeDemand(),
+  ]);
+  const offer = offerFor(found, today, data);
+  const decision = refurbishDecision(offer);
+  const condition = found.inspection.targetCondition;
+  return {
+    decision,
+    condition,
+    match: decision.refurbish
+      ? matchWaitingList(
+          { category: found.category, condition, priceNetCents: offer.priceNetCents },
+          demand,
+          today,
+          data.table,
+          data.vat.rates
+        )
+      : null,
+  };
+}
+export type SecondLifePlan = Awaited<ReturnType<typeof secondLifePlanFor>>;
 
 /** Records who finished the work. Nothing is published yet: this only makes the item ready. */
 export async function completeRefurbishment(

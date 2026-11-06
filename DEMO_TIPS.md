@@ -30,8 +30,8 @@ set when you switch.
 | 6    | Who can sign? (Norvi)   | ✅     | Contract waits for the named signatory, who signs by link    |
 | 7    | Big ticket (Haapala)    | ✅     | Due-diligence and PEP questions, manual review with reasons  |
 | 8    | Early exit (Aino)       | ✅     | Buyout and early return, formula shown                       |
-| 9    | Second life (ebike-007) | ⚠️     | Refurbish and re-price work; waiting-list match is #48       |
-| 10   | Third life (ebike-008)  | ⚠️     | Relist and lease again work; passport is #48                 |
+| 9    | Second life (ebike-007) | ✅     | Refurbish yes; wait-13 wins, with the reasons shown          |
+| 10   | Third life (ebike-008)  | ✅     | Lease again; the passport lists its lives and CO₂ avoided    |
 
 ---
 
@@ -163,10 +163,15 @@ Point out:
 3. **Put back on the market**: the new price before you confirm (original price × age ×
    condition × usage from `residual-curves.json`, minus work), with an example monthly rent.
 
-**Not yet (#48):** choosing between `wait-02` and `wait-13` on the waiting list. Our rule
-to state verbally: both have the same budget and deadline; `wait-13` needs **good**
-condition, so a **fair** bike only qualifies for `wait-02`, who also wants the shorter
-12-month term.
+4. Below the workbench, **Refurbish, and who gets it next** (demo date on or before
+   **10 Nov 2026**, the waiting-list deadline):
+   - **Refurbish: yes.** Worth €1,866.60 excl. VAT after €670.00 of work: €1,196.60 ahead.
+   - **wait-13 gets it**, 24 months at **€68.39** a month excl. VAT.
+   - Why not `wait-02`? Same €90 budget and deadline, but they want **12 months**, which
+     makes the rent **€104.57**, over budget. The work brings the bike to **good**, so
+     `wait-13`'s minimum condition is met. `wait-04` qualifies too but needs it by January,
+     so the earlier deadline wins. Same date → whoever signed up first.
+   - Every other e-bike entry is listed with its rent and the check it failed.
 
 ## 10. Third life: `ebike-008` (2 previous lives)
 
@@ -174,5 +179,7 @@ condition, so a **fair** bike only qualifies for `wait-02`, who also wants the s
 2. **Put back on the market** at the shown price.
 3. Act as **Olavi** (returned this bike after 24 months), or anyone, and lease it again.
 4. The lease page shows the **CO₂ avoided** by reusing it instead of making a new one.
-
-**Not yet (#48):** the item passport listing all its lives in one place.
+5. Open the **product page** of `ebike-008` (before or after leasing): the **Item
+   passport** lists life 1 (before our records), life 2 (dates, 36 months, started good,
+   returned) and, once leased, life 3, with **130.7 kg CO₂e** avoided per reuse life and
+   the method stated.
