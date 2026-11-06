@@ -12,7 +12,9 @@ import { assertSameOrigin } from './auth-input';
 import { readIdentity } from './auth-session';
 import { DEMO_DATE_COOKIE, requestToday, requireDemoMode } from './demo-mode';
 import { CURRENT_USER_ID, keepOwnSession, returnToOwnAccount } from './demo-own-account';
+import { rewindDemo } from './demo-rewind';
 import { ensureScenarioLease } from './demo-scenarios';
+import { todayIso } from './today';
 
 export const DEMO_STAFF = {
   id: 'demo-staff',
@@ -36,18 +38,28 @@ export async function setDemoDate(
   if (raw !== null && date === null)
     throw new ApiError(400, 'INVALID_DEMO_DATE', 'Choose a date in the demo range.');
   const identity = await readIdentity(database, request.headers, settings);
-  await withAudit(
-    database,
-    {
-      actor: identity?.id ?? 'anonymous',
-      action: date ? 'demo.date_set' : 'demo.date_cleared',
-      entityType: 'demo',
-      entityId: 'clock',
-      details: { date },
-    },
-    async () => undefined
-  );
-  const response = ok({ date }, { headers: { 'Cache-Control': 'no-store' } });
+  const entry: AuditEntry = {
+    actor: identity?.id ?? 'anonymous',
+    action: date ? 'demo.date_set' : 'demo.date_cleared',
+    entityType: 'demo',
+    entityId: 'clock',
+    details: { date },
+  };
+  const removedLeases = await withAudit(database, entry, async (tx) => {
+    if (!identity) return 0;
+    // The signed-in account's demo world follows the clock: going back undoes what happened
+    // after the new date; going forward again sets up the persona's scenario lease.
+    const today = date ?? todayIso();
+    const rewound = await rewindDemo(tx, identity.customerId, today);
+    const scenario = demoScenario(identity.customerId).lease;
+    const scenarioLease = scenario
+      ? await ensureScenarioLease(tx, identity.customerId, scenario, today)
+      : null;
+    entry.details = { date, rewound, scenarioLease };
+    return rewound.removedLeases.length;
+  });
+  // The bar leaves a page about a lease that no longer exists (see landingAfterSwitch).
+  const response = ok({ date, removedLeases }, { headers: { 'Cache-Control': 'no-store' } });
   const secure = settings.production ? '; Secure' : '';
   response.headers.append(
     'Set-Cookie',
@@ -137,13 +149,20 @@ export async function switchPersona(
       throw new ApiError(429, 'RATE_LIMITED', 'Please try again in a minute.');
     if (!signedIn.ok) throw new ApiError(500, 'DEMO_UNAVAILABLE', 'The persona failed.');
     const { user }: { user: { id: string } } = await signedIn.json();
+    // Undo this persona's demo actions after the demo date, then set up its scenario.
+    const rewound = await rewindDemo(tx, customerId, today);
     // The persona's scenario: a lease they already have (once the demo date reaches it).
     const scenarioLease = scenario.lease
       ? await ensureScenarioLease(tx, customerId, scenario.lease, today)
       : null;
     // withAudit writes the entry after this work, so it records the signed-in account.
     entry.actor = user.id;
-    entry.details = { today, scenarioLease, cart: scenario.cart.map((item) => item.id) };
+    entry.details = {
+      today,
+      rewound,
+      scenarioLease,
+      cart: scenario.cart.map((item) => item.id),
+    };
     // The cart lives in the browser, so the bar sets it from this response.
     const response = ok(
       { personaId: persona.id, staff: persona.staff, cart: scenario.cart },

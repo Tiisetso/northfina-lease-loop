@@ -23,6 +23,13 @@ In demo mode (on by default in development) a dark bar sits above the header:
 Set the **date first**, then switch persona: the persona's scenario uses the date that's
 set when you switch.
 
+**Going back in time undoes.** Setting an earlier date undoes the signed-in account's demo
+actions after it: a lease signed later disappears (its item is back in the catalogue),
+later invoices, payments and events go, a later buyout is reopened, and a company contract
+signed later waits for its signatory again. Move forward and the persona's scenario is set
+up again (Aino's lease reappears from 5 Nov). Real leases and other accounts are never
+touched; a return completed after the date is not undone.
+
 ## Status at a glance
 
 | Card | Scenario                | Status | Notes                                                        |

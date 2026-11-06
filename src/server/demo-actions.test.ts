@@ -70,7 +70,7 @@ describe('POST /api/demo/date', () => {
   it('sets the demo-date cookie and records who changed it', async () => {
     const response = await postDate(post('/api/demo/date', { date: '2026-11-05' }), undefined);
     expect(response.status).toBe(200);
-    expect((await response.json()).data).toEqual({ date: '2026-11-05' });
+    expect((await response.json()).data).toEqual({ date: '2026-11-05', removedLeases: 0 });
     const [cookie] = response.headers.getSetCookie();
     expect(cookie).toContain(`${DEMO_DATE_COOKIE}=2026-11-05`);
     expect(cookie).toContain('HttpOnly');
@@ -203,6 +203,55 @@ describe('persona scenarios', () => {
       today: '2027-01-10',
       scenarioLease: lease!.id,
     });
+  });
+  it('rewinds: an earlier date undoes what happened after it, a later one sets it up again', async () => {
+    const session = cookiesOf(await switchTo('cust-aino', '2027-01-10'));
+    const setDate = (date: string) =>
+      postDate(post('/api/demo/date', { date }, { cookie: session }), undefined);
+    const bike = () => fixture.db.asset.findUniqueOrThrow({ where: { id: 'ebike-003' } });
+
+    // Before 5 Nov the lease wasn't signed yet: it's gone and the bike is available again.
+    expect((await setDate('2026-11-01')).status).toBe(200);
+    expect(await ainoLease()).toHaveLength(0);
+    expect(await bike()).toMatchObject({ status: 'available', firstLeaseDate: null });
+    const audit = await fixture.db.auditLog.findFirst({
+      where: { action: 'demo.date_set' },
+      orderBy: { id: 'desc' },
+    });
+    expect(JSON.parse(audit!.details_json!).rewound.removedLeases).toHaveLength(1);
+
+    // Forward again: her scenario lease is signed on 5 Nov as before.
+    await setDate('2026-12-10');
+    expect((await ainoLease())[0]!.invoices.map((invoice) => invoice.dueDate)).toEqual([
+      '2026-11-05',
+      '2026-12-05',
+    ]);
+    // Back a little: only the December invoice and its payment are undone.
+    await setDate('2026-11-20');
+    const [lease] = await ainoLease();
+    expect(lease!.invoices.map((invoice) => invoice.dueDate)).toEqual(['2026-11-05']);
+    // November's payment (made on 5 Nov) stays; nothing dated after 20 Nov remains.
+    const payments = await fixture.db.payment.findMany({
+      where: { invoice: { contractId: lease!.id } },
+    });
+    expect(payments.map((payment) => payment.paidDate)).toEqual(['2026-11-05']);
+  });
+  it('rewinds a buyout made after the date, and only the signed-in account', async () => {
+    const session = cookiesOf(await switchTo('cust-aino', '2027-06-01'));
+    const [lease] = await ainoLease();
+    await fixture.db.contract.update({
+      where: { id: lease!.id },
+      data: { status: 'bought', endedOn: '2027-05-20' },
+    });
+    await fixture.db.asset.update({ where: { id: 'ebike-003' }, data: { status: 'sold' } });
+    // Someone else rewinding doesn't touch Aino.
+    await switchTo('cust-mikko', '2026-11-01');
+    expect((await ainoLease())[0]!.status).toBe('bought');
+
+    await postDate(post('/api/demo/date', { date: '2027-05-01' }, { cookie: session }), undefined);
+    const [reopened] = await ainoLease();
+    expect(reopened).toMatchObject({ status: 'active', endedOn: null });
+    expect(reopened!.asset.status).toBe('reserved');
   });
   it('creates the lease once, and not before the demo date reaches its start', async () => {
     await switchTo('cust-aino', '2026-11-04');
