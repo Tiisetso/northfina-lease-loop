@@ -63,8 +63,7 @@ Everything in the skeleton is replaceable. Keep the rules, not necessarily the c
 
 Use [.github/pull_request_template.md](.github/pull_request_template.md) for team
 feature and bug-fix PRs. It provides the shared structure for authors and coding
-agents: a short summary, linked issues and sub-issues, context, implementation,
-reproducible testing, visual evidence and a checklist.
+agents: context, implementation, reproducible testing, visual evidence and a checklist.
 Fill every section, report actual check results and explain anything that is not applicable.
 Use a short title such as `fix(auth): prevent registration crash [T1038]` when a ticket exists.
 
