@@ -285,7 +285,7 @@ export async function acceptReturn(
         });
         await tx.asset.update({
           where: { id: request.contract.assetId },
-          data: { status: 'reserved' },
+          data: { status: 'sold' },
         });
         return tx.returnAssessment.update({
           where: { id: request.assessment.id },

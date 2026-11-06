@@ -25,6 +25,7 @@
   "status.available": "Saatavilla",
   "status.reserved": "Varattu",
   "status.returned": "Palautettu",
+  "status.sold": "Myyty",
   "asset.modelYear": "Vuosimalli",
   "asset.usage": "Käyttö",
   "asset.previousLives": "Aiemmat vuokrakaudet",
@@ -834,5 +835,10 @@
   "secondLife.failed.budget": "Vuokra ylittää budjetin",
   "secondLife.failed.term": "Kestoa ei tarjota",
   "secondLife.failed.deadline": "Määräpäivä on mennyt",
-  "secondLife.rule": "Näin valitsemme: henkilö sopii, jos kunto, määräpäivä ja vuokra hänen toivomallaan kestolla (alv 0 %) sopivat. Aikaisin määräpäivä voittaa; samalla päivällä ensin ilmoittautunut voittaa."
+  "secondLife.rule": "Näin valitsemme: henkilö sopii, jos kunto, määräpäivä ja vuokra hänen toivomallaan kestolla (alv 0 %) sopivat. Aikaisin määräpäivä voittaa; samalla päivällä ensin ilmoittautunut voittaa.",
+  "termEnded.title": "Vuokrasopimuksesi päättyi {date}",
+  "termEnded.body": "Sinä päätät, mitä tuotteelle {item} nyt tapahtuu. Voit ostaa sen hintaan {amount} sis. alv, sopimuksessa sovittuun hintaan, tai palauttaa sen meille.",
+  "termEnded.noBilling": "Kuukausivuokraa ei enää laskuteta. Tuote pysyy sinulla, kunnes valitset.",
+  "termEnded.buy": "Osta",
+  "termEnded.return": "Palauta"
 }
