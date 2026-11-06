@@ -8,7 +8,7 @@ Use "N/A — <reason>" where a section does not apply. Do not delete the heading
 For the final judging PR, use .github/hackathon_submission.md instead.
 -->
 
-## Context / Why
+## Context
 
 <!-- Explain the customer need, business rule or bug. Why does this change matter?
 Include the relevant issue/ticket link, or say "No linked issue". -->
@@ -17,7 +17,7 @@ Include the relevant issue/ticket link, or say "No linked issue". -->
 
 **Related issue:**
 
-## Description / What
+## Description
 
 <!-- Describe the final behavior and the implementation that enables it.
 Mention important decisions, trade-offs, migrations or configuration changes.
