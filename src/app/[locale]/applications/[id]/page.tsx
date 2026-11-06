@@ -2,7 +2,9 @@ import Link from 'next/link';
 import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { z } from 'zod';
+import { dateOfAge } from '@/domain/application-fields';
 import { formatEuro } from '@/domain/money';
+import { formatIsoDate } from '@/i18n/format';
 import { getT, type MessageKey } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
 import { applicationItemsSchema, findCustomerApplication } from '@/server/applications';
@@ -20,6 +22,16 @@ export default async function Page({ params }: PageProps<'/[locale]/applications
   const t = getT(locale);
   const items = applicationItemsSchema.parse(JSON.parse(application.itemsJson));
   const reasons = z.array(z.string()).parse(JSON.parse(application.reasonsJson));
+  // Tell an under-age applicant when they can apply, rather than only that they can't yet.
+  const answers = z
+    .object({ q_birth_date: z.string().optional() })
+    .catch({})
+    .parse(JSON.parse(application.answersJson));
+  const adultFrom = answers.q_birth_date ? dateOfAge(answers.q_birth_date, 18) : null;
+  const reasonText = (reason: string) =>
+    reason === 'under_age' && adultFrom
+      ? t('application.reason.under_age_until', { date: formatIsoDate(adultFrom, locale) })
+      : t(`application.reason.${reason}` as MessageKey);
   const current = application.startDate === (await appToday());
   return (
     <div className="mx-auto max-w-copy px-card py-section-compact">
@@ -32,7 +44,7 @@ export default async function Page({ params }: PageProps<'/[locale]/applications
       {reasons.length ? (
         <ul className="mt-6 list-disc space-y-3 pl-5">
           {reasons.map((reason) => (
-            <li key={reason}>{t(`application.reason.${reason}` as MessageKey)}</li>
+            <li key={reason}>{reasonText(reason)}</li>
           ))}
         </ul>
       ) : null}

@@ -36,3 +36,14 @@ export function parseEuroCents(value: string): number | null {
   const cents = BigInt(match[1]) * 100n + BigInt((match[2] ?? '').padEnd(2, '0'));
   return cents <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(cents) : null;
 }
+
+/**
+ * The first date on which someone born on `birthDate` is `age` years old, using the same
+ * Feb 29 → Feb 28 rule as `ageOnDate`, so `ageOnDate(birthDate, dateOfAge(...)) === age`.
+ */
+export function dateOfAge(birthDate: string, age: number): string | null {
+  if (!isCalendarDate(birthDate) || !Number.isInteger(age) || age < 0) return null;
+  const year = String(Number(birthDate.slice(0, 4)) + age).padStart(4, '0');
+  const day = `${year}-${birthDate.slice(5)}`;
+  return isCalendarDate(day) ? day : `${year}-02-28`;
+}

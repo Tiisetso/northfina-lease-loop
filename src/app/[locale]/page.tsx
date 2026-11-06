@@ -14,7 +14,7 @@ import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import { toAsset } from '@/server/assets';
 import { db } from '@/server/db';
-import { appToday } from '@/server/demo-mode';
+import { appToday, demoModeEnabled } from '@/server/demo-mode';
 
 export default async function CataloguePage({ params }: PageProps<'/[locale]'>) {
   const { locale } = await params;
@@ -133,6 +133,7 @@ export default async function CataloguePage({ params }: PageProps<'/[locale]'>) 
             {group.assets.map((asset) => (
               <li key={asset.id}>
                 <AssetCard
+                  showId={demoModeEnabled()}
                   asset={asset}
                   price={assetOfferPrice(rowById.get(asset.id)!, priceLists, today)}
                   vatBasisPoints={vatBasisPoints}

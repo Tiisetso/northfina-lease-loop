@@ -4,12 +4,14 @@ import { z } from 'zod';
 import type { PrismaClient } from '@/generated/prisma/client';
 import { loadCustomers } from '@/data/load';
 import { parseDemoDate } from '@/domain/demo';
+import { demoScenario } from '@/domain/demo-scenarios';
 import { ApiError, ok, readJsonBody } from './api-response';
 import { withAudit, type AuditEntry } from './audit';
 import { authSettings, createAuth, type AuthSettings } from './auth-config';
 import { assertSameOrigin } from './auth-input';
 import { readIdentity } from './auth-session';
-import { DEMO_DATE_COOKIE, requireDemoMode } from './demo-mode';
+import { DEMO_DATE_COOKIE, requestToday, requireDemoMode } from './demo-mode';
+import { ensureScenarioLease } from './demo-scenarios';
 
 export const DEMO_STAFF = {
   id: 'demo-staff',
@@ -72,7 +74,8 @@ export async function demoPersonas() {
 }
 
 /**
- * POST { personaId } signs this browser in as a persona. The account is created on first use
+ * POST { personaId } signs this browser in as a persona and sets up its scenario card: the
+ * lease it already has and the cart it starts with (returned for the browser to store). The account is created on first use
  * through the library's normal sign-up, then signed in through its normal sign-in, so no
  * session or cookie is hand-made. Account creation, sign-in and audit share one transaction.
  */
@@ -88,6 +91,8 @@ export async function switchPersona(
   if (!persona) throw new ApiError(404, 'NOT_FOUND', 'Unknown persona.');
   const password = personaPassword(settings.secret, persona.id);
   const customerId = persona.staff ? `${persona.id}-customer` : persona.id;
+  const scenario = demoScenario(persona.id);
+  const today = requestToday(request);
 
   const entry: AuditEntry = {
     actor: 'anonymous',
@@ -127,9 +132,18 @@ export async function switchPersona(
       throw new ApiError(429, 'RATE_LIMITED', 'Please try again in a minute.');
     if (!signedIn.ok) throw new ApiError(500, 'DEMO_UNAVAILABLE', 'The persona failed.');
     const { user }: { user: { id: string } } = await signedIn.json();
+    // The persona's scenario: a lease they already have (once the demo date reaches it).
+    const scenarioLease = scenario.lease
+      ? await ensureScenarioLease(tx, customerId, scenario.lease, today)
+      : null;
     // withAudit writes the entry after this work, so it records the signed-in account.
     entry.actor = user.id;
-    const response = ok({ personaId: persona.id }, { headers: { 'Cache-Control': 'no-store' } });
+    entry.details = { today, scenarioLease, cart: scenario.cart.map((item) => item.id) };
+    // The cart lives in the browser, so the bar sets it from this response.
+    const response = ok(
+      { personaId: persona.id, cart: scenario.cart },
+      { headers: { 'Cache-Control': 'no-store' } }
+    );
     for (const cookie of signedIn.headers.getSetCookie())
       response.headers.append('Set-Cookie', cookie);
     return response;

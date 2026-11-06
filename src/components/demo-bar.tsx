@@ -1,6 +1,7 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
+import { setCart, type CartItem } from './cart-store';
 
 export type DemoBarLabels = {
   badge: string;
@@ -39,7 +40,7 @@ export function DemoBar({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function send(path: string, body: unknown) {
+  async function send(path: string, body: unknown, onSuccess?: (data: unknown) => void) {
     setBusy(true);
     setError(null);
     try {
@@ -49,7 +50,10 @@ export function DemoBar({
         body: JSON.stringify(body),
       });
       if (!response.ok) setError(response.status === 429 ? labels.rateLimited : labels.error);
-      else router.refresh();
+      else {
+        onSuccess?.(((await response.json()) as { data: unknown }).data);
+        router.refresh();
+      }
     } catch {
       setError(labels.error);
     } finally {
@@ -62,7 +66,11 @@ export function DemoBar({
   };
   const submitPersona = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (persona) void send('/api/demo/persona', { personaId: persona });
+    // Each persona starts with its own scenario cart (often empty), never the previous one's.
+    if (persona)
+      void send('/api/demo/persona', { personaId: persona }, (data) =>
+        setCart((data as { cart: CartItem[] }).cart)
+      );
   };
 
   const control =
