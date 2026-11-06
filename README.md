@@ -173,7 +173,8 @@ person leases it from the catalogue).
 - **Signing by link** for a company's authorised signatory, with no account needed.
 - **Co-lease:** share a lease and split its invoices between participants.
 - **Staff workspace:** returns queue, inspection, refurbishment sign-off and relisting,
-  plus an overview with 24 months of simulated history (revenue and active leases).
+  an overview with 24 months of simulated history (revenue and active leases), and an
+  **audit trail** tab showing who changed what and when (RULES §7).
 
 ## Scenario cards
 
