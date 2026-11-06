@@ -177,10 +177,53 @@ describe('assessApplication', () => {
       )
     ).toMatchObject({ status: 'manual_review', reasons: ['large_amount'] });
   });
-  it('never silently assumes affordability where the bank omits the income question', () => {
-    expect(assessApplication(bank, { ...context, financedCents: 199999 }, consumer)).toMatchObject({
-      status: 'manual_review',
-      reasons: ['income_check'],
+  describe('income threshold (the bank asks consumers for income from 200 000 cents)', () => {
+    const { q_monthly_income: _income, ...withoutIncome } = consumer;
+    it('approves below the threshold without an income answer, with an explanatory note', () => {
+      expect(
+        assessApplication(bank, { ...context, financedCents: 199999 }, withoutIncome)
+      ).toMatchObject({ status: 'approved', reasons: ['income_not_required'] });
+    });
+    it('ignores a stale income answer once the question no longer applies', () => {
+      const result = assessApplication(
+        bank,
+        { ...context, financedCents: 199999, monthlyTotalCents: 900000 },
+        { ...consumer, q_monthly_income: 1 }
+      );
+      expect(result).toMatchObject({ status: 'approved', reasons: ['income_not_required'] });
+      expect(result.answers.q_monthly_income).toBeUndefined();
+    });
+    it('requires income exactly at the threshold and applies the 30 % rule', () => {
+      const atThreshold = { ...context, financedCents: 200000, monthlyTotalCents: 7500 };
+      expect(assessApplication(bank, atThreshold, withoutIncome)).toMatchObject({
+        status: 'incomplete',
+        missing: ['q_monthly_income'],
+      });
+      expect(
+        assessApplication(bank, atThreshold, { ...consumer, q_monthly_income: 25000 })
+      ).toMatchObject({ status: 'approved', reasons: [] });
+      expect(
+        assessApplication(bank, atThreshold, { ...consumer, q_monthly_income: 24999 })
+      ).toMatchObject({ status: 'rejected', reasons: ['affordability'] });
+    });
+    it('uses the combined cart amount, so splitting items cannot avoid the income question', () => {
+      expect(
+        assessApplication(bank, { ...context, financedCents: 230000 }, withoutIncome)
+      ).toMatchObject({ status: 'incomplete', missing: ['q_monthly_income'] });
+    });
+    it('still rejects or reviews below the threshold for other reasons, without the note', () => {
+      const small = { ...context, financedCents: 110300 };
+      expect(
+        assessApplication(bank, small, { ...withoutIncome, q_birth_date: '2009-03-10' })
+      ).toMatchObject({ status: 'rejected', reasons: ['under_age'] });
+      expect(
+        assessApplication(bank, small, { ...withoutIncome, q_country: 'other' })
+      ).toMatchObject({ status: 'rejected', reasons: ['residency'] });
+    });
+    it('does not add the note for companies, which have no income question', () => {
+      expect(
+        assessApplication(bank, { ...context, financedCents: 199999 }, company).reasons
+      ).not.toContain('income_not_required');
     });
   });
   it('reports missing, malformed and impossible answers without approving', () => {

@@ -282,6 +282,7 @@
   "application.reason.signatory": "An authorized company signatory must be involved before a contract can be signed.",
   "application.reason.large_amount": "Financing of €50,000 or more requires a person to review the application.",
   "application.reason.income_check": "The question flow did not collect income for this amount, so a person must check affordability.",
+  "application.reason.income_not_required": "Income isn't asked for this amount, so no affordability check was needed.",
   "application.reason.incomplete": "Some required answers are missing or invalid.",
   "application.reason.blocked_answer": "An answer does not meet the application requirements.",
   "application.option.consumer": "Individual",

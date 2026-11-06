@@ -52,9 +52,13 @@ manual review currently records that a person is required and blocks checkout.
   question thresholds. Category-targeted questions apply if any item matches that
   category; term thresholds use the longest selected term. Individual items must
   also be financeable and available. Combined finance must fit the supplied band limits.
-- The supplied bank asks income only from €2,000 financed. Below that threshold,
-  consumers are sent for manual review because affordability is unknown; cached
-  answers to an inactive income question are not used to bypass this policy.
+- The supplied bank asks income only from €2,000 financed (combined cart). Below that
+  threshold affordability is not part of the bank's assessment, so it is skipped and
+  the result carries the note `income_not_required`; all other rules still apply.
+  An income answer left over from a larger cart is dropped, never used. From €2,000
+  the income answer is required and the 30% rule applies. (This replaces the earlier
+  policy of sending every consumer under €2,000 to manual review: with no reviewer
+  step, consumers could not lease any item under €2,000.)
 - PEP answers require manual review. A company applicant without signing authority
   must provide an authorized contact and receives manual review, not automatic approval.
 - At €50,000 financed or more, require a person to review the business due diligence.

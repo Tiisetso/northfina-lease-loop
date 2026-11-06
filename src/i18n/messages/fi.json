@@ -282,6 +282,7 @@
   "application.reason.signatory": "Yrityksen nimenkirjoitusoikeuden omaavan henkilön on oltava mukana ennen allekirjoittamista.",
   "application.reason.large_amount": "Vähintään 50 000 euron rahoitus tarvitsee henkilön tarkistuksen.",
   "application.reason.income_check": "Kysymykset eivät keränneet tulotietoja tälle summalle, joten henkilön on tarkistettava maksukyky.",
+  "application.reason.income_not_required": "Tuloja ei kysytä tämän suuruisessa rahoituksessa, joten maksukykyä ei tarvinnut tarkistaa.",
   "application.reason.incomplete": "Pakollisia vastauksia puuttuu tai ne ovat virheellisiä.",
   "application.reason.blocked_answer": "Vastaus ei täytä hakemuksen vaatimuksia.",
   "application.option.consumer": "Yksityishenkilö",

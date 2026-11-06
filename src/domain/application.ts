@@ -21,7 +21,7 @@ export type ApplicationReason =
   | 'pep'
   | 'signatory'
   | 'large_amount'
-  | 'income_check'
+  | 'income_not_required'
   | 'incomplete'
   | 'blocked_answer';
 export type ApplicationAssessment = {
@@ -128,9 +128,18 @@ export function assessApplication(
   }
   if (context.financedCents < context.minimumCents || context.financedCents > context.maximumCents)
     rejected.push('financed_limits');
+  // The bank asks consumers for income only above its own threshold. Where the question is
+  // inactive, affordability is not part of the bank's assessment, so it is skipped rather than
+  // sent to a person. Where it is active, a missing answer is already `incomplete` above.
+  const notes: ApplicationReason[] = [];
   if (answers.q_customer_type === 'consumer') {
-    if (typeof answers.q_monthly_income !== 'number') review.push('income_check');
-    else if (BigInt(context.monthlyTotalCents) * 100n > BigInt(answers.q_monthly_income) * 30n)
+    const income = answers.q_monthly_income;
+    if (!questions.some((question) => question.id === 'q_monthly_income'))
+      notes.push('income_not_required');
+    else if (
+      typeof income === 'number' &&
+      BigInt(context.monthlyTotalCents) * 100n > BigInt(income) * 30n
+    )
       rejected.push('affordability');
   }
   if (answers.q_pep === 'yes') review.push('pep');
@@ -138,9 +147,10 @@ export function assessApplication(
     review.push('signatory');
   // Bank asks for business due diligence at €50,000; this demo routes those cases to people.
   if (context.financedCents >= 5_000_000) review.push('large_amount');
+  // Informational notes are shown only on approvals; a rejection or review states its own causes.
   return {
     status: rejected.length ? 'rejected' : review.length ? 'manual_review' : 'approved',
-    reasons: [...new Set(rejected.length ? rejected : review)],
+    reasons: [...new Set(rejected.length ? rejected : review.length ? review : notes)],
     missing: [],
     answers,
   };
