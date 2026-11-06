@@ -844,5 +844,11 @@
   "termEnded.body": "Du bestämmer vad som händer med {item} nu. Du kan köpa den för {amount} inkl. moms, priset som avtalades i ditt kontrakt, eller lämna tillbaka den till oss.",
   "termEnded.noBilling": "Ingen mer månadshyra faktureras. Tills du väljer stannar produkten hos dig.",
   "termEnded.buy": "Köp den",
-  "termEnded.return": "Lämna tillbaka"
+  "termEnded.return": "Lämna tillbaka",
+  "audit.tab": "Ändringslogg",
+  "audit.title": "Ändringslogg",
+  "audit.intro": "Vem ändrade vad och när. Varje ändring av affärsdata (signering, fakturor, betalningar, returer, personalbeslut, demoåtgärder) skriver en post i samma transaktion som ändringen. De senaste {count}, nyast först.",
+  "audit.system": "System ({name})",
+  "audit.details": "Detaljer",
+  "audit.empty": "Inget har registrerats än."
 }

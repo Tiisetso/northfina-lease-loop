@@ -844,5 +844,11 @@
   "termEnded.body": "Sinä päätät, mitä tuotteelle {item} nyt tapahtuu. Voit ostaa sen hintaan {amount} sis. alv, sopimuksessa sovittuun hintaan, tai palauttaa sen meille.",
   "termEnded.noBilling": "Kuukausivuokraa ei enää laskuteta. Tuote pysyy sinulla, kunnes valitset.",
   "termEnded.buy": "Osta",
-  "termEnded.return": "Palauta"
+  "termEnded.return": "Palauta",
+  "audit.tab": "Muutosloki",
+  "audit.title": "Muutosloki",
+  "audit.intro": "Kuka muutti mitä ja milloin. Jokainen liiketoimintatiedon muutos (allekirjoitus, laskut, maksut, palautukset, henkilöstön päätökset, demotoiminnot) kirjoittaa yhden merkinnän samassa transaktiossa kuin muutos. Uusimmat {count}, uusin ensin.",
+  "audit.system": "Järjestelmä ({name})",
+  "audit.details": "Tiedot",
+  "audit.empty": "Mitään ei ole vielä kirjattu."
 }
