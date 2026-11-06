@@ -301,6 +301,30 @@
           "decision": "Lock the price list valid on the signing day, keep approvals signable for 7 days with eligibility re-checked at today's amounts, and require the customer to accept a price that differs from their quote, so a price never changes silently in either direction and the contract records the original quote to explain it."
         }
       ]
+    },
+    {
+      "source": "docs/decisions/records/invoice-issuance-on-view.json",
+      "sha256": "adc3eb38c87b4ccae142701a507545f57b6d4db19c31911e8b314fd8becf01fc",
+      "prNumber": 84,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/84",
+      "mergedAt": "2026-11-06T12:10:21.000Z",
+      "decisions": [
+        {
+          "id": "D-84-01",
+          "category": "Contract",
+          "decision": "Issue each monthly invoice of an active contract on its due date from the locked net rent, with the VAT rate of that due date stored on the invoice, so later price lists or VAT changes never rewrite an issued invoice; contracts waiting for a signatory or already ended are not billed."
+        },
+        {
+          "id": "D-84-02",
+          "category": "Infrastructure",
+          "decision": "Run billing idempotently when the customer opens their account, lease or buyout page instead of on a scheduler, because the demo clock moves in jumps; one audit row records each run that issued something, and the contract and due date uniqueness prevents duplicates."
+        },
+        {
+          "id": "D-84-03",
+          "category": "Contract",
+          "decision": "On demo leases only, record a simulated payment for invoices already past their due date, matching the persona scenarios, so moving the demo clock forward doesn't show months of overdue rent; real leases are never paid by the billing run."
+        }
+      ]
     }
   ]
 }
