@@ -727,5 +727,16 @@
   "customer.var.D": "Uusien vaurioiden kustannus ennen ALV:tä",
   "customer.var.buyoutToday": "Lunastuksen arvo tänään maksettaessa",
   "return.stage.cancelled": "Peruutettu",
-  "recovery.state.cancelled": "Peruutettu"
+  "recovery.state.cancelled": "Peruutettu",
+  "demo.badge": "Demotila",
+  "demo.date": "Demopäivä",
+  "demo.setDate": "Aseta päivä",
+  "demo.reset": "Käytä tätä päivää",
+  "demo.active": "Sovellus käsittelee päivää {date} tämänpäiväisenä.",
+  "demo.persona": "Toimi henkilönä",
+  "demo.choosePersona": "Valitse henkilö",
+  "demo.switch": "Vaihda",
+  "demo.staff": "Henkilökunta (demo)",
+  "demo.error": "Se ei onnistunut. Yritä uudelleen.",
+  "demo.rateLimited": "Liian monta vaihtoa. Odota hetki ja yritä uudelleen."
 }

@@ -14,7 +14,7 @@ import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
 import { toAsset } from '@/server/assets';
 import { db } from '@/server/db';
-import { todayIso } from '@/server/today';
+import { appToday } from '@/server/demo-mode';
 
 export default async function ProductPage({ params }: PageProps<'/[locale]/products/[id]'>) {
   const { locale, id } = await params;
@@ -32,7 +32,7 @@ export default async function ProductPage({ params }: PageProps<'/[locale]/produ
   if (!row || row.isFleetHistory) notFound();
   const asset = toAsset(row);
   const available = asset.status === 'available' && row.contracts.length === 0;
-  const today = todayIso();
+  const today = await appToday();
   const price = assetOfferPrice(row, lists, today);
   const rate = vat.rates.find(
     (rate) => rate.valid_from <= today && (rate.valid_to === null || rate.valid_to >= today)

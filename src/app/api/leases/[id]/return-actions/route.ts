@@ -6,7 +6,7 @@ import { requireIdentity } from '@/server/auth-session';
 import { db } from '@/server/db';
 import { acceptReturn } from '@/server/recovery';
 import { readRecoveryBody } from '@/server/recovery-input';
-import { todayIso } from '@/server/today';
+import { requestToday } from '@/server/demo-mode';
 
 const schema = z.strictObject({
   action: z.enum(['accept', 'buyout']),
@@ -24,7 +24,7 @@ export const POST = handleRoute(
       contractId: id,
       customerId: identity.customerId,
       userId: identity.id,
-      today: todayIso(),
+      today: requestToday(request),
     });
     return ok(
       { id: result.id, status: result.status },

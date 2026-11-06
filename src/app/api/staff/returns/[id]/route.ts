@@ -8,7 +8,7 @@ import { db } from '@/server/db';
 import { assessReturn, findReturnCase, progressReturn } from '@/server/recovery';
 import { readRecoveryBody, staffRecoveryActionSchema } from '@/server/recovery-input';
 import { completeRefurbishment, publishRelisting } from '@/server/relisting';
-import { todayIso } from '@/server/today';
+import { requestToday } from '@/server/demo-mode';
 
 /** An itemized inspection is much larger than the other recovery requests. */
 const maxActionBytes = 32 * 1024;
@@ -19,7 +19,7 @@ export const POST = handleRoute(
     const staff = await requireStaff(db, request.headers);
     const { id } = await params;
     const input = await readRecoveryBody(request, staffRecoveryActionSchema, maxActionBytes);
-    const today = todayIso();
+    const today = requestToday(request);
     const result = await perform();
     return ok(
       { id: result.id, status: result.status },

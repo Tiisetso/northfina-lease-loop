@@ -15,7 +15,7 @@ import {
   recoveryReportSchema,
 } from '@/server/recovery-input';
 import { relistOfferFor } from '@/server/relisting';
-import { todayIso } from '@/server/today';
+import { appToday } from '@/server/demo-mode';
 
 export default async function Page({ params }: PageProps<'/[locale]/staff/returns/[id]'>) {
   const { locale, id } = await params;
@@ -35,15 +35,15 @@ export default async function Page({ params }: PageProps<'/[locale]/staff/return
     ? recoveryCalculationSchema.parse(JSON.parse(request.assessment.calculationJson))
     : null;
   const firstDate = request.contract.asset.firstLeaseDate ?? request.contract.startDate;
+  const today = await appToday();
   const vat = await loadVatRates();
   const rate = vat.rates.find(
-    (rate) =>
-      rate.valid_from <= todayIso() && (rate.valid_to === null || rate.valid_to >= todayIso())
+    (rate) => rate.valid_from <= today && (rate.valid_to === null || rate.valid_to >= today)
   );
   const vatBasisPoints = rate ? Math.round(rate.rate_percent * 100) : 0;
   const status = request.assessment?.status ?? 'pending';
   const offer = ['received', 'ready'].includes(status)
-    ? await relistOfferFor(db, id, todayIso()).catch(() => null)
+    ? await relistOfferFor(db, id, today).catch(() => null)
     : null;
   const t = getT(locale);
   const itemName = `${request.contract.asset.make} ${request.contract.asset.model}`;
@@ -76,9 +76,9 @@ export default async function Page({ params }: PageProps<'/[locale]/staff/return
         status={status}
         currentUsage={request.contract.asset.usage_value}
         recordedAge={
-          request.contract.asset.firstLeaseDate ? recoveryAgeMonths(firstDate, todayIso()) : null
+          request.contract.asset.firstLeaseDate ? recoveryAgeMonths(firstDate, today) : null
         }
-        defaultAge={recoveryAgeMonths(firstDate, todayIso())}
+        defaultAge={recoveryAgeMonths(firstDate, today)}
       />
     </div>
   );

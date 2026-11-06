@@ -8,7 +8,7 @@ import { intlLocale, isLocale } from '@/i18n/locales';
 import { applicationItemsSchema, findCustomerApplication } from '@/server/applications';
 import { readIdentity } from '@/server/auth-session';
 import { db } from '@/server/db';
-import { todayIso } from '@/server/today';
+import { appToday } from '@/server/demo-mode';
 
 export default async function Page({ params }: PageProps<'/[locale]/applications/[id]'>) {
   const { locale, id } = await params;
@@ -20,7 +20,7 @@ export default async function Page({ params }: PageProps<'/[locale]/applications
   const t = getT(locale);
   const items = applicationItemsSchema.parse(JSON.parse(application.itemsJson));
   const reasons = z.array(z.string()).parse(JSON.parse(application.reasonsJson));
-  const current = application.startDate === todayIso();
+  const current = application.startDate === (await appToday());
   return (
     <div className="mx-auto max-w-copy px-card py-section-compact">
       <h1 className="font-display text-display-sm font-semibold tablet:text-display-lg">

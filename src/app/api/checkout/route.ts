@@ -9,7 +9,7 @@ import { requireIdentity } from '@/server/auth-session';
 import { withAudit } from '@/server/audit';
 import { checkoutOptions } from '@/server/checkout-options';
 import { db } from '@/server/db';
-import { todayIso } from '@/server/today';
+import { requestToday } from '@/server/demo-mode';
 
 const schema = z.strictObject({
   token: z.uuid(),
@@ -92,7 +92,7 @@ export const POST = handleRoute(async (request) => {
       throw new ApiError(409, 'CHECKOUT_CONFLICT', 'Checkout cannot be repeated.');
     return ok({ ids: existingIds }, { status: 201, headers: { 'Cache-Control': 'no-store' } });
   }
-  const today = todayIso();
+  const today = requestToday(request);
   if (input.date !== today) throw new ApiError(409, 'QUOTE_CHANGED', 'The quote date has changed.');
   const data = await checkoutOptions(today);
   const quotes = input.items.map((item) => {

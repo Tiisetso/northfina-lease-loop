@@ -7,7 +7,7 @@ import { db } from '@/server/db';
 import { CartPage } from '@/components/cart-page';
 import { isLocale } from '@/i18n/locales';
 import { checkoutOptions } from '@/server/checkout-options';
-import { todayIso } from '@/server/today';
+import { appToday } from '@/server/demo-mode';
 
 export default async function Page({ params, searchParams }: PageProps<'/[locale]/cart'>) {
   const { locale } = await params;
@@ -18,7 +18,7 @@ export default async function Page({ params, searchParams }: PageProps<'/[locale
   const identity = id ? await readIdentity(db, await headers()) : null;
   const application =
     id && identity ? await findCustomerApplication(db, identity.customerId, id) : null;
-  const today = todayIso();
+  const today = await appToday();
   const applicationId =
     application?.status === 'approved' && application.startDate === today
       ? application.id

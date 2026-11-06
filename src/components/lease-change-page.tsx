@@ -9,7 +9,7 @@ import { readIdentity } from '@/server/auth-session';
 import { db } from '@/server/db';
 import { leaseActionContext } from '@/server/lease-actions';
 import { checkoutOptions } from '@/server/checkout-options';
-import { todayIso } from '@/server/today';
+import { appToday } from '@/server/demo-mode';
 
 export async function LeaseChangePage({
   locale,
@@ -28,7 +28,7 @@ export async function LeaseChangePage({
     select: { id: true },
   });
   if (!owned) notFound();
-  const today = todayIso();
+  const today = await appToday();
   const context = await leaseActionContext(db, identity.customerId, id, today);
   const t = getT(locale);
   return (
