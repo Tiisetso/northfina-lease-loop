@@ -390,6 +390,7 @@
   "pricing.downGross": "Käsiraha sisältäen ALV:n",
   "pricing.financedGross": "Rahoitettava määrä sisältäen ALV:n: {amount}",
   "pricing.includesVat": "Sisältää ALV:n",
+  "pricing.roundingRule": "Näin pyöristämme: kuukausimaksut alkavat sopimuksen alkupäivästä täysinä kuukausina (ei osakuukausimaksua), ja jokainen summa pyöristetään kerran lähimpään senttiin, puoli senttiä ylöspäin.",
   "recovery.staff": "Henkilökunnan työtila",
   "recovery.queue": "Palautukset ja kunnostus",
   "recovery.queueIntro": "Tarkista ilmoitus, arvioi tuote ja valmistele sen seuraava käyttökerta.",

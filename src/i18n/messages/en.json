@@ -390,6 +390,7 @@
   "pricing.downGross": "Down payment including VAT",
   "pricing.financedGross": "Financed amount including VAT: {amount}",
   "pricing.includesVat": "Including VAT",
+  "pricing.roundingRule": "How we round: monthly payments start on your contract's start date as full months (no part-month charge), and each amount is rounded once to the nearest cent, half a cent up.",
   "recovery.staff": "Staff workspace",
   "recovery.queue": "Returns and recovery",
   "recovery.queueIntro": "Review customer reports, assess the item, and prepare its next life.",
