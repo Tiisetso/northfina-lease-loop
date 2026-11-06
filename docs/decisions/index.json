@@ -147,6 +147,20 @@
           "decision": "Supersede D-37-03: skip the consumer affordability check when the question bank does not ask for income (financed amount below its threshold) and approve on the remaining rules, because the bank deliberately omits income there and routing every such case to manual review made low-value items unleasable for consumers."
         }
       ]
+    },
+    {
+      "source": "docs/decisions/records/isolate-test-git-env.json",
+      "sha256": "e0250e2afdcf21d225b85014a78c983f79124f64af432f5a9ef57200637b60f7",
+      "prNumber": 60,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/60",
+      "mergedAt": "2026-11-06T09:31:45.000Z",
+      "decisions": [
+        {
+          "id": "D-60-01",
+          "category": "Testing",
+          "decision": "Strip inherited GIT_* variables in every test worker and run fixture repositories with an explicit clean environment, because Git hooks export GIT_DIR, which overrides git -C and let a fixture test re-initialise, reconfigure and commit to the real repository."
+        }
+      ]
     }
   ]
 }
