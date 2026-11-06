@@ -123,6 +123,11 @@ immutability and the one-record limit, pass the full base commit SHA:
 npm run decisions:validate -- --base <full-base-commit-sha>
 ```
 
+The PR workflow takes this SHA from the first parent of GitHub's checked-out test
+merge, after confirming that the checkout is a merge. This pins validation to the
+base actually represented by the checkout. An older base SHA in an event payload
+must not make already-merged source records look like new additions to a rolling PR.
+
 For recovery, use a clean, up-to-date default-branch checkout with full Git history
 and a working `origin`. Authenticate `gh` with repository contents and pull-request
 read access, then run:
