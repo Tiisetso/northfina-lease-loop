@@ -19,7 +19,10 @@ import {
 } from './repository.mjs';
 
 export function context(env = process.env) {
+  // DECISIONS_REPOSITORY names the repository whose PRs the records come from. It is set when
+  // the checks run elsewhere, e.g. on our judging PR upstream, where GITHUB_REPOSITORY is theirs.
   const remote =
+    env.DECISIONS_REPOSITORY ??
     env.GITHUB_REPOSITORY ??
     git('remote', 'get-url', 'origin')
       .replace(/^git@github\.com:|^https:\/\/github\.com\//, '')
@@ -27,13 +30,33 @@ export function context(env = process.env) {
   if (!/^[\w.-]+\/[\w.-]+$/.test(remote)) throw new Error('Set GITHUB_REPOSITORY=owner/repo');
   return { repository: remote, defaultBranch: env.DECISIONS_DEFAULT_BRANCH ?? 'main' };
 }
+/** True when the records' repository is not the one running the checks (our judging PR). */
+export function judgingRun(env = process.env) {
+  return Boolean(
+    env.DECISIONS_REPOSITORY &&
+    env.GITHUB_REPOSITORY &&
+    env.DECISIONS_REPOSITORY !== env.GITHUB_REPOSITORY
+  );
+}
 export function main(args = process.argv.slice(2)) {
   const [mode = 'validate', ...flags] = args;
   const { repository, defaultBranch } = context();
   const base = flags.length ? flags[1] : undefined;
   if (flags.length && (flags.length !== 2 || flags[0] !== '--base'))
     throw new Error('Expected --base <full SHA>');
-  if (mode === 'validate') {
+  if (mode === 'validate' && judgingRun()) {
+    // Running on our judging PR in the organisers' repository: the PR carries our whole history,
+    // so the one-PR rules (one new record, immutable base) don't apply. Each record was checked
+    // by its own PR in our fork; here every record and the published table are checked against
+    // the fork's merged PRs on GitHub.
+    const { sources, index } = validateLocal(repository, defaultBranch);
+    if (
+      serializeIndex(index) !==
+      serializeIndex(reconcileRepository(repository, defaultBranch, sources))
+    )
+      throw new Error('Metadata does not match original merged PRs');
+    console.log(`Decision records and published history validated against ${repository}.`);
+  } else if (mode === 'validate') {
     const { sources, index } = validateLocal(repository, defaultBranch, base);
     // Generated mappings in a PR must also be verified against GitHub, not merely self-consistent.
     if (base && git('diff', '--name-only', base, '--', INDEX_PATH)) {
