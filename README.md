@@ -59,6 +59,14 @@ Everything in the skeleton is replaceable. Keep the rules, not necessarily the c
 
 ---
 
+## Team pull requests
+
+Use [.github/pull_request_template.md](.github/pull_request_template.md) for team
+feature and bug-fix PRs. It provides the shared structure for authors and coding
+agents: context, implementation, reproducible testing, visual evidence and a checklist.
+Fill every section, report actual check results and explain anything that is not applicable.
+Use a short title such as `fix(auth): prevent registration crash [T1038]` when a ticket exists.
+
 ## Submitting
 
 You can't push to this repo. You work in **your own fork** and send us a **pull request**.
@@ -68,7 +76,7 @@ You can't push to this repo. You work in **your own fork** and send us a **pull 
 3. Everyone clones the fork and commits as usual. Small, conventional commits; the hooks help.
 4. **Before Friday 6 November 16:00**, open a pull request from your fork to `etufillari/northfina-lease-loop` `main`.
    - Title: `Team <name>: <your product name>`.
-   - Fill in the template: members, the Smart Problems you picked, and how to demo.
+   - Use the [final hackathon submission structure](.github/hackathon_submission.md): members, the Smart Problems you picked, and how to demo.
    - You can open it early and keep pushing until the deadline.
 5. **At 16:00 we record the latest commit of every open pull request.** That commit is what we judge. Anything pushed later is ignored, and pull requests opened after 16:00 don't count.
 
