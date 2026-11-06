@@ -29,6 +29,18 @@ You are helping a hackathon team build **Lease Loop**. The challenge is in `CHAL
 - Use `.github/hackathon_submission.md` for the final judging PR and follow the
   submission title and deadline in `README.md`.
 
+## Decision records
+
+- Consider whether the PR makes a meaningful project choice; routine changes need no record.
+- If yes, include one uniquely named JSON record in `docs/decisions/records/` with
+  its ordered decisions. Follow `docs/decisions/README.md` and use only categories
+  from `scripts/decisions/model.mjs`. State the actual choice and reason concisely.
+- Review the wording with the implementation and run `npm run decisions:validate`
+  before requesting review. Do not invent decisions to satisfy a checklist.
+- Never edit the generated `docs/DECISIONS.md` or assign PR numbers, IDs or merge dates.
+- Merged records are immutable. Supersede a decision in a new PR with a new record
+  referencing its old ID; never rewrite historical wording or renumber it.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 ## This is NOT the Next.js you know

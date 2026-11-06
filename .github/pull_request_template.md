@@ -25,6 +25,10 @@ For a bug fix, explain what happens before and after the change. -->
 
 -
 
+<!-- Optional: if this PR introduces a meaningful project choice, link its one
+reviewed JSON decision record here. Otherwise omit this note; no record is required.
+See docs/decisions/README.md. Do not duplicate the record or invent a decision. -->
+
 ## Testing Instructions
 
 <!-- Give steps a reviewer can reproduce, including setup, inputs and expected results.

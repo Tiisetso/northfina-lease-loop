@@ -59,6 +59,12 @@ Everything in the skeleton is replaceable. Keep the rules, not necessarily the c
 
 ---
 
+## Project decisions
+
+[Read the generated decision log](docs/DECISIONS.md) for accepted project choices
+and their reasons. [The contribution guide](docs/decisions/README.md) explains
+reviewed source records, publication through a rolling documentation PR and recovery.
+
 ## Team pull requests
 
 Use [.github/pull_request_template.md](.github/pull_request_template.md) for team
