@@ -59,6 +59,7 @@ async function context(
     annualRateBasisPoints:
       contract.annualRateBasisPoints ?? Math.round(band.band.annual_interest_percent * 100),
     recoveryCents: 0,
+    termMonths: contract.termMonths,
     vatBasisPoints: Math.round(rate.rate_percent * 100),
     outstandingCents: summary.outstandingCents + accrued.reduce((s, i) => s + i.totalCents, 0),
   };
@@ -84,12 +85,42 @@ async function context(
   };
 }
 export async function leaseActionContext(
-  database: PrismaClient,
+  database: PrismaClient | TransactionClient,
   customerId: string,
   contractId: string,
   today: string
 ) {
   return context(database, customerId, contractId, today);
+}
+
+/** A simulated payment that includes unpaid rent also pays those invoices, so nothing is owed twice. */
+export async function settleOpenRent(
+  tx: TransactionClient,
+  data: Pick<Awaited<ReturnType<typeof context>>, 'contract' | 'accrued'>,
+  today: string
+) {
+  for (const invoice of data.contract.invoices.filter((i) => i.status === 'issued')) {
+    const unpaid = Math.max(0, invoice.netCents + invoice.vatCents - paidForInvoice(invoice, true));
+    if (unpaid)
+      await tx.payment.create({
+        data: { invoiceId: invoice.id, amountCents: unpaid, paidDate: today, isSimulated: true },
+      });
+  }
+  for (const invoice of data.accrued) {
+    await tx.invoice.create({
+      data: {
+        contractId: data.contract.id,
+        dueDate: invoice.dueDate,
+        issuedDate: today,
+        netCents: invoice.netCents,
+        vatBasisPoints: invoice.vatBasisPoints,
+        vatCents: invoice.vatCents,
+        payments: {
+          create: { amountCents: invoice.totalCents, paidDate: today, isSimulated: true },
+        },
+      },
+    });
+  }
 }
 
 /** Buying an owned demo lease is a price/payment action; no staff condition approval is involved. */
@@ -130,6 +161,9 @@ export async function payBuyout(
       const data = await context(tx, input.customerId, input.contractId, input.today);
       if (data.contract.status !== 'active')
         throw new ApiError(409, 'LEASE_INACTIVE', 'The lease is not active.');
+      // A paid return is on its way back; buying it too would charge the customer twice.
+      if (data.contract.actionPayments.some((payment) => payment.kind === 'return'))
+        throw new ApiError(409, 'RETURN_PAID', 'This lease has a paid return.');
       if (!data.contract.isDemo)
         throw new ApiError(409, 'REAL_PAYMENT_REQUIRED', 'A real payment integration is required.');
       if (
@@ -148,36 +182,7 @@ export async function payBuyout(
           isSimulated: true,
         },
       });
-      for (const invoice of data.contract.invoices.filter((i) => i.status === 'issued')) {
-        const unpaid = Math.max(
-          0,
-          invoice.netCents + invoice.vatCents - paidForInvoice(invoice, true)
-        );
-        if (unpaid)
-          await tx.payment.create({
-            data: {
-              invoiceId: invoice.id,
-              amountCents: unpaid,
-              paidDate: input.today,
-              isSimulated: true,
-            },
-          });
-      }
-      for (const invoice of data.accrued) {
-        await tx.invoice.create({
-          data: {
-            contractId: input.contractId,
-            dueDate: invoice.dueDate,
-            issuedDate: input.today,
-            netCents: invoice.netCents,
-            vatBasisPoints: invoice.vatBasisPoints,
-            vatCents: invoice.vatCents,
-            payments: {
-              create: { amountCents: invoice.totalCents, paidDate: input.today, isSimulated: true },
-            },
-          },
-        });
-      }
+      await settleOpenRent(tx, data, input.today);
       await tx.leaseRequest.updateMany({
         where: { contractId: input.contractId, status: { in: ['pending', 'approved'] } },
         data: { status: 'cancelled' },

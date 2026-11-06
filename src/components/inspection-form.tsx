@@ -5,33 +5,28 @@ import type { AssetCategory, AssetCondition } from '@/data/schemas';
 import { parseEuroCents } from '@/domain/application-fields';
 import { netFromGross } from '@/domain/gross-money';
 import {
-  batteryBelowBenchmark,
+  batteryIsRepairLine,
   checkResults,
   conditionsUpTo,
-  damageLiabilities,
-  damageTypes,
   evaluateInspection,
   inspectionChecks,
   inspectionReadings,
   reportedCheckIds,
-  usageSources,
+  reportedRepairCents,
   type CheckGate,
   type CheckResult,
-  type DamageLiability,
-  type DamageType,
   type InspectionRecord,
-  type UsageSource,
 } from '@/domain/inspection';
+import { conditionDamageCost } from '@/domain/condition-report';
+import { batteryAssessment, inspectionPartCost } from '@/domain/laptop-parts';
 import { invoiceAmounts } from '@/domain/lease-billing';
+import { assessmentPreview, type ReturnPreviewContext } from '@/domain/return-preview';
 import { formatEuro } from '@/domain/money';
 import { getT, type MessageKey } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import type { RecoveryInspection } from '@/server/recovery-input';
-
-export const inputClass =
-  'mt-2 min-h-target w-full rounded-sm border border-hairline bg-canvas px-3 py-2 text-body';
-export const primaryButtonClass =
-  'pressable min-h-target rounded-pill bg-primary px-6 py-3 text-caption font-semibold text-white disabled:opacity-50';
+import { DamageLog, type DamageState } from './damage-log';
+import { inputClass, primaryButtonClass } from './form-classes';
 
 const groups: readonly { id: string; gates: readonly CheckGate[] }[] = [
   { id: 'identity', gates: ['identity', 'condition'] },
@@ -39,8 +34,7 @@ const groups: readonly { id: string; gates: readonly CheckGate[] }[] = [
   { id: 'function', gates: ['function'] },
 ];
 
-type CheckState = { result: CheckResult | ''; repair: string; note: string };
-type DamageState = { area: string; type: DamageType; liability: DamageLiability; repair: string };
+type CheckState = { result: CheckResult | ''; repair: string; note: string; chargeable: boolean };
 
 type Props = {
   locale: Locale;
@@ -53,10 +47,20 @@ type Props = {
   recordedAge: number | null;
   defaultAge: number;
   vatBasisPoints: number;
+  returnContext: ReturnPreviewContext | null;
+  /** The price from the customer's return form, which this inspection does not change. */
+  agreed: { totalCents: number; lines: readonly { id: string; netCents: number }[] } | null;
   busy: boolean;
   failed: boolean;
   onSubmit: (body: unknown) => void;
 };
+
+/** Identity and accessories are yes-or-no questions, so wear and "not applicable" make no sense. */
+function resultAllowed(id: string, gate: CheckGate, result: CheckResult) {
+  if (gate === 'identity' || id === 'accessories_complete')
+    return ['pass', 'repair', 'not_tested'].includes(result);
+  return true;
+}
 
 export function InspectionForm({
   locale,
@@ -69,6 +73,8 @@ export function InspectionForm({
   recordedAge,
   defaultAge,
   vatBasisPoints,
+  returnContext,
+  agreed,
   busy,
   failed,
   onSubmit,
@@ -80,7 +86,9 @@ export function InspectionForm({
   const readingDefinitions = inspectionReadings(category);
   const reported = new Set(reportedCheckIds(category, reportedIssues));
 
-  const [usageSource, setUsageSource] = useState<UsageSource>(saved?.usageSource ?? 'display');
+  const [usage, setUsage] = useState(
+    String(inspection?.usageValue ?? Math.max(currentUsage, reportedUsage ?? 0))
+  );
   const [customerPresent, setCustomerPresent] = useState(saved?.customerPresent ?? false);
   const [checks, setChecks] = useState<Record<string, CheckState>>(() =>
     Object.fromEntries(
@@ -92,6 +100,7 @@ export function InspectionForm({
             result: check?.result ?? '',
             repair: check?.repairCents ? money(check.repairCents) : '',
             note: check?.note ?? '',
+            chargeable: check?.chargeable ?? true,
           },
         ];
       })
@@ -127,7 +136,6 @@ export function InspectionForm({
     return gross === null ? -1 : netFromGross(gross, vatBasisPoints);
   }
   const record: InspectionRecord = {
-    usageSource,
     customerPresent,
     checks: definitions.flatMap(({ id }) => {
       const check = checks[id]!;
@@ -139,6 +147,7 @@ export function InspectionForm({
               // Costs entered before changing a result away from repair no longer apply.
               repairCents: check.result === 'repair' ? netCents(check.repair) : 0,
               note: check.note.trim(),
+              chargeable: check.chargeable,
             },
           ]
         : [];
@@ -155,6 +164,15 @@ export function InspectionForm({
     })),
   };
   const findings = evaluateInspection(category, record);
+  const ageForBattery = recordedAge ?? inspection?.ageMonths ?? defaultAge;
+  const batteryReading = record.readings.find((item) => item.id === 'battery_health')?.value;
+  const battery =
+    category === 'laptop' && typeof batteryReading === 'number' && Number.isFinite(batteryReading)
+      ? batteryAssessment(batteryReading, ageForBattery)
+      : null;
+  const batteryCost =
+    returnContext?.costs.laptop?.fixed.find((task) => task.id === 'battery_replacement')
+      ?.cost_cents ?? null;
   const allowed = conditionsUpTo(findings.conditionCap);
   // The grade follows the findings down automatically, and never silently back up.
   const grade = allowed.includes(condition) ? condition : findings.conditionCap;
@@ -168,19 +186,60 @@ export function InspectionForm({
       action: 'assess',
       condition: grade,
       targetCondition,
-      usageValue: Number(data.get('usageValue')),
+      usageValue: Number(usage),
       ageMonths: Number(data.get('ageMonths')),
       notes: data.get('notes'),
       record,
     });
   }
+  const setReading = (id: string, value: string) => {
+    if (/^\d*[.,]?\d*$/.test(value)) setReadings((current) => ({ ...current, [id]: value }));
+  };
+  const resultLabel = (id: string, result: CheckResult) =>
+    t(
+      (['serial_match', 'accessories_complete'].includes(id) && result !== 'not_applicable'
+        ? `inspection.result.${id}.${result}`
+        : `inspection.result.${result}`) as MessageKey
+    );
+  /** Choosing "needs repair" suggests what the customer was quoted, or else the usual cost. */
+  function chooseResult(id: string, result: CheckResult) {
+    const usual =
+      !returnContext || category !== 'laptop'
+        ? null
+        : id === 'battery_pack'
+          ? batteryCost
+          : inspectionPartCost(id, returnContext.recoveryFacts.originalPriceCents);
+    const suggested =
+      result === 'repair' ? (reportedRepairCents(id, agreed?.lines ?? []) ?? usual) : null;
+    setChecks((current) => {
+      const check = current[id]!;
+      return {
+        ...current,
+        [id]: {
+          ...check,
+          result,
+          repair: suggested !== null && !check.repair ? money(suggested) : check.repair,
+          chargeable: id === 'battery_pack' && battery ? battery.customerPays : check.chargeable,
+        },
+      };
+    });
+  }
   const setCheck = (id: string, change: Partial<CheckState>) =>
     setChecks((current) => ({ ...current, [id]: { ...current[id]!, ...change } }));
-  const setDamageRow = (index: number, change: Partial<DamageState>) =>
-    setDamage((current) =>
-      current.map((entry, position) => (position === index ? { ...entry, ...change } : entry))
-    );
   const answered = definitions.length - findings.missingChecks.length;
+  const live =
+    returnContext &&
+    assessmentPreview(returnContext, {
+      condition: grade,
+      targetCondition,
+      usageValue: Number(usage),
+      additionalRepairCents: Math.max(0, findings.repairNetCents),
+      damageNetCents: Math.max(
+        conditionDamageCost(returnContext.baselineCondition, grade, returnContext.costs[category]),
+        findings.chargeableNetCents
+      ),
+      skipBatteryTask: batteryIsRepairLine(record),
+    });
 
   return (
     <form onSubmit={submit} className="rounded-lg border border-hairline p-6">
@@ -190,41 +249,36 @@ export function InspectionForm({
         <section>
           <h3 className="text-caption font-semibold">{t('inspection.section.item')}</h3>
           <div className="mt-3 grid gap-5 sm:grid-cols-2">
-            <label className="text-caption">
-              {t(`product.usage.${category}`)}
-              <input
-                name="usageValue"
-                type="number"
-                min={currentUsage}
-                max={100000000}
-                step={1}
-                defaultValue={inspection?.usageValue ?? Math.max(currentUsage, reportedUsage ?? 0)}
-                required
-                className={inputClass}
-              />
-            </label>
-            <label className="text-caption">
-              {t('inspection.usageSource')}
-              <select
-                value={usageSource}
-                onChange={(event) => setUsageSource(event.target.value as UsageSource)}
-                className={inputClass}
-              >
-                {usageSources.map((source) => (
-                  <option key={source} value={source}>
-                    {t(`inspection.usageSource.${source}`)}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {category === 'laptop' ? (
+              <label className="text-caption">
+                {t('inspection.reading.battery_health')} ({t('inspection.unit.percent')})
+                <input
+                  inputMode="numeric"
+                  value={readings.battery_health ?? ''}
+                  onChange={(event) => setReading('battery_health', event.target.value)}
+                  className={inputClass}
+                />
+              </label>
+            ) : (
+              <label className="text-caption">
+                {t(`product.usage.${category}`)}
+                <input
+                  inputMode="numeric"
+                  value={usage}
+                  required
+                  onChange={(event) => {
+                    if (/^\d*$/.test(event.target.value)) setUsage(event.target.value);
+                  }}
+                  className={inputClass}
+                />
+              </label>
+            )}
             <label className="text-caption">
               {t('recovery.ageMonths')}
               <input
                 name="ageMonths"
-                type="number"
-                min={0}
-                max={1200}
-                step={1}
+                inputMode="numeric"
+                pattern="[0-9]*"
                 readOnly={recordedAge !== null}
                 defaultValue={recordedAge ?? inspection?.ageMonths ?? defaultAge}
                 required
@@ -241,6 +295,20 @@ export function InspectionForm({
               {t('inspection.customerPresent')}
             </label>
           </div>
+          {battery ? (
+            <p className="mt-3 rounded-sm bg-parchment p-3 text-caption">
+              {t(
+                !battery.needsReplacement
+                  ? 'inspection.battery.fine'
+                  : agreed
+                    ? 'inspection.battery.agreed'
+                    : battery.customerPays
+                      ? 'inspection.battery.charge'
+                      : 'inspection.battery.normal',
+                { months: ageForBattery }
+              )}
+            </p>
+          ) : null}
         </section>
 
         {groups.map((group) => (
@@ -273,20 +341,15 @@ export function InspectionForm({
                           id={`check-${id}`}
                           required
                           value={check.result}
-                          onChange={(event) =>
-                            setCheck(id, { result: event.target.value as CheckResult })
-                          }
+                          onChange={(event) => chooseResult(id, event.target.value as CheckResult)}
                           className="min-h-target w-full rounded-sm border border-hairline bg-canvas px-3 py-2 text-caption"
                         >
                           <option value="">{t('inspection.choose')}</option>
                           {checkResults
-                            .filter(
-                              (result) =>
-                                gate !== 'identity' || !['wear', 'not_applicable'].includes(result)
-                            )
+                            .filter((result) => resultAllowed(id, gate, result))
                             .map((result) => (
                               <option key={result} value={result}>
-                                {t(`inspection.result.${result}`)}
+                                {resultLabel(id, result)}
                               </option>
                             ))}
                         </select>
@@ -311,6 +374,19 @@ export function InspectionForm({
                               className={inputClass}
                             />
                           </label>
+                          {agreed ? null : (
+                            <label className="flex min-h-target items-center gap-3 text-caption sm:col-span-2">
+                              <input
+                                type="checkbox"
+                                checked={check.chargeable}
+                                onChange={(event) =>
+                                  setCheck(id, { chargeable: event.target.checked })
+                                }
+                                className="size-4 shrink-0 accent-primary"
+                              />
+                              {t('inspection.customerPaysRepair')}
+                            </label>
+                          )}
                         </div>
                       ) : null}
                     </li>
@@ -324,118 +400,29 @@ export function InspectionForm({
           <h3 className="text-caption font-semibold">{t('inspection.section.readings')}</h3>
           <p className="mt-1 text-caption text-ink-muted">{t('inspection.readingsHint')}</p>
           <div className="mt-3 grid gap-5 sm:grid-cols-3">
-            {readingDefinitions.map(({ id, unit, max }) => (
-              <label key={id} className="text-caption">
-                {t(`inspection.reading.${id}` as MessageKey)} ({t(`inspection.unit.${unit}`)})
-                <input
-                  type="number"
-                  min={0}
-                  max={max}
-                  step="any"
-                  value={readings[id]}
-                  onChange={(event) =>
-                    setReadings((current) => ({ ...current, [id]: event.target.value }))
-                  }
-                  className={inputClass}
-                />
-              </label>
-            ))}
+            {readingDefinitions
+              .filter(({ id }) => category !== 'laptop' || id !== 'battery_health')
+              .map(({ id, unit }) => (
+                <label key={id} className="text-caption">
+                  {t(`inspection.reading.${id}` as MessageKey)}
+                  {unit === 'count' ? '' : ` (${t(`inspection.unit.${unit}`)})`}
+                  <input
+                    inputMode="decimal"
+                    value={readings[id]}
+                    onChange={(event) => setReading(id, event.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+              ))}
           </div>
-          {batteryBelowBenchmark(record.readings) ? (
-            <p className="mt-3 rounded-sm bg-parchment p-3 text-caption">
-              {t('inspection.batteryLow')}
-            </p>
-          ) : null}
         </section>
 
-        <section>
-          <h3 className="text-caption font-semibold">{t('inspection.section.damage')}</h3>
-          <p className="mt-1 text-caption text-ink-muted">{t('inspection.damageHint')}</p>
-          <ul className="mt-3 space-y-4">
-            {damage.map((entry, index) => (
-              <li key={index} className="rounded-sm bg-parchment p-4">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="text-caption sm:col-span-2">
-                    {t('inspection.damageArea')}
-                    <input
-                      required
-                      maxLength={80}
-                      value={entry.area}
-                      onChange={(event) => setDamageRow(index, { area: event.target.value })}
-                      className={inputClass}
-                    />
-                  </label>
-                  <label className="text-caption">
-                    {t('inspection.damageType')}
-                    <select
-                      value={entry.type}
-                      onChange={(event) =>
-                        setDamageRow(index, { type: event.target.value as DamageType })
-                      }
-                      className={inputClass}
-                    >
-                      {damageTypes.map((type) => (
-                        <option key={type} value={type}>
-                          {t(`inspection.damage.${type}`)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="text-caption">
-                    {t('inspection.damageLiability')}
-                    <select
-                      value={entry.liability}
-                      onChange={(event) =>
-                        setDamageRow(index, { liability: event.target.value as DamageLiability })
-                      }
-                      className={inputClass}
-                    >
-                      {damageLiabilities.map((liability) => (
-                        <option key={liability} value={liability}>
-                          {t(`inspection.liability.${liability}`)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="text-caption">
-                    {t('inspection.repairCost')}
-                    <input
-                      inputMode="decimal"
-                      value={entry.repair}
-                      onChange={(event) => setDamageRow(index, { repair: event.target.value })}
-                      className={inputClass}
-                    />
-                  </label>
-                  <div className="flex items-end">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setDamage((current) => current.filter((_, position) => position !== index))
-                      }
-                      className="min-h-target text-caption text-primary underline"
-                    >
-                      {t('inspection.damageRemove')}
-                    </button>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-          {damage.length < 12 ? (
-            <button
-              type="button"
-              onClick={() =>
-                setDamage((current) => [
-                  ...current,
-                  { area: '', type: 'scratch', liability: 'fair_wear', repair: '' },
-                ])
-              }
-              className="mt-3 min-h-target rounded-pill border border-primary px-5 py-2 text-caption text-primary"
-            >
-              {t('inspection.damageAdd')}
-            </button>
-          ) : null}
-        </section>
+        <DamageLog
+          locale={locale}
+          damage={damage}
+          setDamage={setDamage}
+          priceAgreed={agreed !== null}
+        />
 
         <section className="rounded-sm bg-parchment p-4">
           <h3 className="text-caption font-semibold">{t('inspection.section.result')}</h3>
@@ -453,11 +440,37 @@ export function InspectionForm({
               <dt className="text-caption text-ink-muted">{t('inspection.totalRepairs')}</dt>
               <dd className="mt-1 font-semibold">{currency(findings.repairNetCents)}</dd>
             </div>
-            <div>
-              <dt className="text-caption text-ink-muted">{t('inspection.totalChargeable')}</dt>
-              <dd className="mt-1 font-semibold">{currency(findings.chargeableNetCents)}</dd>
-            </div>
+            {agreed ? null : (
+              <div>
+                <dt className="text-caption text-ink-muted">{t('inspection.totalChargeable')}</dt>
+                <dd className="mt-1 font-semibold">{currency(findings.chargeableNetCents)}</dd>
+              </div>
+            )}
           </dl>
+          {live ? (
+            <dl className="mt-4 grid gap-4 border-t border-hairline pt-4 sm:grid-cols-3">
+              <div>
+                <dt className="text-caption text-ink-muted">
+                  {t(agreed ? 'recovery.agreedPrice' : 'recovery.customerPays')}
+                </dt>
+                <dd className="mt-1 text-tagline font-semibold">
+                  {formatEuro(agreed?.totalCents ?? live.customerPaysCents, intlLocale[locale])}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-caption text-ink-muted">{t('inspection.live.price')}</dt>
+                <dd className="mt-1 text-tagline font-semibold">
+                  {currency(live.suggestedPriceNetCents)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-caption text-ink-muted">{t('inspection.live.work')}</dt>
+                <dd className="mt-1 text-tagline font-semibold">
+                  {currency(live.refurbishmentNetCents)}
+                </dd>
+              </div>
+            </dl>
+          ) : null}
           <div className="mt-4 grid gap-5 sm:grid-cols-2">
             <label className="text-caption">
               {t('recovery.currentCondition')}
@@ -494,8 +507,6 @@ export function InspectionForm({
               {t('recovery.notes')}
               <textarea
                 name="notes"
-                required
-                minLength={1}
                 maxLength={1000}
                 defaultValue={inspection?.notes ?? ''}
                 rows={3}
@@ -509,7 +520,7 @@ export function InspectionForm({
             </p>
           ) : null}
           <button type="submit" className={`${primaryButtonClass} mt-5 w-full`}>
-            {t(busy ? 'auth.working' : 'recovery.calculate')}
+            {t(busy ? 'auth.working' : agreed ? 'recovery.sendQuote' : 'recovery.calculate')}
           </button>
         </section>
       </fieldset>

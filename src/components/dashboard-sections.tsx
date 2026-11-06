@@ -83,13 +83,16 @@ function LeaseList({ locale, leases, rates, today }: Props) {
       </div>
     );
   return (
-    <ul className="mt-5 grid gap-5 tablet:grid-cols-2">
-      {leases.map((lease) => (
-        <li key={lease.id}>
-          <LeaseCard lease={lease} rates={rates} today={today} locale={locale} />
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className="mt-5 grid gap-5 tablet:grid-cols-2">
+        {leases.map((lease) => (
+          <li key={lease.id}>
+            <LeaseCard lease={lease} rates={rates} today={today} locale={locale} />
+          </li>
+        ))}
+      </ul>
+      <p className="mt-4 text-caption text-ink-muted">{t('dashboard.allIncludeVat')}</p>
+    </>
   );
 }
 function Overview({ locale, leases, rates, today, name }: Props & { name: string }) {
@@ -244,7 +247,8 @@ function Requests({ locale, leases }: { locale: Locale; leases: CustomerLease[] 
                   {lease.status === 'active' &&
                   ['pending', 'approved'].includes(request.status) &&
                   (!request.assessment ||
-                    ['quoted', 'accepted'].includes(request.assessment.status)) ? (
+                    ['quoted', 'accepted'].includes(request.assessment.status)) &&
+                  !lease.actionPayments.some((payment) => payment.kind === 'return') ? (
                     <CancelLeaseRequest
                       locale={locale}
                       contractId={lease.id}

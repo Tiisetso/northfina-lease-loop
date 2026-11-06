@@ -1,12 +1,6 @@
 import { z } from 'zod';
 import { assetConditionSchema } from '@/data/schemas';
-import {
-  checkResults,
-  damageLiabilities,
-  damageTypes,
-  sanitizationMethods,
-  usageSources,
-} from '@/domain/inspection';
+import { checkResults, damageLiabilities, damageTypes, usageSources } from '@/domain/inspection';
 import { ApiError, readJsonBody } from './api-response';
 
 export const reportIssuesByCategory = {
@@ -29,6 +23,11 @@ export const reportIssuesByCategory = {
     'keyboard_fault',
     'network_fault',
     'charging_fault',
+    'cooling_fault',
+    'speed_fault',
+    'camera_audio_fault',
+    'hinge_fault',
+    'liquid_fault',
     'battery_weak',
   ],
   farm_machine: [
@@ -41,6 +40,7 @@ export const reportIssuesByCategory = {
     'service_due',
   ],
 } as const;
+const repairLineSchema = z.object({ id: z.string(), netCents: z.number().int().nonnegative() });
 export const recoveryReportSchema = z.strictObject({
   condition: assetConditionSchema,
   usageValue: z.number().int().min(0).max(100_000_000),
@@ -49,10 +49,10 @@ export const recoveryReportSchema = z.strictObject({
   preferredDate: z.iso.date().optional(),
   answers: z
     .strictObject({
-      power: z.enum(['working', 'fault', 'unknown']),
+      power: z.enum(['working', 'minor', 'fault', 'unknown']),
       batteryKnown: z.boolean(),
       batteryHealth: z.number().int().min(0).max(100).nullable(),
-      functions: z.record(z.string().max(60), z.enum(['working', 'fault', 'unknown'])),
+      functions: z.record(z.string().max(60), z.enum(['working', 'minor', 'fault', 'unknown'])),
       cosmetic: z.enum(['same', 'light', 'deep', 'broken']),
       accessories: z.enum(['complete', 'missing', 'unknown']),
     })
@@ -73,11 +73,21 @@ export const recoveryReportSchema = z.strictObject({
       quoteDate: z.iso.date(),
     })
     .optional(),
+  /** The price shown in the return form. The server sets this; anything sent by a client is ignored. */
+  agreedPrice: z
+    .object({
+      vatBasisPoints: z.number().int().nonnegative(),
+      earlyReturnNetCents: z.number().int().nonnegative(),
+      customerRepairNetCents: z.number().int().nonnegative(),
+      repairShareBasisPoints: z.number().int().nonnegative(),
+      lines: z.array(repairLineSchema).max(20),
+    })
+    .optional(),
 });
 export type RecoveryReport = z.infer<typeof recoveryReportSchema>;
 const repairCents = z.number().int().min(0).max(25_000_000);
 export const inspectionRecordSchema = z.strictObject({
-  usageSource: z.enum(usageSources),
+  usageSource: z.enum(usageSources).optional(),
   customerPresent: z.boolean(),
   checks: z
     .array(
@@ -86,6 +96,7 @@ export const inspectionRecordSchema = z.strictObject({
         result: z.enum(checkResults),
         repairCents,
         note: z.string().trim().max(300),
+        chargeable: z.boolean().optional(),
       })
     )
     .max(40),
@@ -108,7 +119,7 @@ const inspectionFields = {
   targetCondition: z.enum(['good', 'like_new']),
   usageValue: z.number().int().min(0).max(100_000_000),
   ageMonths: z.number().int().min(0).max(1200),
-  notes: z.string().trim().min(1).max(1000),
+  notes: z.string().trim().max(1000).default(''),
 };
 export const inspectionSchema = z.strictObject({
   ...inspectionFields,
@@ -130,8 +141,17 @@ export const recoveryCalculationSchema = z.object({
   damageNetCents: z.number().int().nonnegative().default(0),
   /** The logged damage behind the customer's charge, so they can see what they are paying for. */
   chargeableDamage: z
-    .array(z.object({ area: z.string(), type: z.string(), netCents: z.number().int() }))
+    .array(
+      z.object({
+        area: z.string(),
+        type: z.string(),
+        netCents: z.number().int(),
+        checkId: z.string().optional(),
+      })
+    )
     .default([]),
+  /** The repairs behind a price agreed in the return form. Absent when inspection set the price. */
+  agreedLines: z.array(repairLineSchema).optional(),
   recovery: z.object({
     asReturnedValueCents: z.number().int().nonnegative(),
     postRepairValueCents: z.number().int().nonnegative(),
@@ -148,27 +168,14 @@ export const recoveryCalculationSchema = z.object({
     buyoutTotalCents: z.number().int().nonnegative(),
     returnNetCents: z.number().int().nonnegative(),
     returnTotalCents: z.number().int().nonnegative(),
+    earlyReturnNetCents: z.number().int().nonnegative().default(0),
+    customerRepairNetCents: z.number().int().nonnegative().default(0),
+    repairShareBasisPoints: z.number().int().nonnegative().default(10000),
     remainingRentNetCents: z.number().int().nonnegative(),
     policyVersion: z.string(),
   }),
 });
 export type RecoveryCalculation = z.infer<typeof recoveryCalculationSchema>;
-const shortText = z.string().trim().min(1).max(120);
-export const workRecordSchema = z.strictObject({
-  completedWork: z.array(z.string().max(60)).max(30),
-  retestedChecks: z.array(z.string().max(60)).max(40),
-  sanitization: z
-    .strictObject({
-      storageModel: shortText,
-      storageSerial: shortText,
-      method: z.enum(sanitizationMethods),
-      technique: shortText,
-      tool: shortText,
-      verification: shortText,
-    })
-    .nullable(),
-  notes: z.string().trim().max(1000),
-});
 export const staffRecoveryActionSchema = z.discriminatedUnion('action', [
   z.strictObject({
     ...inspectionFields,
@@ -177,7 +184,6 @@ export const staffRecoveryActionSchema = z.discriminatedUnion('action', [
     record: inspectionRecordSchema,
   }),
   z.strictObject({ action: z.literal('receive') }),
-  z.strictObject({ action: z.literal('complete_work'), work: workRecordSchema }),
   z.strictObject({
     action: z.literal('publish'),
     // The price the staff member saw; publishing fails if today's price differs.

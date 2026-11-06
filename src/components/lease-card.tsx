@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { VatRate } from '@/data/schemas';
-import { sharesOn } from '@/domain/co-lease';
+import { holderShareCents, sharesOn } from '@/domain/co-lease';
 import { invoiceAmounts } from '@/domain/lease-billing';
 import { summarizeLease } from '@/domain/lease-dashboard';
 import { formatEuro } from '@/domain/money';
@@ -28,12 +28,16 @@ export function LeaseCard({
     (item) => item.valid_from <= today && (item.valid_to === null || item.valid_to >= today)
   );
   const monthly = rate
-    ? invoiceAmounts(lease.monthlyNetCents, Math.round(rate.rate_percent * 100)).totalCents
+    ? holderShareCents(
+        invoiceAmounts(lease.monthlyNetCents, Math.round(rate.rate_percent * 100)).totalCents,
+        lease.coLeaseShares,
+        today
+      )
     : null;
   const money = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const people = sharesOn(lease.coLeaseShares, today);
   return (
-    <article className="h-full rounded-lg border border-hairline bg-canvas p-5">
+    <article className="flex h-full flex-col rounded-lg border border-hairline bg-canvas p-5">
       <div className="flex items-start gap-4">
         <div className="w-24 shrink-0 sm:w-28">
           <ProductPhoto
@@ -45,62 +49,44 @@ export function LeaseCard({
           />
         </div>
         <div className="min-w-0 flex-1">
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1 text-fine font-semibold ${lease.status === 'active' ? 'bg-emerald-50 text-emerald-800' : lease.status === 'awaiting_signature' ? 'bg-amber-50 text-amber-900' : 'bg-parchment text-ink-muted'}`}
-          >
+          {lease.status !== 'active' ? (
             <span
-              aria-hidden="true"
-              className={`size-1.5 rounded-full ${lease.status === 'active' ? 'bg-emerald-600' : lease.status === 'awaiting_signature' ? 'bg-amber-500' : 'bg-ink-muted'}`}
-            />
-            {t(`dashboard.status.${lease.status}`)}
-          </span>
-          <h3 className="mt-2 text-body font-semibold wrap-anywhere">
+              className={`inline-flex rounded-pill px-2.5 py-1 text-fine font-semibold ${lease.status === 'awaiting_signature' ? 'bg-amber-50 text-amber-900' : 'bg-parchment text-ink-muted'}`}
+            >
+              {t(`dashboard.status.${lease.status}`)}
+            </span>
+          ) : null}
+          <h3 className="text-body font-semibold wrap-anywhere">
             {lease.asset.make} {lease.asset.model}
           </h3>
-          <p className="mt-2 text-body font-semibold tabular-nums">
-            {monthly === null
-              ? t('dashboard.forecastUnavailable')
-              : `${money(monthly)} / ${t('dashboard.month')}`}
-          </p>
-          <p className="text-fine text-ink-muted">{t('dashboard.includesVat')}</p>
-        </div>
-      </div>
-      <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-divider pt-4 text-caption">
-        <div>
-          <dt className="text-ink-muted">{t('dashboard.nextPayment')}</dt>
-          <dd className="mt-1 font-semibold">
-            {lease.status === 'active' && info.next
-              ? money(info.next.shareCents)
-              : t('dashboard.noNext')}
-          </dd>
-          {lease.status === 'active' && info.next ? (
-            <dd className="mt-1 text-fine text-ink-muted">
-              {formatIsoDate(info.next.dueDate, locale)}
-              {info.next.kind === 'issued' ? ` · ${t('dashboard.issued')}` : ''}
-            </dd>
+          {lease.status === 'active' ? (
+            <>
+              <p className="mt-2 text-tagline font-semibold tabular-nums">
+                {monthly === null
+                  ? t('dashboard.forecastUnavailable')
+                  : `${money(monthly)} / ${t('dashboard.month')}`}
+              </p>
+              <p className="mt-2 text-caption text-ink-muted">
+                {t('dashboard.endsOn', { date: formatIsoDate(info.endDate, locale) })}
+              </p>
+            </>
+          ) : (
+            <p className="mt-2 text-caption text-ink-muted">
+              {t(`dashboard.status.${lease.status}`)}
+            </p>
+          )}
+          {people.length > 1 ? (
+            <div className="mt-3 flex items-center gap-3">
+              <AvatarStack people={people.map(({ user }) => user)} />
+              <p className="text-caption text-ink-muted">
+                {t('colease.cardNote', { count: people.length })}
+              </p>
+            </div>
           ) : null}
         </div>
-        <div>
-          <dt className="text-ink-muted">{t('dashboard.ends')}</dt>
-          <dd className="mt-1 font-semibold">{formatIsoDate(info.endDate, locale)}</dd>
-          <dd className="mt-1 text-fine text-ink-muted">
-            {t('dashboard.monthsProgress', {
-              completed: info.elapsedMonths,
-              total: lease.termMonths,
-            })}
-          </dd>
-        </div>
-      </dl>
-      {people.length > 1 ? (
-        <div className="mt-4 flex items-center gap-3 border-t border-divider pt-4">
-          <AvatarStack people={people.map(({ user }) => user)} />
-          <p className="text-caption text-ink-muted">
-            {t('colease.cardNote', { count: people.length })}
-          </p>
-        </div>
-      ) : null}
+      </div>
       <Link
-        className="mt-3 inline-flex min-h-target items-center gap-2 text-caption font-semibold text-primary"
+        className="mt-auto inline-flex min-h-target items-center gap-2 pt-3 text-caption font-semibold text-primary"
         href={`/${locale}/account/leases/${encodeURIComponent(lease.id)}`}
       >
         {t('dashboard.viewLease')} <span aria-hidden="true">→</span>

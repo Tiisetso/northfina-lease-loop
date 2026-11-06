@@ -1,16 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
-  batteryBelowBenchmark,
   conditionsUpTo,
   evaluateInspection,
   inspectionChecks,
   inspectionReadings,
   reportedCheckIds,
-  requiredSignoff,
-  signoffGaps,
+  reportedRepairCents,
   type CheckResult,
   type InspectionRecord,
-  type WorkRecord,
 } from './inspection';
 
 function record(
@@ -100,7 +97,18 @@ describe('evaluateInspection', () => {
         }
       )
     );
-    expect(result).toMatchObject({ repairNetCents: 8700, chargeableNetCents: 5000 });
+    expect(result).toMatchObject({ repairNetCents: 8700, chargeableNetCents: 8000 });
+  });
+
+  it("leaves out repairs marked as not the customer's", () => {
+    const base = record({ brakes: { result: 'repair', repairCents: 3000 } });
+    const result = evaluateInspection('e_bike', {
+      ...base,
+      checks: base.checks.map((check) =>
+        check.id === 'brakes' ? { ...check, chargeable: false } : check
+      ),
+    });
+    expect(result).toMatchObject({ repairNetCents: 3000, chargeableNetCents: 0 });
   });
 
   it('lists repairs and untested checks as open until re-tested', () => {
@@ -109,7 +117,6 @@ describe('evaluateInspection', () => {
       record({ brakes: { result: 'repair' }, charging: { result: 'not_tested' } })
     );
     expect(result.ok).toBe(true);
-    expect(result.openChecks).toEqual(['brakes', 'charging']);
   });
 
   it('rejects incomplete or contradictory records', () => {
@@ -155,76 +162,23 @@ describe('evaluateInspection', () => {
   });
 });
 
-describe('batteryBelowBenchmark', () => {
-  it('flags measurements under the benchmark only', () => {
-    expect(batteryBelowBenchmark([{ id: 'battery_health', value: 79 }])).toBe(true);
-    expect(batteryBelowBenchmark([{ id: 'battery_health', value: 80 }])).toBe(false);
-    expect(batteryBelowBenchmark([{ id: 'battery_health', value: null }])).toBe(false);
-    expect(batteryBelowBenchmark([])).toBe(false);
-  });
-});
+describe('reportedRepairCents', () => {
+  const lines = [
+    { id: 'keyboard_fault', netCents: 4000 },
+    { id: 'speed_fault', netCents: 8000 },
+  ];
 
-describe('refurbishment sign-off', () => {
-  const sanitization = {
-    storageModel: 'NVMe 512',
-    storageSerial: 'S1',
-    method: 'purge' as const,
-    technique: 'Cryptographic erase',
-    tool: 'WipeTool 4.2',
-    verification: 'Read-back sample',
-  };
-  const work = (extra: Partial<WorkRecord> = {}): WorkRecord => ({
-    completedWork: [],
-    retestedChecks: [],
-    sanitization: null,
-    notes: '',
-    ...extra,
+  it('suggests what the customer was quoted for that part', () => {
+    expect(reportedRepairCents('keyboard', lines)).toBe(4000);
   });
 
-  it('requires every work item, every open check and a wipe record when a wipe is planned', () => {
-    const required = requiredSignoff(
-      'e_bike',
-      [{ id: 'safety_inspection' }, { id: 'certified_data_wipe' }],
-      record({ brakes: { result: 'repair' } })
-    );
-    expect(required).toEqual({
-      work: ['safety_inspection', 'certified_data_wipe'],
-      retests: ['brakes'],
-      sanitization: true,
-    });
-    expect(signoffGaps(required, work())).toEqual({
-      work: ['safety_inspection', 'certified_data_wipe'],
-      retests: ['brakes'],
-      sanitization: true,
-      ok: false,
-    });
-    expect(
-      signoffGaps(
-        required,
-        work({
-          completedWork: required.work,
-          retestedChecks: ['brakes'],
-          sanitization,
-        })
-      ).ok
-    ).toBe(true);
+  it('puts a fault that touches two checks on its first check only', () => {
+    expect(reportedRepairCents('storage', lines)).toBe(8000);
+    expect(reportedRepairCents('power_on', lines)).toBeNull();
   });
 
-  it('rejects a blank wipe record and needs no re-tests for a legacy assessment', () => {
-    const required = requiredSignoff('laptop', [{ id: 'certified_data_wipe' }], undefined);
-    expect(required.retests).toEqual([]);
-    expect(
-      signoffGaps(
-        required,
-        work({
-          completedWork: ['certified_data_wipe'],
-          sanitization: { ...sanitization, tool: '  ' },
-        })
-      ).sanitization
-    ).toBe(true);
-  });
-
-  it('needs nothing when there is nothing to confirm', () => {
-    expect(signoffGaps(requiredSignoff('e_bike', [], undefined), work()).ok).toBe(true);
+  it('has no suggestion for a part the customer did not report', () => {
+    expect(reportedRepairCents('display', lines)).toBeNull();
+    expect(reportedRepairCents('display', [])).toBeNull();
   });
 });

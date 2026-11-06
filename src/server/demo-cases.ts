@@ -9,11 +9,9 @@ import { monthlyFactorFor } from '@/domain/coefficient';
 import {
   evaluateInspection,
   inspectionChecks,
-  requiredSignoff,
   type CheckResult,
   type DamageEntry,
   type InspectionRecord,
-  type WorkRecord,
 } from '@/domain/inspection';
 import { forecastInvoices, quoteAmounts } from '@/domain/lease-billing';
 import { listPriceOn } from '@/domain/price-list';
@@ -27,7 +25,6 @@ import {
 } from './demo-history';
 import { requestLeaseChange } from './leases';
 import { acceptReturn, assessReturn, progressReturn } from './recovery';
-import { completeRefurbishment } from './relisting';
 
 export const demoInspectorId = 'demo-inspector';
 
@@ -35,7 +32,6 @@ type Findings = Record<string, { result: CheckResult; repairCents?: number; note
 
 type ReturnedCase = {
   assetId: string;
-  stage: 'received' | 'ready';
   monthsAgo: number;
   termMonths: number;
   startCondition: AssetCondition;
@@ -46,13 +42,41 @@ type ReturnedCase = {
   readings: Record<string, number>;
   damage: DamageEntry[];
   notes: string;
+  /** An item still available in the catalogue, returned here with these findings instead. */
+  damaged?: { condition: AssetCondition; usage: number };
 };
 
 /** The returned items in the data pack, keeping their recorded condition and usage. */
 const returnedCases: readonly ReturnedCase[] = [
   {
+    // A badly treated laptop, to show how real repair costs move the numbers.
+    assetId: 'laptop-003',
+    monthsAgo: 14,
+    termMonths: 36,
+    startCondition: 'new',
+    startUsage: 0,
+    targetCondition: 'good',
+    damaged: { condition: 'poor', usage: 410 },
+    report: {
+      issues: ['screen_damage', 'keyboard_fault', 'cooling_fault', 'hinge_fault', 'battery_weak'],
+      notes: 'It fell off a desk. Screen is cracked, fan is loud, some keys stopped working.',
+    },
+    findings: {
+      display: { result: 'repair', repairCents: 40000, note: 'Cracked panel. Replace.' },
+      keyboard: { result: 'repair', repairCents: 25000, note: 'Top case and keyboard replaced.' },
+      chassis_hinges: { result: 'repair', repairCents: 25000, note: 'Left hinge snapped.' },
+      cooling: { result: 'repair', repairCents: 10000, note: 'Fan seized. Replace, new paste.' },
+      ports: { result: 'repair', repairCents: 9000, note: 'One USB-C port torn off.' },
+      battery_pack: { result: 'repair', repairCents: 9000, note: 'At 61 % after 14 months.' },
+      trackpad: { result: 'wear' },
+    },
+    readings: { battery_health: 61, storage_health: 94, dead_pixels: 200 },
+    damage: [{ area: 'Lid', type: 'dent', liability: 'chargeable', repairCents: 12000 }],
+    notes:
+      'Heavy drop damage. Replace panel, top case, hinge, fan, port and battery; repair the lid.',
+  },
+  {
     assetId: 'ebike-007',
-    stage: 'received',
     monthsAgo: 26,
     termMonths: 36,
     startCondition: 'good',
@@ -77,7 +101,6 @@ const returnedCases: readonly ReturnedCase[] = [
   },
   {
     assetId: 'ebike-008',
-    stage: 'ready',
     monthsAgo: 18,
     termMonths: 36,
     startCondition: 'good',
@@ -91,7 +114,6 @@ const returnedCases: readonly ReturnedCase[] = [
   },
   {
     assetId: 'ebike-011',
-    stage: 'received',
     monthsAgo: 20,
     termMonths: 36,
     startCondition: 'like_new',
@@ -117,7 +139,6 @@ const returnedCases: readonly ReturnedCase[] = [
   },
   {
     assetId: 'laptop-006',
-    stage: 'ready',
     monthsAgo: 16,
     termMonths: 36,
     startCondition: 'like_new',
@@ -131,7 +152,6 @@ const returnedCases: readonly ReturnedCase[] = [
   },
   {
     assetId: 'laptop-007',
-    stage: 'received',
     monthsAgo: 25,
     termMonths: 36,
     startCondition: 'good',
@@ -148,7 +168,6 @@ const returnedCases: readonly ReturnedCase[] = [
   },
   {
     assetId: 'farm-005',
-    stage: 'received',
     monthsAgo: 27,
     termMonths: 48,
     startCondition: 'good',
@@ -334,15 +353,6 @@ async function ensureInspector(db: PrismaClient) {
   );
 }
 
-const sanitization: WorkRecord['sanitization'] = {
-  storageModel: 'Demo NVMe 512 GB',
-  storageSerial: 'DEMO-NVME-0006',
-  method: 'purge',
-  technique: 'Cryptographic erase',
-  tool: 'Demo Wipe 4.2',
-  verification: 'Read-back sampling',
-};
-
 /** Seeds items untouched since the data pack only, so nobody's own test data is overwritten. */
 export async function seedDemoCases(db: PrismaClient, today: string) {
   await ensureDemoCustomers(db);
@@ -358,14 +368,16 @@ export async function seedDemoCases(db: PrismaClient, today: string) {
 
   for (const [index, item] of returnedCases.entries()) {
     const asset = assets.get(item.assetId);
-    if (!asset || asset.status !== 'returned') continue;
+    if (!asset || asset.status !== (item.damaged ? 'available' : 'returned')) continue;
     const category = asset.category as AssetCategory;
     const { contractId, startDate } = await startCaseLease(db, {
       ...item,
-      previousLives: Math.max(0, asset.previous_lives - 1),
+      previousLives: item.damaged ? asset.previous_lives : Math.max(0, asset.previous_lives - 1),
       customerIndex: index,
       today,
     });
+    const returnedCondition = item.damaged?.condition ?? (asset.condition as AssetCondition);
+    const returnedUsage = item.damaged?.usage ?? asset.usage_value;
     const customerId = demoCustomerId(index);
     const userId = `demo-user-${index % 64}`;
     const { id: requestId } = await requestLeaseChange(db, {
@@ -374,8 +386,8 @@ export async function seedDemoCases(db: PrismaClient, today: string) {
       contractId,
       kind: 'return',
       report: {
-        condition: asset.condition as AssetCondition,
-        usageValue: asset.usage_value,
+        condition: returnedCondition,
+        usageValue: returnedUsage,
         ...item.report,
       },
     });
@@ -386,9 +398,9 @@ export async function seedDemoCases(db: PrismaClient, today: string) {
       today,
       inspection: {
         // The data pack's recorded facts stay exactly as supplied.
-        condition: asset.condition as AssetCondition,
+        condition: returnedCondition,
         targetCondition: item.targetCondition,
-        usageValue: asset.usage_value,
+        usageValue: returnedUsage,
         ageMonths: recoveryAgeMonths(startDate, today),
         additionalRepairCents: evaluateInspection(category, record).repairNetCents,
         notes: item.notes,
@@ -403,24 +415,9 @@ export async function seedDemoCases(db: PrismaClient, today: string) {
       today,
       action: 'accept',
       expectedAssessmentUpdatedAt: assessment.updatedAt.toISOString(),
+      paymentMethod: 'card',
     });
     await progressReturn(db, { requestId, staffId: demoInspectorId, today, action: 'receive' });
-    if (item.stage === 'ready') {
-      const workItems = JSON.parse(assessment.calculationJson).recovery.workItems as {
-        id: string;
-      }[];
-      const required = requiredSignoff(category, workItems, record);
-      await completeRefurbishment(db, {
-        requestId,
-        staffId: demoInspectorId,
-        work: {
-          completedWork: required.work,
-          retestedChecks: required.retests,
-          sanitization: required.sanitization ? sanitization : null,
-          notes: 'All planned work finished and tested.',
-        },
-      });
-    }
     created++;
   }
 

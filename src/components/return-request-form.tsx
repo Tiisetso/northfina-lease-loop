@@ -1,7 +1,13 @@
 'use client';
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { categoryChecks, type CheckAnswer, type ConditionAnswers } from '@/domain/condition-report';
+import {
+  answerOptions,
+  categoryChecks,
+  type CheckAnswer,
+  type ConditionAnswers,
+} from '@/domain/condition-report';
+import { batteryAssessment } from '@/domain/laptop-parts';
 import { returnPreview, type ReturnPreviewContext } from '@/domain/return-preview';
 import { checkoutQuote } from '@/domain/checkout-quote';
 import { formatEuro } from '@/domain/money';
@@ -10,7 +16,9 @@ import { intlLocale, type Locale } from '@/i18n/locales';
 import type { CheckoutData } from '@/server/checkout-options';
 import { ConditionChoice } from './condition-choice';
 import { ProductPhoto } from './product-photo';
-import { PriceFormula } from './price-formula';
+import { ProgressBar } from './progress-bar';
+import { ReturnBreakdown, repairLineLabel } from './return-breakdown';
+import { ReturnCalculator } from './return-calculator';
 
 type Props = {
   locale: Locale;
@@ -45,8 +53,7 @@ export function ReturnRequestForm({
   const category = data.recoveryFacts.category;
   const steps = [
     ...(mode === 'exchange' ? ['replacement'] : []),
-    ...(category === 'laptop' ? [] : ['usage']),
-    'power',
+    ...(category === 'laptop' ? [] : ['usage', 'power']),
     ...(category !== 'farm_machine' ? ['battery'] : []),
     'functions',
     'cosmetic',
@@ -68,6 +75,8 @@ export function ReturnRequestForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
   const step = steps[index];
+  const answerLabel = (key: string, answer: CheckAnswer) =>
+    t((answer === 'unknown' ? 'flow.answer.unknown' : `flow.part.${key}.${answer}`) as MessageKey);
   const currency = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const answers: ConditionAnswers = {
     power: power ?? 'unknown',
@@ -168,12 +177,7 @@ export function ReturnRequestForm({
         >
           ←
         </button>
-        <progress
-          aria-label={t('flow.progress')}
-          value={index + 1}
-          max={steps.length}
-          className="h-2 w-full accent-primary"
-        />
+        <ProgressBar label={t('flow.progress')} value={index + 1} max={steps.length} />
         <span className="shrink-0 text-caption tabular-nums">
           {index + 1}/{steps.length}
         </span>
@@ -181,9 +185,9 @@ export function ReturnRequestForm({
       <div className="grid items-start gap-8 desktop:grid-cols-[290px_minmax(0,1fr)]">
         <aside className="space-y-4 desktop:sticky desktop:top-40">
           <div className="rounded-lg border border-hairline p-5">
-            <p className="text-caption text-ink-muted">{t('flow.value')}</p>
+            <p className="text-caption text-ink-muted">{t('flow.returnTotal')}</p>
             <p className="mt-2 text-display-sm font-semibold text-primary">
-              {estimate ? currency(estimate.itemValueTotalCents) : '—'}
+              {estimate ? currency(estimate.returnTotalCents) : '—'}
             </p>
             <p className="mt-2 text-fine text-ink-muted">{t('flow.provisional')}</p>
           </div>
@@ -200,27 +204,19 @@ export function ReturnRequestForm({
               </div>
               <p className="font-semibold">{name}</p>
             </div>
-            <dl className="mt-5 space-y-4 text-caption">
-              <div>
-                <dt className="text-ink-muted">{t('flow.baseline')}</dt>
-                <dd className="mt-1 font-semibold">
-                  {t(`condition.${data.baselineCondition}`)}
-                  {category !== 'laptop' ? (
-                    <>
-                      {' '}
-                      · {baselineUsage} {t(`return.unit.${usageUnit}` as MessageKey)}
-                    </>
-                  ) : null}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-ink-muted">{t('flow.damage')}</dt>
-                <dd className="mt-1 font-semibold">
-                  {estimate ? currency(estimate.damageTotalCents) : '—'}
-                </dd>
-              </div>
-            </dl>
-            <p className="mt-4 text-fine text-ink-muted">{t('flow.damageNote')}</p>
+            <p className="mt-4 text-caption text-ink-muted">
+              {t('flow.baseline')}:{' '}
+              <span className="font-semibold text-ink">
+                {t(`condition.${data.baselineCondition}`)}
+              </span>
+              {category !== 'laptop' ? (
+                <>
+                  {' '}
+                  · {baselineUsage} {t(`return.unit.${usageUnit}` as MessageKey)}
+                </>
+              ) : null}
+            </p>
+            <p className="mt-2 text-fine text-ink-muted">{t('flow.damageNote')}</p>
           </div>
         </aside>
         <section className="min-w-0 rounded-lg border border-hairline p-5 sm:p-8">
@@ -312,12 +308,12 @@ export function ReturnRequestForm({
               </label>
             ) : null}
             {step === 'power'
-              ? (['working', 'fault', 'unknown'] as const).map((value) => (
+              ? answerOptions('power').map((value) => (
                   <ConditionChoice
                     key={value}
                     selected={power === value}
                     onClick={() => setPower(value)}
-                    label={t(`flow.answer.${value}`)}
+                    label={answerLabel('power', value)}
                   />
                 ))
               : null}
@@ -350,6 +346,19 @@ export function ReturnRequestForm({
                   label={t('flow.unable')}
                   description={t('flow.unknownNote')}
                 />
+                {category === 'laptop' && battery === 'known' && health !== '' ? (
+                  <p role="status" className="rounded-sm bg-parchment p-4 text-caption">
+                    {t(
+                      batteryAssessment(Number(health), data.recoveryFacts.ageMonths).customerPays
+                        ? 'flow.battery.charged'
+                        : batteryAssessment(Number(health), data.recoveryFacts.ageMonths)
+                              .needsReplacement
+                          ? 'flow.battery.normal'
+                          : 'flow.battery.fine',
+                      { months: data.recoveryFacts.ageMonths }
+                    )}
+                  </p>
+                ) : null}
               </>
             ) : null}
             {step === 'functions'
@@ -359,7 +368,7 @@ export function ReturnRequestForm({
                       {t(`flow.check.${key}` as MessageKey)}
                     </legend>
                     <div className="flex flex-wrap gap-2">
-                      {(['working', 'fault', 'unknown'] as const).map((answer) => (
+                      {answerOptions(key).map((answer) => (
                         <button
                           key={answer}
                           type="button"
@@ -367,7 +376,7 @@ export function ReturnRequestForm({
                           onClick={() => setFunctions({ ...functions, [key]: answer })}
                           className={`min-h-target rounded-pill border px-4 text-caption ${functions[key] === answer ? 'border-primary bg-primary/5 text-primary' : 'border-hairline'}`}
                         >
-                          {t(`flow.answer.${answer}`)}
+                          {answerLabel(key, answer)}
                         </button>
                       ))}
                     </div>
@@ -404,6 +413,24 @@ export function ReturnRequestForm({
                   <p className="mt-2 text-display-sm font-semibold">
                     {estimate ? currency(estimate.returnTotalCents) : '—'}
                   </p>
+                  {estimate ? (
+                    <ReturnBreakdown
+                      locale={locale}
+                      currency={currency}
+                      data={{
+                        showEarly: estimate.remainingMonths > 0,
+                        earlyCents: estimate.earlyReturnTotalCents,
+                        repairSharePercent: estimate.repairSharePercent,
+                        repairCents: estimate.customerRepairTotalCents,
+                        lines: estimate.lines.map((line) => ({
+                          key: line.id,
+                          label: t(repairLineLabel(line.id)),
+                          cents: line.totalCents,
+                        })),
+                        unpaidCents: estimate.unpaidCents,
+                      }}
+                    />
+                  ) : null}
                   {replacement && newQuote ? (
                     <div className="mt-5 border-t border-hairline pt-4">
                       <p className="font-semibold">{replacement.name}</p>
@@ -415,8 +442,14 @@ export function ReturnRequestForm({
                       </p>
                     </div>
                   ) : null}
-                  <p className="mt-4 text-caption text-ink-muted">{t('flow.provisional')}</p>
                 </div>
+                <ReturnCalculator
+                  locale={locale}
+                  data={data}
+                  answers={answers}
+                  usage={usage}
+                  currency={currency}
+                />
                 <label className="block text-caption font-semibold">
                   {t('return.preferredDate')}
                   <input
@@ -446,7 +479,6 @@ export function ReturnRequestForm({
               {t('return.submitError')}
             </p>
           ) : null}
-          <PriceFormula locale={locale} kind="return" />
           <div className="mt-8 flex justify-end">
             <button
               type="button"

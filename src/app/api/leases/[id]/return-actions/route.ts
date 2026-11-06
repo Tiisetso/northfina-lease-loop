@@ -12,6 +12,7 @@ const schema = z.strictObject({
   action: z.enum(['accept', 'buyout']),
   requestId: z.string().min(1).max(100),
   expectedAssessmentUpdatedAt: z.iso.datetime(),
+  paymentMethod: z.enum(['card', 'invoice']).optional(),
 });
 export const POST = handleRoute(
   async (request, { params }: RouteContext<'/api/leases/[id]/return-actions'>) => {

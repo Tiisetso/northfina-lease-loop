@@ -6,7 +6,7 @@ import type {
   ResidualCurves,
   VatRate,
 } from '@/data/schemas';
-import { assetRecovery, recoveryAgeMonths } from './asset-recovery';
+import { assetRecovery, recoveryAgeMonths, valuationFactors } from './asset-recovery';
 import { checkoutQuote } from './checkout-quote';
 
 export type RelistInput = {
@@ -20,6 +20,9 @@ export type RelistInput = {
   additionalRepairCents: number;
   /** The second-life price saved with the quote, net. */
   quotedPriceCents: number;
+  /** What the customer's settlement already pays toward the repairs. */
+  customerRepairCents?: number;
+  skipBatteryTask?: boolean;
   today: string;
 };
 
@@ -49,11 +52,13 @@ export function relistOffer(
       usageValue: input.usageValue,
       maintenanceUsageValue: input.maintenanceUsageValue,
       additionalRepairCents: input.additionalRepairCents,
+      skipBatteryTask: input.skipBatteryTask,
     },
     curves,
     costs
   );
   const priceNetCents = recovery.postRepairValueCents;
+  const customerRepair = input.customerRepairCents ?? 0;
   const example = checkoutQuote(
     priceNetCents,
     0,
@@ -68,8 +73,19 @@ export function relistOffer(
     priceChangeSinceQuoteCents: priceNetCents - input.quotedPriceCents,
     originalPriceCents: input.originalPriceCents,
     refurbishmentCostCents: recovery.refurbishmentCostCents,
-    /** Sale value minus work. Negative when the work costs more than the item will be worth. */
-    netResultCents: priceNetCents - recovery.refurbishmentCostCents,
+    workItems: recovery.workItems,
+    factors: valuationFactors(
+      {
+        category: input.category,
+        ageMonths,
+        usageValue: input.usageValue,
+        condition: input.targetCondition,
+      },
+      curves
+    ),
+    customerRepairCents: customerRepair,
+    /** Price, minus work, plus what the customer paid toward it. Negative is a loss. */
+    netResultCents: priceNetCents - recovery.refurbishmentCostCents + customerRepair,
     monthlyTotalCents: example?.monthlyTotalCents ?? null,
     /** False when the price falls outside the financing table, so nobody could lease it. */
     leasable: example !== null,

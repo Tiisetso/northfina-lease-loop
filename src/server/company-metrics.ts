@@ -56,10 +56,10 @@ export async function loadCompanyMetrics(db: PrismaClient, today: string) {
 /** How many cases are waiting for staff, for the top of the dashboard. */
 export async function staffAttentionCounts(db: PrismaClient) {
   const kinds = { kind: { in: ['return', 'buyout', 'exchange'] } };
-  const [toAssess, toSignOff, toRelist] = await Promise.all([
+  const [toAssess, toReceive, toRelist] = await Promise.all([
     db.leaseRequest.count({ where: { ...kinds, status: 'pending', assessment: null } }),
-    db.returnAssessment.count({ where: { status: { in: ['accepted', 'received'] } } }),
-    db.returnAssessment.count({ where: { status: 'ready' } }),
+    db.returnAssessment.count({ where: { status: 'accepted' } }),
+    db.returnAssessment.count({ where: { status: { in: ['received', 'ready'] } } }),
   ]);
-  return { toAssess, toSignOff, toRelist };
+  return { toAssess, toReceive, toRelist };
 }

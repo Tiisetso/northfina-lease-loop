@@ -1,16 +1,67 @@
 import type { Asset } from '@/data/schemas';
-import { formatNumber } from '@/i18n/format';
-import { getT } from '@/i18n/get-t';
+import type { ItemChange } from '@/domain/item-changes';
+import { formatIsoDate, formatNumber } from '@/i18n/format';
+import { getT, type MessageKey } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
+import type { PublishedRefurbishment } from '@/server/relisting';
 
-export function ProductDetails({ asset, locale }: { asset: Asset; locale: Locale }) {
+const factRow =
+  'flex min-w-0 flex-wrap justify-between gap-x-6 gap-y-2 border-b border-hairline py-4 text-caption';
+
+/** One row of the refurbishment list: what was touched, and what happened to it. */
+function changeRow(
+  locale: Locale,
+  change: ItemChange
+): [key: string, label: string, value: string] {
   const t = getT(locale);
+  switch (change.kind) {
+    case 'part':
+      return [
+        change.checkId,
+        t(`inspection.check.${change.checkId}` as MessageKey),
+        t(`product.change.${change.action}`),
+      ];
+    case 'damage':
+      return [
+        `${change.area}-${change.type}`,
+        `${change.area} · ${t(`inspection.damage.${change.type}` as MessageKey)}`,
+        t('product.change.repaired'),
+      ];
+    case 'condition':
+      return [
+        'condition',
+        t('condition.label'),
+        `${t(`condition.${change.from}`)} → ${t(`condition.${change.to}`)}`,
+      ];
+    case 'task':
+      return [change.id, t(`recovery.task.${change.id}` as MessageKey), t('product.change.done')];
+  }
+}
+
+export function ProductDetails({
+  asset,
+  locale,
+  refurbishment,
+}: {
+  asset: Asset;
+  locale: Locale;
+  refurbishment: PublishedRefurbishment | null;
+}) {
+  const t = getT(locale);
+  const battery = asset.category === 'laptop' ? refurbishment?.battery : null;
   const highlights = [
     [t('condition.label'), t(`condition.${asset.condition}`)],
-    [
-      t(`product.usage.${asset.category}`),
-      t(`usage.${asset.usage.unit}`, { value: formatNumber(asset.usage.value, locale) }),
-    ],
+    battery
+      ? [
+          t('inspection.reading.battery_health'),
+          battery.kind === 'new'
+            ? t('product.batteryNew')
+            : `${formatNumber(battery.percent, locale)} %`,
+        ]
+      : [
+          t(`product.usage.${asset.category}`),
+          t(`usage.${asset.usage.unit}`, { value: formatNumber(asset.usage.value, locale) }),
+        ],
     [t('asset.previousLives'), formatNumber(asset.previous_lives, locale)],
   ];
   const facts = [
@@ -52,15 +103,31 @@ export function ProductDetails({ asset, locale }: { asset: Asset; locale: Locale
         </div>
         <dl className="mt-8 grid gap-x-10 tablet:grid-cols-2">
           {facts.map(([label, value]) => (
-            <div
-              key={label}
-              className="flex min-w-0 flex-wrap justify-between gap-x-6 gap-y-2 border-b border-hairline py-4 text-caption"
-            >
+            <div key={label} className={factRow}>
               <dt className="text-ink-muted">{label}</dt>
               <dd className="font-semibold wrap-anywhere">{value}</dd>
             </div>
           ))}
         </dl>
+        {refurbishment?.changes.length ? (
+          <>
+            <h3 className="mt-10 text-tagline font-semibold">{t('recovery.history')}</h3>
+            <p className="mt-2 text-caption text-ink-muted">
+              {t('recovery.historyIntro', { date: formatIsoDate(refurbishment.date, locale) })}
+            </p>
+            <dl className="mt-4 grid gap-x-10 tablet:grid-cols-2">
+              {refurbishment.changes.map((change) => {
+                const [key, label, value] = changeRow(locale, change);
+                return (
+                  <div key={key} className={factRow}>
+                    <dt className="text-ink-muted">{label}</dt>
+                    <dd className="font-semibold wrap-anywhere">{value}</dd>
+                  </div>
+                );
+              })}
+            </dl>
+          </>
+        ) : null}
       </section>
 
       <section

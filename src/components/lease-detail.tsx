@@ -22,6 +22,8 @@ import { LeaseRequestControls, ReturnQuoteAccept } from './lease-controls';
 import { AvatarStack } from './person-avatar';
 import { SignatoryStatus, type SigningInfo } from './signatory-status';
 import { ProductPhoto } from './product-photo';
+import { ProgressBar } from './progress-bar';
+import { quoteBreakdown, ReturnBreakdown } from './return-breakdown';
 
 type Props = {
   locale: Locale;
@@ -49,14 +51,6 @@ export function LeaseDetail({
   const people = sharesOn(lease.coLeaseShares, today);
   const termEnd = endOfTerm(lease, today);
   const currency = (cents: number) => formatEuro(cents, intlLocale[locale]);
-  const currentRate = rates.find(
-    (rate) => rate.valid_from <= today && (rate.valid_to === null || rate.valid_to >= today)
-  );
-  const startRate = rates.find(
-    (rate) =>
-      rate.valid_from <= lease.startDate &&
-      (rate.valid_to === null || rate.valid_to >= lease.startDate)
-  );
   const endRate = rates.find(
     (rate) =>
       rate.valid_from <= info.endDate && (rate.valid_to === null || rate.valid_to >= info.endDate)
@@ -69,6 +63,7 @@ export function LeaseDetail({
     (request) => request.assessment && request.status !== 'cancelled'
   );
   const assessment = returnRequest?.assessment;
+  const paidReturn = lease.actionPayments.some((payment) => payment.kind === 'return');
   let quote: RecoveryCalculation | null = null;
   if (assessment) {
     try {
@@ -177,20 +172,36 @@ export function LeaseDetail({
               />
             </div>
             <div className="min-w-0">
-              <span
-                className={`inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1 text-fine font-semibold ${lease.status === 'active' ? 'bg-emerald-50 text-emerald-800' : lease.status === 'awaiting_signature' ? 'bg-amber-50 text-amber-900' : 'bg-parchment text-ink-muted'}`}
-              >
+              {lease.status !== 'active' ? (
                 <span
-                  className={`size-1.5 rounded-full ${lease.status === 'active' ? 'bg-emerald-600' : lease.status === 'awaiting_signature' ? 'bg-amber-500' : 'bg-ink-muted'}`}
-                  aria-hidden="true"
-                />
-                {t(`dashboard.status.${lease.status}`)}
-              </span>
-              <h2 className="mt-3 text-tagline font-semibold wrap-anywhere">
+                  className={`inline-flex rounded-pill px-2.5 py-1 text-fine font-semibold ${lease.status === 'awaiting_signature' ? 'bg-amber-50 text-amber-900' : 'bg-parchment text-ink-muted'}`}
+                >
+                  {t(`dashboard.status.${lease.status}`)}
+                </span>
+              ) : null}
+              <h2 className="text-tagline font-semibold wrap-anywhere">
                 {lease.asset.make} {lease.asset.model}
               </h2>
+            </div>
+          </div>
+          {lease.status === 'active' ? (
+            <div className="mt-5 border-t border-divider pt-5">
+              <ProgressBar
+                label={t('dashboard.progress')}
+                value={info.yourPaidCents}
+                max={info.yourPaidCents + info.yourRemainingCents}
+              />
+              <div className="mt-2 flex flex-wrap justify-between gap-x-6 gap-y-1 text-caption">
+                <span>{t('dashboard.paidOf', { amount: currency(info.yourPaidCents) })}</span>
+                <span className="font-semibold">
+                  {t('dashboard.leftToPay', { amount: currency(info.yourRemainingCents) })}
+                </span>
+              </div>
               <p className="mt-2 text-caption text-ink-muted">
-                {t(`condition.${lease.asset.condition}`)} · {lease.asset.model_year}
+                {info.paymentsLeft === 1
+                  ? t('dashboard.paymentLeft')
+                  : t('dashboard.paymentsLeft', { count: info.paymentsLeft })}{' '}
+                · {t('dashboard.endsOn', { date: formatIsoDate(info.endDate, locale) })}
               </p>
               <p className="mt-2 text-caption text-ink-muted">
                 {t('priceLock.locked', { version: lease.priceListVersion })}
@@ -216,28 +227,7 @@ export function LeaseDetail({
                 </p>
               ) : null}
             </div>
-          </div>
-          <dl className="mt-5 grid grid-cols-2 gap-5 border-t border-divider pt-5">
-            <Fact label={t('dashboard.started')} value={formatIsoDate(lease.startDate, locale)} />
-            <Fact label={t('dashboard.ends')} value={formatIsoDate(info.endDate, locale)} />
-          </dl>
-          <div className="mt-5">
-            <div className="flex flex-wrap justify-between gap-2 text-caption">
-              <span className="text-ink-muted">{t('dashboard.progress')}</span>
-              <span>
-                {t('dashboard.monthsProgress', {
-                  completed: info.elapsedMonths,
-                  total: lease.termMonths,
-                })}
-              </span>
-            </div>
-            <progress
-              aria-label={t('dashboard.progress')}
-              className="mt-2 h-2 w-full accent-primary"
-              value={info.elapsedMonths}
-              max={lease.termMonths}
-            />
-          </div>
+          ) : null}
         </section>
 
         {assessment && returnRequest ? (
@@ -253,7 +243,13 @@ export function LeaseDetail({
             {quote ? (
               <>
                 <p className="mt-4 text-caption text-ink-muted">
-                  {t(returnRequest.kind === 'buyout' ? 'return.buyoutNow' : 'return.total')}
+                  {t(
+                    returnRequest.kind === 'buyout'
+                      ? 'return.buyoutNow'
+                      : paidReturn
+                        ? 'flow.amountPaid'
+                        : 'flow.returnTotal'
+                  )}
                 </p>
                 <p className="mt-1 text-display-sm font-semibold">
                   {currency(
@@ -263,44 +259,25 @@ export function LeaseDetail({
                   )}
                 </p>
                 <p className="mt-2 text-caption text-ink-muted">
-                  {t('return.quoteNote', { date: formatIsoDate(quote.quoteDate, locale) })}
+                  {t('pricing.includesVat')}
+                  {assessment.status === 'quoted'
+                    ? ` · ${t('return.quoteNote', { date: formatIsoDate(quote.quoteDate, locale) })}`
+                    : ''}
                 </p>
-                <details className="mt-4 border-t border-divider pt-4">
-                  <summary className="cursor-pointer text-caption font-semibold text-primary">
-                    {t('return.calculation')}
-                  </summary>
-                  <p className="mt-3 text-caption text-ink-muted">
-                    {t(
-                      returnRequest.kind === 'buyout'
-                        ? 'return.buyoutMethod'
-                        : 'return.returnMethod'
-                    )}
-                  </p>
-                  {quote.chargeableDamage.length ? (
-                    <>
-                      <p className="mt-4 text-caption font-semibold">
-                        {t('return.chargeableDamage')}
-                      </p>
-                      <ul className="mt-2 divide-y divide-divider text-caption">
-                        {quote.chargeableDamage.map((item) => (
-                          <li key={item.area} className="flex justify-between gap-4 py-2">
-                            <span>
-                              {item.area} · {t(`inspection.damage.${item.type}` as MessageKey)}
-                            </span>
-                            <span className="shrink-0">
-                              {currency(
-                                invoiceAmounts(item.netCents, quote.vatBasisPoints).totalCents
-                              )}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                      <p className="mt-2 text-caption text-ink-muted">
-                        {t('return.chargeableNote')}
-                      </p>
-                    </>
-                  ) : null}
-                </details>
+                {returnRequest.kind === 'buyout' ? (
+                  <details className="mt-4 border-t border-divider pt-4">
+                    <summary className="cursor-pointer text-caption font-semibold text-primary">
+                      {t('return.calculation')}
+                    </summary>
+                    <p className="mt-3 text-caption text-ink-muted">{t('return.buyoutMethod')}</p>
+                  </details>
+                ) : (
+                  <ReturnBreakdown
+                    locale={locale}
+                    currency={currency}
+                    data={quoteBreakdown(locale, quote)}
+                  />
+                )}
                 {assessment.status === 'quoted' && quote.quoteDate === today ? (
                   <ReturnQuoteAccept
                     locale={locale}
@@ -308,6 +285,11 @@ export function LeaseDetail({
                     requestId={returnRequest.id}
                     expectedAssessmentUpdatedAt={assessment.updatedAt.toISOString()}
                     action={returnRequest.kind === 'buyout' ? 'buyout' : 'accept'}
+                    payCents={
+                      returnRequest.kind !== 'buyout' && lease.isDemo
+                        ? quote.settlement.returnTotalCents
+                        : 0
+                    }
                   />
                 ) : null}
                 {assessment.status === 'quoted' && quote.quoteDate !== today ? (
@@ -323,7 +305,6 @@ export function LeaseDetail({
 
         <section className={panel}>
           <h3 className="text-tagline font-semibold">{t('dashboard.paymentDetails')}</h3>
-          <p className="mt-2 text-caption text-ink-muted">{t('dashboard.includesVat')}</p>
           <details className="mt-4 border-t border-divider pt-4">
             <summary className="cursor-pointer text-body font-semibold">
               {t('dashboard.forecastSchedule')}
@@ -435,26 +416,12 @@ export function LeaseDetail({
               <p className="mt-3 text-caption text-ink-muted">{t('dashboard.noInvoices')}</p>
             )}
           </details>
-          <details className="mt-4 border-t border-divider pt-4">
-            <summary className="cursor-pointer text-body font-semibold">
-              {t('dashboard.priceBreakdown')}
-            </summary>
-            <dl className="mt-4 grid gap-4 sm:grid-cols-2">
-              <Fact
-                label={t('dashboard.listPriceGross')}
-                value={gross(lease.listPriceCents, startRate)}
-              />
-              <Fact
-                label={t('dashboard.downPaymentGross')}
-                value={gross(lease.downPaymentCents, startRate)}
-              />
-              <Fact label={t('dashboard.buyoutGross')} value={gross(lease.buyoutCents, endRate)} />
-              {info.forecastTotalCents !== null ? (
-                <Fact label={t('dashboard.totalGross')} value={currency(info.forecastTotalCents)} />
-              ) : null}
-            </dl>
-            <p className="mt-4 text-caption text-ink-muted">{t('dashboard.forecastTotalNote')}</p>
-          </details>
+          <Link
+            href={`/${locale}/account/leases/${encodeURIComponent(lease.id)}/agreement`}
+            className="mt-4 flex min-h-target items-center border-t border-divider pt-4 text-body font-semibold text-primary"
+          >
+            {t('agreement.link')}&nbsp;<span aria-hidden="true">→</span>
+          </Link>
         </section>
 
         <section className={panel}>
@@ -473,15 +440,15 @@ export function LeaseDetail({
               })}
             />
           </dl>
-          <div className="mt-5 border-t border-divider pt-4">
-            <p className="text-caption text-ink-muted">{t('dashboard.impactTitle')}</p>
-            <p className="mt-2 text-tagline font-semibold">
-              {t('dashboard.impactValue', { amount: formatNumber(impact, locale) })}
-            </p>
-            <p className="mt-2 text-caption text-ink-muted">
-              {t(lease.asset.previous_lives ? 'dashboard.impactNote' : 'dashboard.noImpact')}
-            </p>
-          </div>
+          {lease.asset.previous_lives ? (
+            <div className="mt-5 border-t border-divider pt-4">
+              <p className="text-caption text-ink-muted">{t('dashboard.impactTitle')}</p>
+              <p className="mt-2 text-tagline font-semibold">
+                {t('dashboard.impactValue', { amount: formatNumber(impact, locale) })}
+              </p>
+              <p className="mt-2 text-caption text-ink-muted">{t('dashboard.impactNote')}</p>
+            </div>
+          ) : null}
         </section>
         <details className={panel}>
           <summary className="cursor-pointer text-body font-semibold">
@@ -526,27 +493,11 @@ export function LeaseDetail({
             {t('colease.ofTotal', { amount: currency(info.next.amountCents) })}
           </p>
         ) : null}
-        <dl className="mt-5 space-y-4 border-t border-divider pt-5">
-          <Fact
-            label={t('dashboard.monthlyGross')}
-            value={`${gross(lease.monthlyNetCents, currentRate)} / ${t('dashboard.month')}`}
-          />
-          <Fact label={t('dashboard.paidSoFar')} value={currency(info.paidCents)} />
-          <Fact label={t('dashboard.outstanding')} value={currency(info.outstandingCents)} />
-          <Fact
-            label={t(
-              liveBuyoutTotalCents !== undefined ? 'flow.buyoutTotal' : 'dashboard.buyoutGross'
-            )}
-            value={
-              liveBuyoutTotalCents !== undefined
-                ? currency(liveBuyoutTotalCents)
-                : gross(lease.buyoutCents, endRate)
-            }
-          />
-        </dl>
-        <p className="mt-3 text-fine text-ink-muted">
-          {t('dashboard.includesVat')} · {t('dashboard.buyoutEstimate')}
-        </p>
+        {info.outstandingCents > 0 ? (
+          <p className="mt-4 rounded-sm bg-parchment p-3 text-caption font-semibold">
+            {t('dashboard.overdueNote', { amount: currency(info.outstandingCents) })}
+          </p>
+        ) : null}
         {lease.status === 'active' ? (
           <div className="mt-5 border-t border-divider pt-5">
             <h3 className="text-body font-semibold">{t('colease.title')}</h3>
@@ -570,7 +521,7 @@ export function LeaseDetail({
             locale={locale}
             id={lease.id}
             disabled={pending || lease.status !== 'active'}
-            active={lease.status === 'active'}
+            active={lease.status === 'active' && !paidReturn}
           />
         </div>
       </aside>

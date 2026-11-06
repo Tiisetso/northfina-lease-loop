@@ -430,7 +430,7 @@ export function CartPage({
             <h2 id="cart-summary" className="text-tagline font-semibold">
               {t('cart.summary')}
             </h2>
-            <p className="mt-7 text-caption text-ink-muted">{t('cart.monthlyTotal')}</p>
+            <p className="mt-7 text-caption text-ink-muted">{t('pricing.monthlyGross')}</p>
             <p className="mt-2 font-display text-display-lg font-semibold tabular-nums">
               {money(monthlyTotal)}
               <span className="ml-1 text-caption font-normal text-ink-muted">

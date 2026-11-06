@@ -35,6 +35,14 @@ export async function cancelLeaseRequest(
           'CANNOT_CANCEL',
           'The item has already been received or this request is closed.'
         );
+      // Money has moved once a return is paid, and there is no refund flow to undo it.
+      if (
+        request.assessment &&
+        (await tx.leaseActionPayment.count({
+          where: { reference: `return-${request.assessment.id}` },
+        }))
+      )
+        throw new ApiError(409, 'CANNOT_CANCEL', 'This return has already been paid.');
       if (request.assessment)
         await tx.returnAssessment.update({
           where: { id: request.assessment.id },

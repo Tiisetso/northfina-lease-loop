@@ -96,6 +96,20 @@ export function summarizeLease(lease: LeaseForSummary, rates: readonly VatRate[]
     /** What the lease holder pays of this amount once a co-lease split applies. */
     shareCents: holderShareCents(earliest.amountCents, lease.coLeaseShares ?? [], earliest.dueDate),
   };
+  const shares = lease.coLeaseShares ?? [];
+  const unissued = forecast.ok
+    ? forecast.invoices.filter((invoice) => !datesIssued.has(invoice.dueDate))
+    : [];
+  /** What this customer has paid and still has to pay in rent, after any co-lease split. */
+  const yourPaidCents = issued.reduce(
+    (sum, invoice) =>
+      sum + holderShareCents(paidForInvoice(invoice, lease.isDemo), shares, invoice.dueDate),
+    0
+  );
+  const yourRemainingCents = [
+    ...unpaid.map((item) => ({ cents: item.amountCents, date: item.dueDate })),
+    ...unissued.map((item) => ({ cents: item.totalCents, date: item.dueDate })),
+  ].reduce((sum, item) => sum + holderShareCents(item.cents, shares, item.date), 0);
   const elapsed =
     today < lease.startDate
       ? 0
@@ -113,6 +127,9 @@ export function summarizeLease(lease: LeaseForSummary, rates: readonly VatRate[]
     billedCents,
     outstandingCents,
     next,
+    yourPaidCents,
+    yourRemainingCents,
+    paymentsLeft: unpaid.length + unissued.length,
     elapsedMonths: elapsed,
     endDate: dueDateForMonth(lease.startDate, lease.termMonths),
     forecast,
