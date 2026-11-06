@@ -230,6 +230,25 @@
           "decision": "Draw the dashboard chart as a small hand-written SVG with a table of the same numbers instead of adding a charting dependency, because four line views need no more."
         }
       ]
+    },
+    {
+      "source": "docs/decisions/records/demo-clock-and-personas.json",
+      "sha256": "45fcae2b4ddfc122428561ef6903eb115adcd1c27e2a0d4b90c86c19c73b78f3",
+      "prNumber": 65,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/65",
+      "mergedAt": "2026-11-06T10:15:16.000Z",
+      "decisions": [
+        {
+          "id": "D-65-01",
+          "category": "Infrastructure",
+          "decision": "Resolve the app's today through one appToday function that honours a validated demo-date cookie only in demo mode, on by default outside production, so scenario cards can be replayed on their own dates while domain code still receives dates as arguments."
+        },
+        {
+          "id": "D-65-02",
+          "category": "Auth",
+          "decision": "Sign demo personas in through the library's normal sign-up and sign-in with a password derived from the server auth secret, so persona switching creates no hand-made sessions and no shared credential is stored or committed."
+        }
+      ]
     }
   ]
 }
