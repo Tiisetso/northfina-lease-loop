@@ -11,6 +11,7 @@ import { authSettings, createAuth, type AuthSettings } from './auth-config';
 import { assertSameOrigin } from './auth-input';
 import { readIdentity } from './auth-session';
 import { DEMO_DATE_COOKIE, requestToday, requireDemoMode } from './demo-mode';
+import { CURRENT_USER_ID, keepOwnSession, returnToOwnAccount } from './demo-own-account';
 import { ensureScenarioLease } from './demo-scenarios';
 
 export const DEMO_STAFF = {
@@ -87,8 +88,12 @@ export async function switchPersona(
   requireDemoMode();
   assertSameOrigin(request, settings);
   const { personaId } = await readJsonBody(request, personaSchema);
-  const persona = (await demoPersonas()).find((item) => item.id === personaId);
+  if (personaId === CURRENT_USER_ID) return returnToOwnAccount(database, request, settings);
+  const personas = await demoPersonas();
+  const persona = personas.find((item) => item.id === personaId);
   if (!persona) throw new ApiError(404, 'NOT_FOUND', 'Unknown persona.');
+  // Switching away from the visitor's own account: keep it so "Current user" can return.
+  const keepOwn = await keepOwnSession(database, request, settings, personas);
   const password = personaPassword(settings.secret, persona.id);
   const customerId = persona.staff ? `${persona.id}-customer` : persona.id;
   const scenario = demoScenario(persona.id);
@@ -146,6 +151,7 @@ export async function switchPersona(
     );
     for (const cookie of signedIn.headers.getSetCookie())
       response.headers.append('Set-Cookie', cookie);
+    if (keepOwn) response.headers.append('Set-Cookie', keepOwn);
     return response;
   });
 }

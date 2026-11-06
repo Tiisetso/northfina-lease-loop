@@ -12,7 +12,10 @@ import { getT, type MessageKey } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import { readIdentity } from '@/server/auth-session';
 import { db } from '@/server/db';
+import { authSettings } from '@/server/auth-config';
+import type { AccountIdentity } from '@/server/auth-session';
 import { DEMO_STAFF, demoPersonas } from '@/server/demo-actions';
+import { CURRENT_USER_ID, isPersonaAccount, ownAccount } from '@/server/demo-own-account';
 import { appToday, demoModeEnabled } from '@/server/demo-mode';
 import { todayIso } from '@/server/today';
 import '../globals.css';
@@ -28,8 +31,11 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const t = getT(locale);
-  const identity = await readIdentity(db, await headers());
-  const demo = demoModeEnabled() ? await demoControls(locale, identity?.customerId) : null;
+  const requestHeaders = await headers();
+  const identity = await readIdentity(db, requestHeaders);
+  const demo = demoModeEnabled()
+    ? await demoControls(locale, identity, requestHeaders.get('cookie'))
+    : null;
 
   return (
     <html lang={locale}>
@@ -110,22 +116,40 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
 }
 
 /** Props for the demo bar: today's demo date, the personas, and translated labels. */
-async function demoControls(locale: Parameters<typeof getT>[0], customerId?: string) {
+async function demoControls(
+  locale: Parameters<typeof getT>[0],
+  identity: AccountIdentity | null,
+  cookieHeader: string | null
+) {
   const t = getT(locale);
-  const [date, personas] = await Promise.all([appToday(), demoPersonas()]);
+  const customerId = identity?.customerId;
+  const [date, personas, own] = await Promise.all([
+    appToday(),
+    demoPersonas(),
+    ownAccount(db, cookieHeader, authSettings()),
+  ]);
+  // "Current user": the visitor's own account, when signed in as it or kept from before a switch.
+  const self = identity && !isPersonaAccount(identity.customerId, personas) ? identity : null;
+  const ownName = self?.name ?? own?.identity.name;
   return {
     date,
     demoDateActive: date !== todayIso(),
     min: DEMO_DATE_MIN,
     max: DEMO_DATE_MAX,
-    personas: personas.map((persona) => ({
-      id: persona.id,
-      label: persona.staff
-        ? t('demo.staff')
-        : `${persona.name} · ${t(`application.option.${persona.type}` as MessageKey)}`,
-    })),
-    currentPersonaId:
-      customerId === `${DEMO_STAFF.id}-customer`
+    personas: [
+      ...(ownName
+        ? [{ id: CURRENT_USER_ID, label: t('demo.currentUser', { name: ownName }) }]
+        : []),
+      ...personas.map((persona) => ({
+        id: persona.id,
+        label: persona.staff
+          ? t('demo.staff')
+          : `${persona.name} · ${t(`application.option.${persona.type}` as MessageKey)}`,
+      })),
+    ],
+    currentPersonaId: self
+      ? CURRENT_USER_ID
+      : customerId === `${DEMO_STAFF.id}-customer`
         ? DEMO_STAFF.id
         : (personas.find((persona) => persona.id === customerId)?.id ?? null),
     labels: {

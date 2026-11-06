@@ -770,6 +770,7 @@
   "demo.persona": "Agera som",
   "demo.choosePersona": "Välj en persona",
   "demo.switch": "Byt",
+  "demo.currentUser": "Nuvarande användare · {name}",
   "demo.staff": "Personal (demo)",
   "demo.error": "Det gick inte. Försök igen.",
   "demo.rateLimited": "För många byten. Vänta en minut och försök igen.",

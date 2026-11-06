@@ -770,6 +770,7 @@
   "demo.persona": "Toimi henkilönä",
   "demo.choosePersona": "Valitse henkilö",
   "demo.switch": "Vaihda",
+  "demo.currentUser": "Nykyinen käyttäjä · {name}",
   "demo.staff": "Henkilökunta (demo)",
   "demo.error": "Se ei onnistunut. Yritä uudelleen.",
   "demo.rateLimited": "Liian monta vaihtoa. Odota hetki ja yritä uudelleen.",

@@ -13,6 +13,11 @@ In demo mode (on by default in development) a dark bar sits above the header:
 - **Act as:** signs this browser in as a data-pack persona, or as **Staff (demo)**.
   Switching sets up that persona's card: Aino already has her lease; Mikko, Norvi and
   Haapala start with their item in the cart. Everyone else starts with an empty cart.
+- **Current user:** signed in with your own account, "Act as" shows **Current user ·
+  your name**. The demo date then applies to your own leases and actions. Switch to any
+  persona and back: **Current user** signs you in as yourself again (your session is kept
+  in a cookie when you first switch away). Personas still start fresh at their scenario on
+  each switch, and changing the date while acting as one carries on from where they are.
 - Catalogue cards and product pages show each item's ID (`ebike-003`) in a dark chip.
 
 Set the **date first**, then switch persona: the persona's scenario uses the date that's
