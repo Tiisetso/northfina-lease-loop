@@ -133,6 +133,9 @@ export function summarizePortfolio(
   const outstandingCents = summaries
     .filter(({ lease }) => !lease.isDemo)
     .reduce((sum, item) => sum + item.summary.outstandingCents, 0);
+  const demoOutstandingCents = summaries
+    .filter(({ lease }) => lease.isDemo)
+    .reduce((sum, item) => sum + item.summary.outstandingCents, 0);
   const next =
     summaries
       .filter(({ lease }) => lease.status === 'active')
@@ -144,6 +147,7 @@ export function summarizePortfolio(
     activeCount: leases.filter((lease) => lease.status === 'active').length,
     realPaidCents,
     demoPaidCents,
+    demoOutstandingCents,
     outstandingCents,
     next,
   };

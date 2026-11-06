@@ -10,6 +10,7 @@ import { intlLocale, type Locale } from '@/i18n/locales';
 import type { CheckoutData } from '@/server/checkout-options';
 import { ConditionChoice } from './condition-choice';
 import { ProductPhoto } from './product-photo';
+import { PriceFormula } from './price-formula';
 
 type Props = {
   locale: Locale;
@@ -44,7 +45,7 @@ export function ReturnRequestForm({
   const category = data.recoveryFacts.category;
   const steps = [
     ...(mode === 'exchange' ? ['replacement'] : []),
-    'usage',
+    ...(category === 'laptop' ? [] : ['usage']),
     'power',
     ...(category !== 'farm_machine' ? ['battery'] : []),
     'functions',
@@ -52,7 +53,8 @@ export function ReturnRequestForm({
     'review',
   ];
   const [index, setIndex] = useState(0);
-  const [usage, setUsage] = useState(usageValue);
+  const [usageInput, setUsageInput] = useState(String(usageValue));
+  const usage = usageInput === '' ? Number.NaN : Number(usageInput);
   const [power, setPower] = useState<CheckAnswer | null>(null);
   const [battery, setBattery] = useState<'known' | 'unknown' | null>(null);
   const [health, setHealth] = useState('');
@@ -99,7 +101,7 @@ export function ReturnRequestForm({
     step === 'replacement'
       ? Boolean(replacement?.available && newQuote)
       : step === 'usage'
-        ? Number.isSafeInteger(usage) && usage >= usageValue
+        ? Number.isSafeInteger(usage) && usage >= usageValue && usage <= 100000000
         : step === 'power'
           ? power !== null
           : step === 'battery'
@@ -202,8 +204,13 @@ export function ReturnRequestForm({
               <div>
                 <dt className="text-ink-muted">{t('flow.baseline')}</dt>
                 <dd className="mt-1 font-semibold">
-                  {t(`condition.${data.baselineCondition}`)} · {baselineUsage}{' '}
-                  {t(`return.unit.${usageUnit}` as MessageKey)}
+                  {t(`condition.${data.baselineCondition}`)}
+                  {category !== 'laptop' ? (
+                    <>
+                      {' '}
+                      · {baselineUsage} {t(`return.unit.${usageUnit}` as MessageKey)}
+                    </>
+                  ) : null}
                 </dd>
               </div>
               <div>
@@ -289,12 +296,14 @@ export function ReturnRequestForm({
               <label className="block text-caption font-semibold">
                 {t('return.usage', { unit: t(`return.unit.${usageUnit}` as MessageKey) })}
                 <input
-                  type="number"
-                  min={usageValue}
-                  max={100000000}
-                  step={1}
-                  value={usage}
-                  onChange={(event) => setUsage(Number(event.target.value))}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={9}
+                  value={usageInput}
+                  onChange={(event) => {
+                    if (/^\d*$/.test(event.target.value)) setUsageInput(event.target.value);
+                  }}
                   className={field}
                 />
                 <span className="mt-3 block font-normal text-ink-muted">
@@ -437,6 +446,7 @@ export function ReturnRequestForm({
               {t('return.submitError')}
             </p>
           ) : null}
+          <PriceFormula locale={locale} kind="return" />
           <div className="mt-8 flex justify-end">
             <button
               type="button"

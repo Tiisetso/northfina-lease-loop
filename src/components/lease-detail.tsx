@@ -46,7 +46,9 @@ export function LeaseDetail({ locale, lease, rates, factors, today, liveBuyoutTo
     rate
       ? currency(invoiceAmounts(cents, Math.round(rate.rate_percent * 100)).totalCents)
       : t('dashboard.forecastUnavailable');
-  const returnRequest = lease.requests.find((request) => request.assessment);
+  const returnRequest = lease.requests.find(
+    (request) => request.assessment && request.status !== 'cancelled'
+  );
   const assessment = returnRequest?.assessment;
   let quote: RecoveryCalculation | null = null;
   if (assessment) {
@@ -58,7 +60,8 @@ export function LeaseDetail({ locale, lease, rates, factors, today, liveBuyoutTo
     }
   }
   const exchange = lease.requests.find(
-    (request) => request.kind === 'exchange' && request.customerReportJson
+    (request) =>
+      request.kind === 'exchange' && request.status !== 'cancelled' && request.customerReportJson
   );
   let exchangeQuote: { name: string; monthlyTotalCents: number; termMonths: number } | null = null;
   if (exchange?.customerReportJson) {

@@ -81,6 +81,7 @@ export async function assessReturn(
       });
       if (!request) throw new ApiError(404, 'NOT_FOUND', 'Return request not found.');
       if (
+        request.status === 'cancelled' ||
         request.contract.status !== 'active' ||
         (request.assessment && request.assessment.status !== 'quoted')
       )

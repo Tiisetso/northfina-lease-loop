@@ -7,6 +7,8 @@ import { formatEuro } from '@/domain/money';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import { ProductPhoto } from './product-photo';
+import { PriceFormula } from './price-formula';
+import { invoiceAmounts } from '@/domain/lease-billing';
 
 type Props = {
   locale: Locale;
@@ -97,25 +99,26 @@ export function BuyoutCheckout({
               <h3 className="mt-8 font-semibold">{t('flow.calculation')}</h3>
               <p className="mt-3 text-caption text-ink-muted">{t('flow.buyoutFormula')}</p>
               <dl className="mt-5 space-y-4 text-caption">
-                <Row label={t('flow.discountedRents')} value={money(quote.remainingRentNetCents)} />
                 <Row
-                  label={t('flow.discountedResidual')}
-                  value={money(quote.buyoutNetCents - quote.remainingRentNetCents)}
-                />
-                <Row
-                  label={t('flow.tax')}
+                  label={t('flow.discountedRents')}
                   value={money(
-                    quote.buyoutTotalCents - finance.outstandingCents - quote.buyoutNetCents
+                    invoiceAmounts(quote.remainingRentNetCents, finance.vatBasisPoints).totalCents
                   )}
                 />
-                <Row label={t('flow.unpaidRent')} value={money(finance.outstandingCents)} />
+                <Row
+                  label={t('flow.discountedResidual')}
+                  value={money(
+                    quote.buyoutTotalCents -
+                      finance.outstandingCents -
+                      invoiceAmounts(quote.remainingRentNetCents, finance.vatBasisPoints).totalCents
+                  )}
+                />
+                {finance.outstandingCents > 0 ? (
+                  <Row label={t('flow.unpaidRent')} value={money(finance.outstandingCents)} />
+                ) : null}
               </dl>
-              <p className="mt-5 text-caption text-ink-muted">
-                {t('flow.rateInfo', {
-                  rate: finance.annualRateBasisPoints / 100,
-                  months: finance.remainingMonths,
-                })}
-              </p>
+              <p className="mt-3 text-fine text-ink-muted">{t('pricing.includesVat')}</p>
+              <PriceFormula locale={locale} kind="buyout" finance={finance} />
             </>
           ) : null}
           {step === 'payment' ? (
