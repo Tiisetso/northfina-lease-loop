@@ -8,7 +8,7 @@ import { isLocale } from '@/i18n/locales';
 import { readIdentity } from '@/server/auth-session';
 import { db } from '@/server/db';
 import { leaseActionContext } from '@/server/lease-actions';
-import { todayIso } from '@/server/today';
+import { appToday } from '@/server/demo-mode';
 export default async function Page({ params }: PageProps<'/[locale]/account/leases/[id]/buyout'>) {
   const { locale, id } = await params;
   if (!isLocale(locale)) notFound();
@@ -19,7 +19,7 @@ export default async function Page({ params }: PageProps<'/[locale]/account/leas
     select: { id: true },
   });
   if (!owned) notFound();
-  const today = todayIso();
+  const today = await appToday();
   const data = await leaseActionContext(db, identity.customerId, id, today);
   const t = getT(locale);
   return (

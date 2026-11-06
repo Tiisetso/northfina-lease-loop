@@ -727,5 +727,16 @@
   "customer.var.D": "Cost of new damage, before VAT",
   "customer.var.buyoutToday": "Buyout valued for payment today",
   "return.stage.cancelled": "Cancelled",
-  "recovery.state.cancelled": "Cancelled"
+  "recovery.state.cancelled": "Cancelled",
+  "demo.badge": "Demo mode",
+  "demo.date": "Demo date",
+  "demo.setDate": "Set date",
+  "demo.reset": "Use today's date",
+  "demo.active": "The app treats {date} as today.",
+  "demo.persona": "Act as",
+  "demo.choosePersona": "Choose a persona",
+  "demo.switch": "Switch",
+  "demo.staff": "Staff (demo)",
+  "demo.error": "That didn't work. Please try again.",
+  "demo.rateLimited": "Too many switches. Wait a minute and try again."
 }

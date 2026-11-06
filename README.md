@@ -87,6 +87,26 @@ the valuation and settlement formulas, and publishing a second-life offer.
 See [RECOVERY.md](RECOVERY.md) for customer returns, staff assessment access,
 the valuation and settlement formulas, and publishing a second-life offer.
 
+## Demo mode (scenario cards)
+
+Every scenario card names a person and a date. In demo mode (on by default outside
+production) a dark bar above the header provides two controls:
+
+- **Demo date:** the whole app treats this date as today: the price list that applies,
+  contract start dates, due invoices and VAT. Pick any date from 2026-01-01 to
+  2031-12-31, or choose _Use today's date_ to return to the real date.
+- **Act as:** sign in as one of the ten personas in `data/customers.json`, or as
+  _Staff (demo)_. An account is created on first use. Its password is derived from
+  `BETTER_AUTH_SECRET`, so it is never stored or shared. The application form starts
+  with the answers the persona's record can give; all of them stay editable.
+
+Example, scenario card 1: set the demo date to 2026-11-05, act as Aino, add
+`ebike-003` (36 months, no down payment) to the cart, apply and sign. The rent is
+€107.30 net, €134.66 including VAT, and the contract starts on 2026-11-05.
+
+Both controls are audited. `LEASE_LOOP_DEMO=false` turns demo mode off;
+`LEASE_LOOP_DEMO=true` allows it in a production build.
+
 ## Project decisions
 
 Stop the running app before refreshing dependencies or database models.
@@ -109,6 +129,7 @@ Setup creates the ignored `.env` file from [.env.example](.env.example).
 | `DATABASE_URL`       | Local SQLite file; defaults to `file:./dev.db`                |
 | `BETTER_AUTH_URL`    | Exact application origin; defaults to `http://localhost:3000` |
 | `BETTER_AUTH_SECRET` | Generated locally by setup; keep it private                   |
+| `LEASE_LOOP_DEMO`    | Optional: `true`/`false` forces demo mode on/off              |
 
 If you change the host or port, update `BETTER_AUTH_URL` to the same origin before
 starting the app. Never commit `.env` or local database files. Use the same Node

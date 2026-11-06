@@ -6,7 +6,7 @@ import { requireIdentity } from '@/server/auth-session';
 import { db } from '@/server/db';
 import { payBuyout } from '@/server/lease-actions';
 import { readRecoveryBody } from '@/server/recovery-input';
-import { todayIso } from '@/server/today';
+import { requestToday } from '@/server/demo-mode';
 const schema = z.strictObject({
   token: z.uuid(),
   quoteDate: z.iso.date(),
@@ -24,7 +24,7 @@ export const POST = handleRoute(
       customerId: identity.customerId,
       userId: identity.id,
       contractId: id,
-      today: todayIso(),
+      today: requestToday(request),
     });
     return ok({ receiptId }, { status: 201, headers: { 'Cache-Control': 'no-store' } });
   }
