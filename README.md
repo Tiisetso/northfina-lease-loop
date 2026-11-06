@@ -64,6 +64,11 @@ Everything in the skeleton is replaceable. Keep the rules, not necessarily the c
 See [APPLICATIONS.md](APPLICATIONS.md) for the question flow, eligibility rules,
 manual-review outcomes and the approval required before simulated checkout.
 
+## Returns and second life
+
+See [RECOVERY.md](RECOVERY.md) for customer returns, staff assessment access,
+the valuation and settlement formulas, and publishing a second-life offer.
+
 ## Project decisions
 
 [Read the generated decision log](docs/DECISIONS.md) for accepted project choices

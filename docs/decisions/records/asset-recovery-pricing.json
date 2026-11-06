@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "decisions": [
+    {
+      "category": "Contract",
+      "decision": "Use versioned age, condition and usage valuations plus separately itemized refurbishment work so the second-life price and recovery cost remain explainable without counting repairs twice."
+    },
+    {
+      "category": "Contract",
+      "decision": "Discount the remaining locked rents and buyout for early settlement, cap early-return liability at discounted rents, and preserve an ordinary return option at maturity so residual-value risk remains with the provider."
+    },
+    {
+      "category": "Database",
+      "decision": "Persist inspection and quote snapshots and require customer acceptance, physical receipt and confirmed completed work as separate audited transitions before a second-life offer becomes available."
+    },
+    {
+      "category": "Auth",
+      "decision": "Restrict recovery operations to staff roles checked on the server and provision local staff with an audited CLI rather than exposing self-promotion in the customer application."
+    },
+    {
+      "category": "UI",
+      "decision": "Show VAT-inclusive customer amounts, compact lease imagery and a payment-focused detail panel while hiding unavailable products from catalogue browsing."
+    }
+  ]
+}
