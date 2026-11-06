@@ -24,7 +24,7 @@ export function returnPreview(
     answers,
     data.costs
   );
-  const condition = report.condition === 'new' ? 'like_new' : report.condition;
+  const condition = report.condition;
   const recovery = assetRecovery(
     {
       ...data.recoveryFacts,

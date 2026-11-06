@@ -14,7 +14,13 @@ export const categoryChecks: Record<AssetCategory, readonly string[]> = {
   e_bike: ['brakes_fault', 'tyres_worn', 'drive_fault'],
   farm_machine: ['engine_fault', 'hydraulic_fault', 'service_due'],
 };
-const grades: readonly AssetCondition[] = ['poor', 'fair', 'good', 'like_new', 'new'];
+const returnGrades = [
+  'poor',
+  'fair',
+  'good',
+  'like_new',
+] as const satisfies readonly AssetCondition[];
+const grades: readonly AssetCondition[] = [...returnGrades, 'new'];
 
 /** Normal use may move a new/like-new item to good; previous damage is never charged again. */
 export function conditionDamageCost(
@@ -54,7 +60,8 @@ export function conditionReport(
     )
   )
     throw new RangeError('Incomplete functional checks');
-  const baselineIndex = Math.min(grades.indexOf(baseline), grades.indexOf('like_new'));
+  // A returned item can be like new, but cannot be reported as new.
+  const baselineIndex = Math.min(grades.indexOf(baseline), returnGrades.length - 1);
   const cosmeticIndex =
     answers.cosmetic === 'broken'
       ? 0
@@ -63,7 +70,7 @@ export function conditionReport(
         : answers.cosmetic === 'light'
           ? 2
           : baselineIndex;
-  const cosmeticCondition = grades[Math.min(baselineIndex, cosmeticIndex)]!;
+  const cosmeticCondition = returnGrades[Math.min(baselineIndex, cosmeticIndex)]!;
   const faults = categoryChecks[category].filter((key) => answers.functions[key] === 'fault');
   const issues = [...faults];
   if (answers.power === 'fault') issues.push('not_working');
@@ -72,9 +79,7 @@ export function conditionReport(
   if (answers.accessories === 'missing') issues.push('missing_accessories');
   if (answers.batteryKnown && answers.batteryHealth! < 80) issues.push('battery_weak');
   return {
-    condition: (answers.power === 'fault' || faults.length
-      ? 'poor'
-      : cosmeticCondition) as AssetCondition,
+    condition: answers.power === 'fault' || faults.length ? 'poor' : cosmeticCondition,
     issues: [...new Set(issues)],
     damageNetCents: conditionDamageCost(baseline, cosmeticCondition, costs[category]),
     inspectionRequired:
