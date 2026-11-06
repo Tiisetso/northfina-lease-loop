@@ -100,6 +100,9 @@ Never add a token or bypass protections silently.
 PRs created by `GITHUB_TOKEN` may not trigger other workflows automatically. If
 required checks are introduced for the rolling PR, use an owner-approved way to
 trigger them or an approved App credential; never mark them passed or bypass them.
+GitHub can require approval before running these workflows; this is separate from
+PR-description checkboxes. Newly created publication PRs use the shared summary-first
+format with no manual checklist. The publisher preserves existing PR descriptions.
 
 ## Local commands and recovery
 

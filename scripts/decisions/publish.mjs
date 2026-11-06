@@ -1,11 +1,31 @@
 // Executed only from the reviewed default-branch checkout, never a PR head.
 import { execFileSync, spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { context } from './cli.mjs';
 import { GENERATED_PATHS, INDEX_PATH, TABLE_PATH, renderTable, serializeIndex } from './model.mjs';
 import { git, github, workingSources, reconcileRepository, writeGenerated } from './repository.mjs';
 
 const BRANCH = 'automation/decision-log';
+const PR_BODY = [
+  '## Summary',
+  '',
+  'Publishes decisions already accepted in merged PRs so the central project history stays current. Original decision text, identifiers and merge dates are preserved.',
+  '',
+  '## Context',
+  '',
+  'Reviewed decision records are waiting to appear in the generated history on main. No linked issue; the table links each decision to its originating PR.',
+  '',
+  '## Description',
+  '',
+  'Update the generated metadata index and central table from accepted records. This publication introduces no new policy and remains pending until the documentation PR is merged.',
+  '',
+  '## Testing Instructions',
+  '',
+  'The publication workflow reconstructs the generated output from original merged PR metadata. Read the Actions results and compare the table/index with the accepted source records. For a local verification, run `npm run decisions:reconcile:check` on a clean checkout of this PR with GitHub read access.',
+  '',
+].join('\n');
 function gh(...args) {
   return execFileSync('gh', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
 }
@@ -55,20 +75,27 @@ export function publish({ repository, defaultBranch }) {
   if (prs.length > 1)
     throw new Error('More than one rolling publication PR; maintainer review required');
   if (prs.length === 0) {
-    gh(
-      'pr',
-      'create',
-      '--repo',
-      repository,
-      '--base',
-      defaultBranch,
-      '--head',
-      BRANCH,
-      '--title',
-      'docs(decisions): publish accepted project decisions',
-      '--body',
-      '## Context\n\nPublish decisions already reviewed and merged into the default branch.\n\n## Description\n\nUpdate only the generated metadata index and central table. Original PR URLs, merge dates and decision IDs are preserved.\n\n## Testing Instructions\n\nRun `npm run decisions:reconcile:check` with GitHub read access. Review the generated diff.\n\n## Screenshots / Recordings\n\nN/A — generated documentation.\n\n## Checklist\n\n- [ ] Generated diff reviewed\n- [ ] Reconciliation verified\n\nThis rolling PR must be merged before the default-branch table updates. It does not merge itself.'
-    );
+    const directory = mkdtempSync(join(tmpdir(), 'lease-loop-decision-pr-'));
+    const bodyFile = join(directory, 'body.md');
+    try {
+      writeFileSync(bodyFile, PR_BODY, { mode: 0o600 });
+      gh(
+        'pr',
+        'create',
+        '--repo',
+        repository,
+        '--base',
+        defaultBranch,
+        '--head',
+        BRANCH,
+        '--title',
+        'docs(decisions): publish accepted project decisions',
+        '--body-file',
+        bodyFile
+      );
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   }
   console.log(
     'Rolling decision-log PR updated; merge it to publish the table on the default branch.'

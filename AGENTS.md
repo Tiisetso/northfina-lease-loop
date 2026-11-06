@@ -29,11 +29,15 @@ You are helping a hackathon team build **Lease Loop**. The challenge is in `CHAL
 - Keep commits focused and conventional. Stage only intended files and leave hooks
   enabled. When a squash merge is authorized, use a conventional squash commit title
   too; CI validates the resulting commit as well as the PR's individual commits.
-- Fill every section with concrete information; use `N/A` with a reason rather than
-  leaving prompts or dropping headings. Give reproducible reviewer steps and outcomes.
-- Report only checks actually run. Identify failures and checks not run. Check boxes
-  only for completed work; do not invent issue links, screenshots or test results.
-- For UI changes, attach available visual evidence and report any visual review gaps.
+- Complete Summary, Context, Description and Testing Instructions; use `N/A` with
+  a reason where appropriate. Screenshots / Recordings is optional. Do not add a
+  manual attestation checklist or require checkbox ticks for review.
+- CI is the source for automated check status: title/description structure, formatting,
+  lint, types, coverage, file size, no-AI rules, secret scanning, translation keys and
+  decision-record validation. Do not replace those results with self-reported ticks.
+- Report only local checks actually run and include relevant failures or validation
+  gaps. Do not invent issue links, screenshots or test results. Include visual evidence
+  when useful; no separate visual-review checkbox or N/A signoff is required.
 - Use `.github/hackathon_submission.md` for the final judging PR and follow the
   submission title and deadline in `README.md`; the judging format is separate from
   the team PR template.

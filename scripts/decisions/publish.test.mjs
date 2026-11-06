@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { validatePullRequest } from '../check-pr.mjs';
 import {
   addEntry,
   entryFor,
@@ -17,14 +18,24 @@ const state = vi.hoisted(() => ({
   index: null,
   files: {},
   defaultBranch: 'main',
+  prBody: '',
+  failCreate: false,
 }));
 vi.mock('node:fs', () => ({
   readFileSync: (file) => state.files[file],
   existsSync: () => true,
+  mkdtempSync: () => '/tmp/lease-loop-publish-test',
+  writeFileSync: (_file, content) => {
+    state.prBody = content;
+  },
+  rmSync: (file) => {
+    state.calls.push(['removeTemp', file]);
+  },
 }));
 vi.mock('node:child_process', () => ({
   execFileSync: (_bin, args) => {
     state.ghCalls.push(args);
+    if (state.failCreate) throw new Error('PR creation failed');
     return '';
   },
   spawnSync: () => ({ stdout: '' }),
@@ -92,6 +103,8 @@ beforeEach(() => {
     existingPr: false,
     index,
     defaultBranch: 'main',
+    prBody: '',
+    failCreate: false,
     files: { [INDEX_PATH]: serializeIndex(empty), [TABLE_PATH]: renderTable(empty) },
   });
 });
@@ -116,6 +129,20 @@ describe('rolling publication', () => {
       state.calls.some((args) => args.includes('--force') || args.includes('--no-verify'))
     ).toBe(false);
     expect(state.ghCalls[0].slice(0, 2)).toEqual(['pr', 'create']);
+    expect(state.ghCalls[0]).toContain('--body-file');
+    expect(state.prBody).not.toContain('- [ ]');
+    expect(
+      validatePullRequest({
+        title: 'docs(decisions): publish accepted project decisions',
+        body: state.prBody,
+      })
+    ).toEqual([]);
+    expect(state.calls).toContainEqual(['removeTemp', '/tmp/lease-loop-publish-test']);
+  });
+  it('removes the temporary description file when PR creation fails', () => {
+    state.failCreate = true;
+    expect(() => publish(context)).toThrow('PR creation failed');
+    expect(state.calls).toContainEqual(['removeTemp', '/tmp/lease-loop-publish-test']);
   });
   it('reuses a rolling PR and keeps stale branches as ancestors without force pushes', () => {
     state.remote = true;
