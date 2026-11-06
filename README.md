@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/brand/wordmark-reference.png" alt="Lease Loop" width="360">
+</p>
+
 # Lease Loop
 
 **Team 4 · Northfina × Hive Helsinki hackathon, 5–6 November 2026**
@@ -9,8 +13,7 @@ rules, data and algorithms, with no AI, ML or LLM features in the app. The inter
 English, Finnish, Swedish and Estonian.
 
 This README is our submission document: what we built against the
-[challenge](CHALLENGE.md), how it works, and how to run it. To present the scenario cards,
-follow **[DEMO_TIPS.md](DEMO_TIPS.md)**.
+[challenge](CHALLENGE.md), how it works, and how to run it.
 
 ## Team
 
@@ -175,6 +178,9 @@ person leases it from the catalogue).
 - **Staff workspace:** returns queue, inspection, refurbishment sign-off and relisting,
   an overview with 24 months of simulated history (revenue and active leases), and an
   **audit trail** tab showing who changed what and when (RULES §7).
+- **Application review** (card 7): applications that need a person (large amount, PEP)
+  wait in a staff queue with their reasons; staff approve or reject with a note, and the
+  customer then continues to signing.
 
 ## Scenario cards
 
@@ -192,8 +198,6 @@ Step-by-step instructions, what to point out and the exact gaps: [DEMO_TIPS.md](
 
 What we know doesn't work yet, so nothing in the demo surprises you:
 
-- **Applications sent to manual review** (card 7's big ticket, PEP) wait for a person, but
-  there is no staff screen to approve them yet (#19). The outcome and reasons are shown.
 - **Smart Problem 6:** no side-by-side comparison of terms (#56).
 - **Smart Problem 7:** CO₂ is shown per item and per item passport, not fleet-wide.
 - **Second life:** the waiting-list winner is chosen and explained, but staff still

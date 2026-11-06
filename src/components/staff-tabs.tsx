@@ -17,6 +17,11 @@ export function StaffTabs({ locale }: { locale: Locale }) {
       active: pathname.startsWith(`${base}/returns`),
     },
     {
+      href: `${base}/applications`,
+      label: t('review.tab'),
+      active: pathname.startsWith(`${base}/applications`),
+    },
+    {
       href: `${base}/audit`,
       label: t('audit.tab'),
       active: pathname.startsWith(`${base}/audit`),

@@ -36,14 +36,23 @@ export default async function Page({ params }: PageProps<'/[locale]/applications
     .catch({})
     .parse(JSON.parse(application.answersJson));
   const adultFrom = answers.q_birth_date ? dateOfAge(answers.q_birth_date, 18) : null;
-  const otherReasons = underAge ? reasons.filter((reason) => reason !== 'under_age') : reasons;
+  const otherReasons = reasons.filter(
+    (reason) => !(underAge && reason === 'under_age') && reason !== 'signatory_pending'
+  );
   const current = application.startDate === (await appToday());
+  // Card 6: the applicant can't sign for the company, so nothing is approved for it until the
+  // named signatory signs. Say so instead of "approved".
+  const signatoryEmail = answers.q_signatory_email ?? '';
+  const awaitingSignatory =
+    application.status === 'approved' && reasons.includes('signatory_pending');
   return (
     <div className="mx-auto max-w-copy px-card py-section-compact">
       <h1 className="font-display text-display-sm font-semibold tablet:text-display-lg">
         {underAge
           ? t('application.underAge.title')
-          : t(`application.status.${application.status}` as MessageKey)}
+          : awaitingSignatory
+            ? t('application.status.awaiting_signatory', { email: signatoryEmail })
+            : t(`application.status.${application.status}` as MessageKey)}
       </h1>
       {underAge ? (
         <UnderAgeHelp
@@ -58,7 +67,9 @@ export default async function Page({ params }: PageProps<'/[locale]/applications
         />
       ) : (
         <p className="mt-6 max-w-prose text-body text-ink-muted">
-          {t(`application.outcome.${application.status}` as MessageKey)}
+          {awaitingSignatory
+            ? t('application.outcome.awaiting_signatory', { email: signatoryEmail })
+            : t(`application.outcome.${application.status}` as MessageKey)}
         </p>
       )}
       {otherReasons.length ? (

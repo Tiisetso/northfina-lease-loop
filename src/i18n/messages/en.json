@@ -905,5 +905,18 @@
   "product.change.repaired": "Repaired",
   "product.change.replaced": "Replaced",
   "product.change.updated": "Updated",
-  "product.change.done": "Done"
+  "product.change.done": "Done",
+  "review.tab": "Applications",
+  "review.title": "Applications to review",
+  "review.intro": "These applications need a person: for example a large amount or a politically exposed person. Read the reasons, write a short note and approve or reject. The customer sees the result on their application page and, once approved, can continue to signing.",
+  "review.appliedOn": "Applied on {date}",
+  "review.down": "{amount} down",
+  "review.reasons": "Why a person must decide",
+  "review.note": "Your note (required, saved in the audit trail)",
+  "review.approve": "Approve",
+  "review.reject": "Reject",
+  "review.error": "That didn't work. Refresh the page and try again.",
+  "review.empty": "No applications are waiting for review.",
+  "application.status.awaiting_signatory": "Waiting for {email} to sign",
+  "application.outcome.awaiting_signatory": "Your application meets our requirements, but you can't sign for the company. Nothing is approved for the company until {email} signs. When you continue, we lock the price and reserve the item, and give you a personal signing link to send them. The contract only becomes active, and nothing is charged, once they sign."
 }
