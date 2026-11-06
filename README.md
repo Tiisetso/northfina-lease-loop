@@ -14,9 +14,34 @@ follow **[DEMO_TIPS.md](DEMO_TIPS.md)**.
 
 ## Team
 
-| Name | GitHub | Main focus |
-| ---- | ------ | ---------- |
-| TODO | TODO   | TODO       |
+| Name              | GitHub                                                 | Main focus                                                                                   |
+| ----------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| Tiisetso Murray   | [@Tiisetso](https://github.com/Tiisetso)               | Integration, CI/testing, demo tooling, contracts/invoices and waiting-list matching          |
+| Cristian Dohanici | [@cristichitz](https://github.com/cristichitz)         | Authentication, catalogue/checkout UX, lease dashboard, returns/refurbishment and co-leasing |
+| Daniel Kwon       | [@OneEyedWilly293](https://github.com/OneEyedWilly293) | Product pages/sliders, application eligibility and decision-log automation                   |
+
+Representative merged work, checked against the commits inside each PR:
+
+- **Tiisetso:** [setup and Makefile (#40)](https://github.com/Tiisetso/northfina-lease-loop/pull/40),
+  [CI and PR checks (#58)](https://github.com/Tiisetso/northfina-lease-loop/pull/58),
+  [demo clock/personas (#65)](https://github.com/Tiisetso/northfina-lease-loop/pull/65),
+  [company signing (#79)](https://github.com/Tiisetso/northfina-lease-loop/pull/79),
+  [price-lock explanation (#82)](https://github.com/Tiisetso/northfina-lease-loop/pull/82),
+  [monthly invoicing (#84)](https://github.com/Tiisetso/northfina-lease-loop/pull/84),
+  [waiting-list matching and item passport (#88)](https://github.com/Tiisetso/northfina-lease-loop/pull/88),
+  [cancellation tests (#85)](https://github.com/Tiisetso/northfina-lease-loop/pull/85) and
+  [buyout tests (#91)](https://github.com/Tiisetso/northfina-lease-loop/pull/91).
+- **Cristian:** [authentication (#7)](https://github.com/Tiisetso/northfina-lease-loop/pull/7),
+  [lease dashboard and catalogue UX (#11)](https://github.com/Tiisetso/northfina-lease-loop/pull/11),
+  [checkout/cart UI (#16)](https://github.com/Tiisetso/northfina-lease-loop/pull/16),
+  [returns, inspections, refurbishment and relisting (#63)](https://github.com/Tiisetso/northfina-lease-loop/pull/63),
+  [customer lease flows (#64)](https://github.com/Tiisetso/northfina-lease-loop/pull/64) and
+  [co-lease invoice splitting (#67)](https://github.com/Tiisetso/northfina-lease-loop/pull/67).
+- **Daniel:** [product pages and lease sliders (#13)](https://github.com/Tiisetso/northfina-lease-loop/pull/13),
+  [application eligibility and checkout approval (#37)](https://github.com/Tiisetso/northfina-lease-loop/pull/37),
+  [PR template (#23)](https://github.com/Tiisetso/northfina-lease-loop/pull/23),
+  [decision-log automation (#26)](https://github.com/Tiisetso/northfina-lease-loop/pull/26) and
+  [verified decision-history backfill (#30)](https://github.com/Tiisetso/northfina-lease-loop/pull/30).
 
 ## The Spine
 
