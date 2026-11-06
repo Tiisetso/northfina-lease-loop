@@ -13,6 +13,7 @@ import { db } from '@/server/db';
 import { listCustomerLeases, type CustomerLease } from '@/server/leases';
 import { todayIso } from '@/server/today';
 import { DashboardShell, type DashboardSection } from './dashboard-shell';
+import { CancelLeaseRequest } from './cancel-lease-request';
 import { LeaseCard } from './lease-card';
 import { DemoLeaseButton } from './lease-controls';
 
@@ -89,11 +90,14 @@ function LeaseList({ locale, leases, rates, today }: Props) {
 }
 function Overview({ locale, leases, rates, today, name }: Props & { name: string }) {
   const t = getT(locale);
-  const { activeCount, realPaidCents, demoPaidCents, outstandingCents, next } = summarizePortfolio(
-    leases,
-    rates,
-    today
-  );
+  const {
+    activeCount,
+    realPaidCents,
+    demoPaidCents,
+    outstandingCents,
+    demoOutstandingCents,
+    next,
+  } = summarizePortfolio(leases, rates, today);
   return (
     <>
       <h2 className="text-tagline font-semibold">{t('account.welcome', { name })}</h2>
@@ -102,25 +106,17 @@ function Overview({ locale, leases, rates, today, name }: Props & { name: string
         <Metric label={t('dashboard.activeCount')} value={String(activeCount)} />
         <Metric
           label={t('dashboard.totalPaid')}
-          value={formatEuro(realPaidCents, intlLocale[locale])}
-          note={
-            demoPaidCents
-              ? t('dashboard.demoPaid', { amount: formatEuro(demoPaidCents, intlLocale[locale]) })
-              : undefined
-          }
+          value={formatEuro(realPaidCents + demoPaidCents, intlLocale[locale])}
+          note={t('customer.rentPayments')}
         />
         <Metric
           label={t('dashboard.outstanding')}
-          value={formatEuro(outstandingCents, intlLocale[locale])}
+          value={formatEuro(outstandingCents + demoOutstandingCents, intlLocale[locale])}
         />
         <Metric
           label={t('dashboard.nextPayment')}
           value={next ? formatEuro(next.amountCents, intlLocale[locale]) : t('dashboard.noNext')}
-          note={
-            next
-              ? `${formatIsoDate(next.dueDate, locale)} · ${t(next.demo ? 'dashboard.demo' : next.kind === 'forecast' ? 'dashboard.estimated' : 'dashboard.issued')}`
-              : undefined
-          }
+          note={next ? formatIsoDate(next.dueDate, locale) : undefined}
         />
       </div>
       <div className="mt-8 flex flex-wrap items-baseline justify-between gap-3">
@@ -229,7 +225,19 @@ function Requests({ locale, leases }: { locale: Locale; leases: CustomerLease[] 
                     {lease.asset.make} {lease.asset.model}
                   </Link>
                 </div>
-                <p className="text-caption">{t(`dashboard.requestStatus.${request.status}`)}</p>
+                <div className="text-right">
+                  <p className="text-caption">{t(`dashboard.requestStatus.${request.status}`)}</p>
+                  {lease.status === 'active' &&
+                  ['pending', 'approved'].includes(request.status) &&
+                  (!request.assessment ||
+                    ['quoted', 'accepted'].includes(request.assessment.status)) ? (
+                    <CancelLeaseRequest
+                      locale={locale}
+                      contractId={lease.id}
+                      requestId={request.id}
+                    />
+                  ) : null}
+                </div>
               </div>
             </li>
           ))}

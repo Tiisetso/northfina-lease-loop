@@ -95,13 +95,32 @@ model Contract {
   status                String         @default("active")
   isDemo                Boolean        @default(false)
   annualRateBasisPoints Int?
+  startCondition        String?
+  startUsageValue       Int?
   createdAt             DateTime       @default(now())
   invoices              Invoice[]
   requests              LeaseRequest[]
   events                LeaseEvent[]
+  actionPayments        LeaseActionPayment[]
 
   @@index([customerId, status])
   @@index([assetId])
+}
+
+// Separate simulated settlement receipts from monthly rent invoice payments.
+model LeaseActionPayment {
+  id            String   @id @default(cuid())
+  contractId    String
+  contract      Contract @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  reference     String   @unique
+  kind          String
+  amountCents   Int
+  paymentMethod String
+  quoteJson     String
+  isSimulated   Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  @@index([contractId])
 }
 
 // Issued invoices retain their net and VAT snapshot even if the tax table changes.

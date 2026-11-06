@@ -1,6 +1,14 @@
 # Returns, assessment and second-life offers
 
-The customer journey is **My leases → open lease → Return item → report → staff quote → customer accepts → staff receives → work completed → second-life catalogue offer**.
+The customer journey is **My leases → open lease → guided condition check → staff confirms the return → customer accepts → staff receives → work completed → second-life catalogue offer**.
+
+The condition check uses the recorded starting condition and lifetime usage, then asks about power, battery health (or unable to check), category-specific functions, new cosmetic damage and accessories. A running item-value and damage estimate remains visible. Existing wear and ordinary light use are not charged again; faults whose cost is not in the supplied table require a professional repair quote. This is inspired by the assessment/revised-offer pattern, not Swappie's proprietary valuation algorithm.
+
+**Buyout is self-service:** open Buy this item, review the discounted-rent/residual/tax breakdown, choose a simulated payment method, and confirm payment. No condition form or staff approval is required. An audited, idempotent settlement receipt is stored separately from monthly invoices. Unpaid and accrued rent included in the buyout is settled once; the contract becomes bought. Real contracts cannot be closed through simulated payment.
+
+**Exchange starts with the replacement:** choose an available item and term, complete the same condition check on the current item, then review its estimated return settlement and the replacement's gross monthly price. Submission saves an exchange request and a server-derived replacement quote. Inspection still confirms the old item's settlement. The replacement is not reserved or leased by this request: its new application and checkout remain required before a new financial commitment.
+
+Staff have a floating Admin shortcut when signed in with their staff role. The shortcut does not bypass authorization.
 
 ## Staff access
 
@@ -38,21 +46,22 @@ All internal money is integer net euro cents; customer amounts include applicabl
 
 The professional confirms every required task and reported fault has been dealt with before publication. If recovery is unsuitable, a received item can be retired instead. An economic loss is visible rather than hidden; the decision to proceed remains a staff decision. Waiting-list matchmaking is not implemented in this workflow.
 
-### Settlement policy `settlement-v1`
+### Settlement policy `settlement-v2`
 
 Let `M` be locked monthly net rent, `B` the contractual net buyout, `n` future unissued payment periods and `r` the snapshotted nominal annual rate divided by 12. Issued payments are excluded from that future balance; unpaid issued invoices and past unissued accrued rent are added once, separately, as gross balances.
 
 ```text
 remaining rent value = sum(M / (1 + r)^k), k = 1..n
 buyout net = remaining rent value + B / (1 + r)^n
-early return net = min(remaining rent value, max(0, buyout net - net recovery))
+financial return shortfall = min(remaining rent value, max(0, buyout net - net recovery))
+return net = max(financial return shortfall, incremental damage cost)
 ```
 
-At the agreed end (`n = 0`), ordinary return settlement is zero and buyout is `B`, before arrears and VAT. Early return is capped at the discounted remaining rents so the provider retains residual-value risk. No arbitrary administration fee or second damage charge is added. The same damage must not reduce recovery value and also create an unitemized duplicate charge.
+At the agreed end (`n = 0`), ordinary return settlement is zero for normal wear; confirmed new damage is still payable and buyout is `B`, before arrears and VAT. The customer is not charged to restore pre-existing cosmetic wear. New/like-new items may reach good condition through normal use. Staff confirm the incremental repair charge; customer estimates remain provisional. The financial early-return shortfall is capped at discounted remaining rents so the provider retains residual-value risk; confirmed new damage is a separate minimum obligation. Use the greater amount instead of adding the same repair effect twice. No arbitrary administration fee or second damage charge is added. The same damage must not reduce recovery value and also create an unitemized duplicate charge.
 
 Discounting uses integer rational arithmetic; round each final net quote half up to cents. Apply the quote-date standard VAT policy once and then add already-gross outstanding issued invoices and past accrued unissued rent once. Real settlement tax treatment would need a separate reviewed policy. Existing contracts without a saved finance rate explicitly use the current coefficient table as a legacy fallback, recorded in the quote.
 
-A quote expires at the end of its quote date. Customer acceptance must match its exact assessment version. Once accepted, the settlement snapshot is frozen for subsequent physical receipt. The simulated buyout action changes ownership status without claiming a recorded payment; non-demo contracts require a recorded settlement-payment integration first.
+A quote expires at the end of its quote date. Customer acceptance must match its exact assessment version. Once accepted, the settlement snapshot is frozen for subsequent physical receipt. Self-service buyout writes an explicitly simulated settlement receipt; non-demo contracts require a real recorded settlement-payment integration first.
 
 ## Lifecycle and data guarantees
 

@@ -20,6 +20,8 @@ export const reportIssuesByCategory = {
     'not_working',
     'screen_damage',
     'keyboard_fault',
+    'network_fault',
+    'charging_fault',
     'battery_weak',
   ],
   farm_machine: [
@@ -38,6 +40,32 @@ export const recoveryReportSchema = z.strictObject({
   issues: z.array(z.string().max(60)).max(20),
   notes: z.string().trim().max(1000).default(''),
   preferredDate: z.iso.date().optional(),
+  answers: z
+    .strictObject({
+      power: z.enum(['working', 'fault', 'unknown']),
+      batteryKnown: z.boolean(),
+      batteryHealth: z.number().int().min(0).max(100).nullable(),
+      functions: z.record(z.string().max(60), z.enum(['working', 'fault', 'unknown'])),
+      cosmetic: z.enum(['same', 'light', 'deep', 'broken']),
+      accessories: z.enum(['complete', 'missing', 'unknown']),
+    })
+    .optional(),
+  replacement: z
+    .strictObject({
+      id: z.string().min(1).max(80),
+      termMonths: z.number().int().min(12).max(60),
+      downPaymentCents: z.number().int().nonnegative(),
+    })
+    .optional(),
+  replacementQuote: z
+    .object({
+      name: z.string(),
+      monthlyTotalCents: z.number().int(),
+      termMonths: z.number().int(),
+      totalCents: z.number().int(),
+      quoteDate: z.iso.date(),
+    })
+    .optional(),
 });
 export type RecoveryReport = z.infer<typeof recoveryReportSchema>;
 export const inspectionSchema = z.strictObject({
@@ -59,6 +87,7 @@ export const recoveryCalculationSchema = z.object({
   vatBasisPoints: z.number().int().nonnegative(),
   outstandingInvoiceCents: z.number().int().nonnegative().default(0),
   accruedUnissuedCents: z.number().int().nonnegative().default(0),
+  damageNetCents: z.number().int().nonnegative().default(0),
   recovery: z.object({
     asReturnedValueCents: z.number().int().nonnegative(),
     postRepairValueCents: z.number().int().nonnegative(),

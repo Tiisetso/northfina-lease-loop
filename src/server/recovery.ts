@@ -5,8 +5,9 @@ import {
   loadResidualCurves,
   loadVatRates,
 } from '@/data/load';
-import { assetCategorySchema } from '@/data/schemas';
+import { assetCategorySchema, assetConditionSchema } from '@/data/schemas';
 import { assetRecovery, recoveryAgeMonths, recoveryFirstUseDate } from '@/domain/asset-recovery';
+import { conditionDamageCost } from '@/domain/condition-report';
 import { monthlyFactorFor } from '@/domain/coefficient';
 import { summarizeLease } from '@/domain/lease-dashboard';
 import { settlementQuote } from '@/domain/lease-settlement';
@@ -32,14 +33,14 @@ const includeCase = {
 } as const;
 export async function listReturnCases(db: PrismaClient) {
   return db.leaseRequest.findMany({
-    where: { kind: { in: ['return', 'buyout'] } },
+    where: { kind: { in: ['return', 'buyout', 'exchange'] } },
     include: includeCase,
     orderBy: { createdAt: 'desc' },
   });
 }
 export async function findReturnCase(db: PrismaClient, requestId: string) {
   return db.leaseRequest.findFirst({
-    where: { id: requestId, kind: { in: ['return', 'buyout'] } },
+    where: { id: requestId, kind: { in: ['return', 'buyout', 'exchange'] } },
     include: includeCase,
   });
 }
@@ -75,11 +76,12 @@ export async function assessReturn(
     async (tx) => {
       await staffInTransaction(tx, input.staffId);
       const request = await tx.leaseRequest.findFirst({
-        where: { id: input.requestId, kind: { in: ['return', 'buyout'] } },
+        where: { id: input.requestId, kind: { in: ['return', 'buyout', 'exchange'] } },
         include: includeCase,
       });
       if (!request) throw new ApiError(404, 'NOT_FOUND', 'Return request not found.');
       if (
+        request.status === 'cancelled' ||
         request.contract.status !== 'active' ||
         (request.assessment && request.assessment.status !== 'quoted')
       )
@@ -158,12 +160,18 @@ export async function assessReturn(
       const accruedUnissuedCents = unissued
         .filter((invoice) => invoice.dueDate < input.today)
         .reduce((sum, invoice) => sum + invoice.totalCents, 0);
+      const damageNetCents = conditionDamageCost(
+        assetConditionSchema.parse(contract.startCondition ?? asset.condition),
+        inspection.condition,
+        costs[assetCategorySchema.parse(asset.category)]
+      );
       const settlement = settlementQuote({
         monthlyNetCents: contract.monthlyNetCents,
         buyoutCents: contract.buyoutCents,
         remainingMonths,
         annualRateBasisPoints,
         recoveryCents: Math.max(0, recovery.netRecoveryCents),
+        damageCents: damageNetCents,
         vatBasisPoints,
         outstandingCents: summary.outstandingCents + accruedUnissuedCents,
       });
@@ -180,6 +188,7 @@ export async function assessReturn(
         vatBasisPoints,
         outstandingInvoiceCents: summary.outstandingCents,
         accruedUnissuedCents,
+        damageNetCents,
         recovery,
         settlement,
       });
@@ -260,7 +269,7 @@ export async function acceptReturn(
           data: { status: 'bought' },
         });
       }
-      if (request.kind !== 'return')
+      if (!['return', 'exchange'].includes(request.kind))
         throw new ApiError(409, 'RETURN_STATE', 'This is not a return request.');
       return tx.returnAssessment.update({
         where: { id: request.assessment.id },
@@ -290,7 +299,7 @@ export async function progressReturn(
     async (tx) => {
       await staffInTransaction(tx, input.staffId);
       const request = await tx.leaseRequest.findFirst({
-        where: { id: input.requestId, kind: 'return' },
+        where: { id: input.requestId, kind: { in: ['return', 'exchange'] } },
         include: includeCase,
       });
       if (!request?.assessment) throw new ApiError(404, 'NOT_FOUND', 'Assessed return not found.');

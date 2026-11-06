@@ -7,7 +7,7 @@
     },
     {
       "category": "Contract",
-      "decision": "Discount the remaining locked rents and buyout for early settlement, cap early-return liability at discounted rents, and preserve an ordinary return option at maturity so residual-value risk remains with the provider."
+      "decision": "Discount remaining locked rents and buyout for self-service settlement, keep normal end-of-term returns free, and use an incremental damage floor rather than adding the same repair loss twice."
     },
     {
       "category": "Database",
@@ -20,6 +20,10 @@
     {
       "category": "UI",
       "decision": "Show VAT-inclusive customer amounts, compact lease imagery and a payment-focused detail panel while hiding unavailable products from catalogue browsing."
+    },
+    {
+      "category": "UI",
+      "decision": "Use a guided category-specific condition check against the recorded starting condition, route buyout directly to simulated payment, and start exchange with replacement selection so the three actions reflect different customer decisions."
     }
   ]
 }

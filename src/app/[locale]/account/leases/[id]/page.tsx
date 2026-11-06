@@ -9,6 +9,7 @@ import { getT } from '@/i18n/get-t';
 import { readIdentity } from '@/server/auth-session';
 import { db } from '@/server/db';
 import { findCustomerLease } from '@/server/leases';
+import { leaseActionContext } from '@/server/lease-actions';
 import { todayIso } from '@/server/today';
 
 export default async function LeaseDetailPage({
@@ -21,6 +22,10 @@ export default async function LeaseDetailPage({
   const lease = await findCustomerLease(db, identity.customerId, id);
   if (!lease) notFound();
   const [vat, factors] = await Promise.all([loadVatRates(), loadCo2Factors()]);
+  const liveBuyout =
+    lease.status === 'active'
+      ? await leaseActionContext(db, identity.customerId, id, todayIso())
+      : null;
   const t = getT(locale);
   return (
     <DashboardShell locale={locale} active="leases">
@@ -36,6 +41,7 @@ export default async function LeaseDetailPage({
         rates={vat.rates}
         factors={factors}
         today={todayIso()}
+        liveBuyoutTotalCents={liveBuyout?.quote.buyoutTotalCents}
       />
     </DashboardShell>
   );
