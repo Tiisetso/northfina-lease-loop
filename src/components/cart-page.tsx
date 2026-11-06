@@ -7,18 +7,25 @@ import { invoiceAmounts, dueDateForMonth } from '@/domain/lease-billing';
 import { checkoutQuote } from '@/domain/checkout-quote';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
+import type { PriceChange } from '@/domain/price-lock';
 import type { CheckoutData } from '@/server/checkout-options';
 import { setCart, useCart } from './cart-store';
+import { PriceChangeNotice } from './price-change-notice';
 import { ProductPhoto } from './product-photo';
 
 export function CartPage({
   locale,
   data,
   applicationId,
+  priceChanges = [],
+  quotedOn = '',
 }: {
   locale: Locale;
   data: CheckoutData;
   applicationId?: string;
+  /** Card 2: prices that changed since the approved quote, and the formatted quote date. */
+  priceChanges?: readonly PriceChange[];
+  quotedOn?: string;
 }) {
   const t = getT(locale);
   const router = useRouter();
@@ -85,9 +92,12 @@ export function CartPage({
           delivery: form.get('delivery'),
           address: form.get('address'),
           payment: form.get('payment'),
+          ...(form.get('acceptPriceChange') === 'on' ? { acceptPriceChange: true } : {}),
         }),
       });
       if (!response.ok) {
+        // A price or approval changed on the server: reload so the notice shows the latest.
+        if (response.status === 409) router.refresh();
         setError(
           response.status === 401
             ? 'login'
@@ -386,6 +396,9 @@ export function CartPage({
                     </div>
                     <p className="mt-3 text-caption text-ink-muted">{t('cart.paymentNote')}</p>
                   </fieldset>
+                  {priceChanges.length ? (
+                    <PriceChangeNotice locale={locale} changes={priceChanges} quotedOn={quotedOn} />
+                  ) : null}
                   {error ? (
                     <div
                       role="alert"

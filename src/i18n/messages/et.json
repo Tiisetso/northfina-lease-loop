@@ -793,5 +793,14 @@
   "signing.sign": "Allkirjasta leping",
   "signing.signed": "Allkirjastatud {date}. Leping on nüüd jõus.",
   "signing.invalid": "See allkirjastamise link ei kehti. Palun küsi saatjalt uus link.",
-  "signing.error": "Allkirjastamine ebaõnnestus. Palun proovi uuesti."
+  "signing.error": "Allkirjastamine ebaõnnestus. Palun proovi uuesti.",
+  "priceLock.title": "Hind on pärast pakkumist muutunud",
+  "priceLock.body": "Said pakkumise {date}. Hinnad on vahepeal muutunud ja allkirjastamine lukustab täna kehtiva hinna, seega palun kontrolli uusi summasid.",
+  "priceLock.item": "Pakkumine {quoted} (hinnakiri v{quotedVersion}), täna {price} (hinnakiri v{version}).",
+  "priceLock.monthly": "Kuumakse koos käibemaksuga: {quoted} → {monthly}.",
+  "priceLock.lower": "Hea uudis: toode on {amount} odavam.",
+  "priceLock.higher": "Toode on {amount} kallim.",
+  "priceLock.accept": "Nõustun tänase hinnaga. Allkirjastamine lukustab selle kogu lepingu ajaks.",
+  "priceLock.locked": "Hind on lukustatud hinnakirjast v{version}. Hilisemad hinnakirjad seda ei muuda.",
+  "priceLock.quoted": "Said pakkumise {quoted} (hinnakiri v{quotedVersion}) {quotedDate}; allkirjastamine lukustas hinna {price} sel päeval kehtinud hinnakirjast."
 }

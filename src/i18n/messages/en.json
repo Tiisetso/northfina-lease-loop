@@ -793,5 +793,14 @@
   "signing.sign": "Sign contract",
   "signing.signed": "Signed on {date}. The contract is now active.",
   "signing.invalid": "This signing link isn't valid. Please ask the person who sent it for a new one.",
-  "signing.error": "Signing didn't work. Please try again."
+  "signing.error": "Signing didn't work. Please try again.",
+  "priceLock.title": "The price changed since your quote",
+  "priceLock.body": "You were quoted on {date}. Prices have changed since then, and signing locks the price that's valid today, so please check the new amounts.",
+  "priceLock.item": "Quoted {quoted} (price list v{quotedVersion}), today {price} (price list v{version}).",
+  "priceLock.monthly": "Monthly payment incl. VAT: {quoted} → {monthly}.",
+  "priceLock.lower": "Good news: the item is {amount} cheaper.",
+  "priceLock.higher": "The item is {amount} more expensive.",
+  "priceLock.accept": "I accept today's price. Signing locks it for the whole lease.",
+  "priceLock.locked": "Price locked from price list v{version}. Later price lists don't change it.",
+  "priceLock.quoted": "You were quoted {quoted} (price list v{quotedVersion}) on {quotedDate}; signing locked {price} from the price list valid that day."
 }
