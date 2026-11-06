@@ -55,7 +55,7 @@ export function ApplicationField({
           value={typeof answer === 'string' ? answer : ''}
           aria-describedby={why}
           onChange={(event) => change(event.target.value)}
-          className={control}
+          className={`${control} application-select`}
         >
           <option value="">{t('application.choose')}</option>
           {question.options?.map((value) => (
