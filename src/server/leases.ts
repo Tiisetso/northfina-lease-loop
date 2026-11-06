@@ -4,6 +4,11 @@ import { assetCategorySchema, assetConditionSchema, usageUnitSchema } from '@/da
 import { canRequestLeaseChange, type RequestKind } from '@/domain/lease-insights';
 import { ApiError } from './api-response';
 import { withAudit } from './audit';
+import {
+  recoveryReportSchema,
+  reportIssuesByCategory,
+  type RecoveryReport,
+} from './recovery-input';
 
 const contractStatus = z.enum(['active', 'completed', 'returned', 'bought']);
 const requestStatus = z.enum(['pending', 'approved', 'rejected', 'cancelled']);
@@ -25,7 +30,12 @@ const include = {
     },
   },
   invoices: { include: { payments: true }, orderBy: { dueDate: 'asc' as const } },
-  requests: { orderBy: { createdAt: 'desc' as const } },
+  requests: {
+    include: {
+      assessment: { select: { id: true, status: true, calculationJson: true, updatedAt: true } },
+    },
+    orderBy: { createdAt: 'desc' as const },
+  },
   events: { orderBy: { eventDate: 'desc' as const } },
 };
 
@@ -67,7 +77,13 @@ function validateLease(contract: Prisma.ContractGetPayload<{ include: typeof inc
 /** Ownership and eligibility are checked again within the same audited transaction. */
 export async function requestLeaseChange(
   db: PrismaClient,
-  input: { customerId: string; userId: string; contractId: string; kind: RequestKind }
+  input: {
+    customerId: string;
+    userId: string;
+    contractId: string;
+    kind: RequestKind;
+    report?: RecoveryReport;
+  }
 ) {
   return withAudit(
     db,
@@ -81,7 +97,17 @@ export async function requestLeaseChange(
     async (tx) => {
       const contract = await tx.contract.findFirst({
         where: { id: input.contractId, customerId: input.customerId },
-        include: { requests: { where: { status: 'pending' } } },
+        include: {
+          asset: { select: { category: true, usage_value: true } },
+          requests: {
+            where: {
+              OR: [
+                { status: 'pending' },
+                { assessment: { status: { in: ['quoted', 'accepted', 'received'] } } },
+              ],
+            },
+          },
+        },
       });
       if (!contract) throw new ApiError(404, 'NOT_FOUND', 'Lease not found.');
       const allowed = canRequestLeaseChange(
@@ -90,7 +116,23 @@ export async function requestLeaseChange(
       );
       if (allowed !== 'allowed')
         throw new ApiError(409, 'REQUEST_UNAVAILABLE', 'This request is unavailable.');
-      return tx.leaseRequest.create({ data: { contractId: contract.id, kind: input.kind } });
+      const report = input.report ? recoveryReportSchema.parse(input.report) : undefined;
+      if (report) {
+        const allowedIssues =
+          reportIssuesByCategory[assetCategorySchema.parse(contract.asset.category)];
+        if (
+          report.usageValue < contract.asset.usage_value ||
+          report.issues.some((issue) => !(allowedIssues as readonly string[]).includes(issue))
+        )
+          throw new ApiError(400, 'INVALID_REPORT', 'The reported usage or issues are invalid.');
+      }
+      return tx.leaseRequest.create({
+        data: {
+          contractId: contract.id,
+          kind: input.kind,
+          ...(report ? { customerReportJson: JSON.stringify(report) } : {}),
+        },
+      });
     }
   );
 }
