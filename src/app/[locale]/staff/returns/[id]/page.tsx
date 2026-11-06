@@ -14,6 +14,7 @@ import {
   recoveryCalculationSchema,
   recoveryReportSchema,
 } from '@/server/recovery-input';
+import { relistOfferFor } from '@/server/relisting';
 import { todayIso } from '@/server/today';
 
 export default async function Page({ params }: PageProps<'/[locale]/staff/returns/[id]'>) {
@@ -40,7 +41,12 @@ export default async function Page({ params }: PageProps<'/[locale]/staff/return
       rate.valid_from <= todayIso() && (rate.valid_to === null || rate.valid_to >= todayIso())
   );
   const vatBasisPoints = rate ? Math.round(rate.rate_percent * 100) : 0;
+  const status = request.assessment?.status ?? 'pending';
+  const offer = ['received', 'ready'].includes(status)
+    ? await relistOfferFor(db, id, todayIso()).catch(() => null)
+    : null;
   const t = getT(locale);
+  const itemName = `${request.contract.asset.make} ${request.contract.asset.model}`;
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-8 sm:px-6">
       <Link
@@ -50,9 +56,7 @@ export default async function Page({ params }: PageProps<'/[locale]/staff/return
         ← {t('recovery.queue')}
       </Link>
       <p className="mt-4 text-caption font-semibold text-primary">{t('recovery.staff')}</p>
-      <h1 className="mt-2 font-display text-display-sm font-semibold">
-        {request.contract.asset.make} {request.contract.asset.model}
-      </h1>
+      <h1 className="mt-2 font-display text-display-sm font-semibold">{itemName}</h1>
       <p className="mt-3 text-caption text-ink-muted">
         {request.contract.customer.owner.name} · {request.contract.asset.serial_number}
       </p>
@@ -61,11 +65,15 @@ export default async function Page({ params }: PageProps<'/[locale]/staff/return
         vatBasisPoints={vatBasisPoints}
         locale={locale}
         requestId={id}
+        assetId={request.contract.asset.id}
+        itemName={itemName}
+        offer={offer}
+        publishedPriceCents={request.assessment?.publishedPriceCents ?? null}
         category={request.contract.asset.category as 'e_bike' | 'laptop' | 'farm_machine'}
         report={report}
         inspection={inspection}
         calculation={calculation}
-        status={request.assessment?.status ?? 'pending'}
+        status={status}
         currentUsage={request.contract.asset.usage_value}
         recordedAge={
           request.contract.asset.firstLeaseDate ? recoveryAgeMonths(firstDate, todayIso()) : null

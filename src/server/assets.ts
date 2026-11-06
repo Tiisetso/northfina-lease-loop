@@ -42,7 +42,7 @@ export async function listAssets(
   filter: { category?: AssetCategory } = {}
 ): Promise<Asset[]> {
   const rows = await db.asset.findMany({
-    where: filter.category ? { category: filter.category } : {},
+    where: { isFleetHistory: false, ...(filter.category ? { category: filter.category } : {}) },
     orderBy: { id: 'asc' },
   });
   return rows.map(toAsset);

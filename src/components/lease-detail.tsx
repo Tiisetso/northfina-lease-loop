@@ -8,7 +8,11 @@ import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT, type MessageKey } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import type { CustomerLease } from '@/server/leases';
-import { recoveryCalculationSchema, type RecoveryCalculation } from '@/server/recovery-input';
+import {
+  recoveryCalculationSchema,
+  recoveryReportSchema,
+  type RecoveryCalculation,
+} from '@/server/recovery-input';
 import { LeaseRequestControls, ReturnQuoteAccept } from './lease-controls';
 import { ProductPhoto } from './product-photo';
 
@@ -18,10 +22,11 @@ type Props = {
   rates: VatRate[];
   factors: Co2Factors;
   today: string;
+  liveBuyoutTotalCents?: number;
 };
 const panel = 'rounded-lg border border-hairline bg-canvas p-5 sm:p-6';
 
-export function LeaseDetail({ locale, lease, rates, factors, today }: Props) {
+export function LeaseDetail({ locale, lease, rates, factors, today, liveBuyoutTotalCents }: Props) {
   const t = getT(locale);
   const info = summarizeLease(lease, rates, today);
   const currency = (cents: number) => formatEuro(cents, intlLocale[locale]);
@@ -50,6 +55,18 @@ export function LeaseDetail({ locale, lease, rates, factors, today }: Props) {
       if (parsed.success) quote = parsed.data;
     } catch {
       /* A missing quote remains unavailable rather than displaying invented numbers. */
+    }
+  }
+  const exchange = lease.requests.find(
+    (request) => request.kind === 'exchange' && request.customerReportJson
+  );
+  let exchangeQuote: { name: string; monthlyTotalCents: number; termMonths: number } | null = null;
+  if (exchange?.customerReportJson) {
+    try {
+      const report = recoveryReportSchema.safeParse(JSON.parse(exchange.customerReportJson));
+      if (report.success) exchangeQuote = report.data.replacementQuote ?? null;
+    } catch {
+      /* No invented replacement price. */
     }
   }
   const pending = lease.requests.some(
@@ -95,6 +112,19 @@ export function LeaseDetail({ locale, lease, rates, factors, today }: Props) {
   return (
     <div className="mt-5 grid items-start gap-6 desktop:grid-cols-[minmax(0,1fr)_320px]">
       <div className="min-w-0 space-y-5">
+        {exchangeQuote ? (
+          <section className={panel}>
+            <h3 className="text-tagline font-semibold">{t('flow.exchangeTitle')}</h3>
+            <p className="mt-3 font-semibold">{exchangeQuote.name}</p>
+            <p className="mt-2">
+              {t('flow.newMonthly')}: {currency(exchangeQuote.monthlyTotalCents)}
+            </p>
+            <p className="mt-2 text-caption text-ink-muted">
+              {t('product.months', { count: exchangeQuote.termMonths })} ·{' '}
+              {t('flow.replacementNote')}
+            </p>
+          </section>
+        ) : null}
         <section className={panel}>
           <div className="flex items-start gap-5">
             <div className="w-28 shrink-0 sm:w-40">
@@ -183,6 +213,30 @@ export function LeaseDetail({ locale, lease, rates, factors, today }: Props) {
                         : 'return.returnMethod'
                     )}
                   </p>
+                  {quote.chargeableDamage.length ? (
+                    <>
+                      <p className="mt-4 text-caption font-semibold">
+                        {t('return.chargeableDamage')}
+                      </p>
+                      <ul className="mt-2 divide-y divide-divider text-caption">
+                        {quote.chargeableDamage.map((item) => (
+                          <li key={item.area} className="flex justify-between gap-4 py-2">
+                            <span>
+                              {item.area} · {t(`inspection.damage.${item.type}` as MessageKey)}
+                            </span>
+                            <span className="shrink-0">
+                              {currency(
+                                invoiceAmounts(item.netCents, quote.vatBasisPoints).totalCents
+                              )}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="mt-2 text-caption text-ink-muted">
+                        {t('return.chargeableNote')}
+                      </p>
+                    </>
+                  ) : null}
                 </details>
                 {assessment.status === 'quoted' && quote.quoteDate === today ? (
                   <ReturnQuoteAccept
@@ -384,13 +438,11 @@ export function LeaseDetail({ locale, lease, rates, factors, today }: Props) {
           <Fact label={t('dashboard.outstanding')} value={currency(info.outstandingCents)} />
           <Fact
             label={t(
-              quote && assessment?.status === 'quoted' && quote.quoteDate === today
-                ? 'return.buyoutNow'
-                : 'dashboard.buyoutGross'
+              liveBuyoutTotalCents !== undefined ? 'flow.buyoutTotal' : 'dashboard.buyoutGross'
             )}
             value={
-              quote && assessment?.status === 'quoted' && quote.quoteDate === today
-                ? currency(quote.settlement.buyoutTotalCents)
+              liveBuyoutTotalCents !== undefined
+                ? currency(liveBuyoutTotalCents)
                 : gross(lease.buyoutCents, endRate)
             }
           />
@@ -404,6 +456,7 @@ export function LeaseDetail({ locale, lease, rates, factors, today }: Props) {
             locale={locale}
             id={lease.id}
             disabled={pending || lease.status !== 'active'}
+            active={lease.status === 'active'}
           />
         </div>
       </aside>

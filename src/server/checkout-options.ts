@@ -6,6 +6,7 @@ import { db } from './db';
 export async function checkoutOptions(today: string) {
   const [assets, prices, table, vat] = await Promise.all([
     db.asset.findMany({
+      where: { isFleetHistory: false },
       orderBy: { id: 'asc' },
       include: { contracts: { where: { status: 'active' }, select: { id: true } } },
     }),

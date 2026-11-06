@@ -5,8 +5,10 @@ import {
   loadResidualCurves,
   loadVatRates,
 } from '@/data/load';
-import { assetCategorySchema } from '@/data/schemas';
+import { assetCategorySchema, assetConditionSchema } from '@/data/schemas';
 import { assetRecovery, recoveryAgeMonths, recoveryFirstUseDate } from '@/domain/asset-recovery';
+import { conditionDamageCost } from '@/domain/condition-report';
+import { conditionsUpTo, evaluateInspection } from '@/domain/inspection';
 import { monthlyFactorFor } from '@/domain/coefficient';
 import { summarizeLease } from '@/domain/lease-dashboard';
 import { settlementQuote } from '@/domain/lease-settlement';
@@ -17,7 +19,6 @@ import {
   recoveryCalculationSchema,
   type RecoveryCalculation,
   type RecoveryInspection,
-  type StaffRecoveryAction,
 } from './recovery-input';
 
 const includeCase = {
@@ -32,14 +33,14 @@ const includeCase = {
 } as const;
 export async function listReturnCases(db: PrismaClient) {
   return db.leaseRequest.findMany({
-    where: { kind: { in: ['return', 'buyout'] } },
+    where: { kind: { in: ['return', 'buyout', 'exchange'] } },
     include: includeCase,
     orderBy: { createdAt: 'desc' },
   });
 }
 export async function findReturnCase(db: PrismaClient, requestId: string) {
   return db.leaseRequest.findFirst({
-    where: { id: requestId, kind: { in: ['return', 'buyout'] } },
+    where: { id: requestId, kind: { in: ['return', 'buyout', 'exchange'] } },
     include: includeCase,
   });
 }
@@ -75,7 +76,7 @@ export async function assessReturn(
     async (tx) => {
       await staffInTransaction(tx, input.staffId);
       const request = await tx.leaseRequest.findFirst({
-        where: { id: input.requestId, kind: { in: ['return', 'buyout'] } },
+        where: { id: input.requestId, kind: { in: ['return', 'buyout', 'exchange'] } },
         include: includeCase,
       });
       if (!request) throw new ApiError(404, 'NOT_FOUND', 'Return request not found.');
@@ -102,6 +103,18 @@ export async function assessReturn(
         : inspection.ageMonths;
       if (asset.firstLeaseDate && inspection.ageMonths !== ageMonths)
         throw new ApiError(409, 'AGE_CHANGED', 'The recorded item age has changed.');
+      const category = assetCategorySchema.parse(asset.category);
+      const findings = inspection.record && evaluateInspection(category, inspection.record);
+      if (findings) {
+        if (!findings.ok || findings.repairNetCents !== inspection.additionalRepairCents)
+          throw new ApiError(400, 'INVALID_INSPECTION', 'The inspection record is incomplete.');
+        if (!conditionsUpTo(findings.conditionCap).includes(inspection.condition))
+          throw new ApiError(
+            400,
+            'CONDITION_ABOVE_FINDINGS',
+            'The findings do not support this condition.'
+          );
+      }
       const financedCents = contract.listPriceCents - contract.downPaymentCents;
       const band = monthlyFactorFor(table, financedCents, contract.termMonths);
       if (!band.ok)
@@ -122,7 +135,7 @@ export async function assessReturn(
       try {
         recovery = assetRecovery(
           {
-            category: assetCategorySchema.parse(asset.category),
+            category,
             originalPriceCents,
             ageMonths,
             condition: inspection.condition,
@@ -158,12 +171,23 @@ export async function assessReturn(
       const accruedUnissuedCents = unissued
         .filter((invoice) => invoice.dueDate < input.today)
         .reduce((sum, invoice) => sum + invoice.totalCents, 0);
+      // Damage logged as the customer's responsibility can exceed the cost of a grade drop, and can
+      // exist with no grade drop at all. The larger amount applies; the two never add up.
+      const damageNetCents = Math.max(
+        conditionDamageCost(
+          assetConditionSchema.parse(contract.startCondition ?? asset.condition),
+          inspection.condition,
+          costs[category]
+        ),
+        findings?.chargeableNetCents ?? 0
+      );
       const settlement = settlementQuote({
         monthlyNetCents: contract.monthlyNetCents,
         buyoutCents: contract.buyoutCents,
         remainingMonths,
         annualRateBasisPoints,
         recoveryCents: Math.max(0, recovery.netRecoveryCents),
+        damageCents: damageNetCents,
         vatBasisPoints,
         outstandingCents: summary.outstandingCents + accruedUnissuedCents,
       });
@@ -180,6 +204,10 @@ export async function assessReturn(
         vatBasisPoints,
         outstandingInvoiceCents: summary.outstandingCents,
         accruedUnissuedCents,
+        damageNetCents,
+        chargeableDamage: (inspection.record?.damage ?? [])
+          .filter((entry) => entry.liability === 'chargeable')
+          .map((entry) => ({ area: entry.area, type: entry.type, netCents: entry.repairCents })),
         recovery,
         settlement,
       });
@@ -250,7 +278,10 @@ export async function acceptReturn(
             'PAYMENT_REQUIRED',
             'Recorded settlement payment is required before transfer.'
           );
-        await tx.contract.update({ where: { id: request.contractId }, data: { status: 'bought' } });
+        await tx.contract.update({
+          where: { id: request.contractId },
+          data: { status: 'bought', endedOn: input.today },
+        });
         await tx.asset.update({
           where: { id: request.contract.assetId },
           data: { status: 'reserved' },
@@ -260,7 +291,7 @@ export async function acceptReturn(
           data: { status: 'bought' },
         });
       }
-      if (request.kind !== 'return')
+      if (!['return', 'exchange'].includes(request.kind))
         throw new ApiError(409, 'RETURN_STATE', 'This is not a return request.');
       return tx.returnAssessment.update({
         where: { id: request.assessment.id },
@@ -276,7 +307,7 @@ export async function progressReturn(
     requestId: string;
     staffId: string;
     today: string;
-    action: Exclude<StaffRecoveryAction['action'], 'assess'>;
+    action: 'receive' | 'retire';
   }
 ) {
   return withAudit(
@@ -290,14 +321,14 @@ export async function progressReturn(
     async (tx) => {
       await staffInTransaction(tx, input.staffId);
       const request = await tx.leaseRequest.findFirst({
-        where: { id: input.requestId, kind: 'return' },
+        where: { id: input.requestId, kind: { in: ['return', 'exchange'] } },
         include: includeCase,
       });
       if (!request?.assessment) throw new ApiError(404, 'NOT_FOUND', 'Assessed return not found.');
       const assessment = request.assessment;
-      const snapshot = calculation(assessment.calculationJson);
-      const inspection = inspectionSchema.parse(JSON.parse(assessment.inspectionJson));
       if (input.action === 'receive') {
+        const snapshot = calculation(assessment.calculationJson);
+        const inspection = inspectionSchema.parse(JSON.parse(assessment.inspectionJson));
         if (assessment.status !== 'accepted' || request.contract.status !== 'active')
           throw new ApiError(409, 'RETURN_STATE', 'The accepted return must be received once.');
         const otherActive = await tx.contract.count({
@@ -311,7 +342,7 @@ export async function progressReturn(
           throw new ApiError(409, 'ASSET_IN_USE', 'This item has another active lease.');
         await tx.contract.update({
           where: { id: request.contractId },
-          data: { status: 'returned' },
+          data: { status: 'returned', endedOn: input.today },
         });
         await tx.asset.update({
           where: { id: request.contract.assetId },
@@ -332,32 +363,14 @@ export async function progressReturn(
           data: { status: 'received' },
         });
       }
-      if (assessment.status !== 'received' || request.contract.status !== 'returned')
+      if (
+        !['received', 'ready'].includes(assessment.status) ||
+        request.contract.status !== 'returned'
+      )
         throw new ApiError(409, 'RETURN_STATE', 'The item must be received before this action.');
-      if (input.action === 'retire')
-        return tx.returnAssessment.update({
-          where: { id: assessment.id },
-          data: { status: 'retired' },
-        });
-      const maintainsUsage = snapshot.recovery.workItems.some(
-        (item) => item.id === 'battery_replacement' || item.id === 'major_service'
-      );
-      await tx.asset.update({
-        where: { id: request.contract.assetId },
-        data: {
-          status: 'available',
-          condition: inspection.targetCondition,
-          secondLifePriceCents: snapshot.recovery.postRepairValueCents,
-          priceRevision: { increment: 1 },
-          ...(maintainsUsage ? { maintenanceUsageValue: inspection.usageValue } : {}),
-        },
-      });
-      await tx.leaseEvent.create({
-        data: { contractId: request.contractId, kind: 'refurbished', eventDate: input.today },
-      });
       return tx.returnAssessment.update({
         where: { id: assessment.id },
-        data: { status: 'published' },
+        data: { status: 'retired' },
       });
     }
   );

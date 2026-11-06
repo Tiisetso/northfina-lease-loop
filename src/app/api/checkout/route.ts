@@ -165,7 +165,13 @@ export const POST = handleRoute(async (request) => {
       for (const [index, quote] of quotes.entries()) {
         const asset = await tx.asset.findUnique({
           where: { id: quote.id },
-          select: { status: true, originalPriceCents: true, firstLeaseDate: true },
+          select: {
+            status: true,
+            originalPriceCents: true,
+            firstLeaseDate: true,
+            condition: true,
+            usage_value: true,
+          },
         });
         if (!asset || asset.status !== 'available')
           throw new ApiError(409, 'QUOTE_CHANGED', 'A product is unavailable.');
@@ -186,6 +192,8 @@ export const POST = handleRoute(async (request) => {
             termMonths: quote.termMonths,
             listPriceCents: quote.priceCents,
             downPaymentCents: quote.downPaymentCents,
+            startCondition: asset.condition,
+            startUsageValue: asset.usage_value,
             annualRateBasisPoints: quote.annualRateBasisPoints,
             monthlyNetCents: quote.monthlyNetCents,
             buyoutCents: quote.buyoutCents,

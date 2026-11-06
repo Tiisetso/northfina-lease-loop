@@ -106,6 +106,7 @@ describe('toAsset', () => {
       secondLifePriceCents: null,
       maintenanceUsageValue: 0,
       priceRevision: 1,
+      isFleetHistory: false,
       created_at: new Date(),
       updated_at: new Date(),
     };

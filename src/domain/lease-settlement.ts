@@ -9,6 +9,7 @@ export type SettlementInput = {
   vatBasisPoints: number;
   /** Already-gross unpaid issued invoices; never apply VAT to this a second time. */
   outstandingCents: number;
+  damageCents?: number;
 };
 
 function roundedCents(numerator: bigint, denominator: bigint) {
@@ -46,10 +47,12 @@ export function settlementQuote(input: SettlementInput) {
     buyoutNetCents = roundedCents(rentNumerator + buyout * rate * undiscounted, denominator);
   }
   // At the agreed end, returning the asset does not make the customer liable for its residual value.
-  const returnNetCents =
+  const financialReturnNetCents =
     input.remainingMonths === 0
       ? 0
       : Math.min(remainingRentNetCents, Math.max(0, buyoutNetCents - input.recoveryCents));
+  // The recovery shortfall already includes repair effects; use a damage floor rather than add them twice.
+  const returnNetCents = Math.max(financialReturnNetCents, input.damageCents ?? 0);
   // This demo treats settlement charges at the selected standard rate; it is a versioned commercial policy.
   const buyoutTotalCents =
     invoiceAmounts(buyoutNetCents, input.vatBasisPoints).totalCents + input.outstandingCents;
@@ -63,6 +66,6 @@ export function settlementQuote(input: SettlementInput) {
     returnNetCents,
     returnTotalCents,
     remainingRentNetCents,
-    policyVersion: 'settlement-v1' as const,
+    policyVersion: 'settlement-v2' as const,
   };
 }

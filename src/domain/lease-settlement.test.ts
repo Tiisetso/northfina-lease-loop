@@ -23,7 +23,7 @@ describe('settlementQuote', () => {
     expect(result.buyoutNetCents).toBeLessThan(10730 * 29 + 58350);
     expect(result.returnNetCents).toBe(expected - 200000);
     expect(result.buyoutTotalCents).toBe(expected + Math.round(expected * 0.255));
-    expect(result.policyVersion).toBe('settlement-v1');
+    expect(result.policyVersion).toBe('settlement-v2');
   });
 
   it('handles zero interest and rounds half cents upwards', () => {
@@ -91,4 +91,19 @@ describe('settlementQuote', () => {
   ])('rejects invalid settlement facts: %j', (changes) =>
     expect(() => quote(changes)).toThrow(RangeError)
   );
+});
+
+it('charges new damage at maturity without adding the same damage twice', () => {
+  const quote = settlementQuote({
+    monthlyNetCents: 10000,
+    buyoutCents: 50000,
+    remainingMonths: 0,
+    annualRateBasisPoints: 790,
+    recoveryCents: 30000,
+    vatBasisPoints: 2550,
+    outstandingCents: 0,
+    damageCents: 7500,
+  });
+  expect(quote.returnNetCents).toBe(7500);
+  expect(quote.returnTotalCents).toBe(9413);
 });

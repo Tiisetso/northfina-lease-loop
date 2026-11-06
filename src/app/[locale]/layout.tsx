@@ -81,6 +81,15 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
           {children}
         </main>
 
+        {identity?.role === 'staff' ? (
+          <Link
+            href={`/${locale}/staff`}
+            className="pressable fixed right-5 bottom-5 z-40 inline-flex min-h-target items-center gap-2 rounded-pill border border-hairline bg-ink px-5 py-3 text-caption font-semibold text-white shadow-lg"
+          >
+            <UiIcon name="settings" className="size-4" />
+            {t('flow.admin')}
+          </Link>
+        ) : null}
         <footer className="bg-parchment text-ink-muted">
           <div className="mx-auto max-w-content px-card py-16">
             <p className="text-caption font-semibold">{t('brand.name')}</p>
