@@ -59,6 +59,11 @@ Everything in the skeleton is replaceable. Keep the rules, not necessarily the c
 
 ---
 
+## Lease applications
+
+See [APPLICATIONS.md](APPLICATIONS.md) for the question flow, eligibility rules,
+manual-review outcomes and the approval required before simulated checkout.
+
 ## Project decisions
 
 [Read the generated decision log](docs/DECISIONS.md) for accepted project choices

@@ -69,6 +69,7 @@ model Customer {
   owner        User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
   createdAt    DateTime @default(now())
   contracts    Contract[]
+  applications LeaseApplication[]
 }
 
 // Contract amounts are the agreed net price snapshot, in whole euro cents.
@@ -198,4 +199,19 @@ model AuthRateLimit {
   key         String @unique
   count       Int
   lastRequest BigInt
+}
+
+// An application is an eligibility result, not a signed contract or an asset reservation.
+model LeaseApplication {
+  id           String   @id @default(cuid())
+  customerId   String
+  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  startDate    String
+  status       String
+  answersJson  String
+  reasonsJson  String
+  itemsJson    String
+  createdAt    DateTime @default(now())
+
+  @@index([customerId, createdAt])
 }

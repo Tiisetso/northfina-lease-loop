@@ -43,8 +43,8 @@ export function AuthForm({ mode, locale }: { mode: 'login' | 'register'; locale:
         return;
       }
       form.reset();
-      const destination =
-        new URLSearchParams(window.location.search).get('next') === 'cart' ? 'cart' : 'account';
+      const next = new URLSearchParams(window.location.search).get('next');
+      const destination = next === 'cart' || next === 'application' ? next : 'account';
       router.replace(`/${locale}/${destination}`);
       router.refresh();
     } catch {
@@ -91,9 +91,10 @@ export function AuthForm({ mode, locale }: { mode: 'login' | 'register'; locale:
           className="inline-flex min-h-target items-center text-primary underline underline-offset-4"
           href={`/${locale}/${registering ? 'login' : 'register'}`}
           onClick={(event) => {
-            if (new URLSearchParams(window.location.search).get('next') === 'cart') {
+            const next = new URLSearchParams(window.location.search).get('next');
+            if (next === 'cart' || next === 'application') {
               event.preventDefault();
-              router.push(`/${locale}/${registering ? 'login' : 'register'}?next=cart`);
+              router.push(`/${locale}/${registering ? 'login' : 'register'}?next=${next}`);
             }
           }}
         >

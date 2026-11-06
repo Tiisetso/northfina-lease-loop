@@ -16,6 +16,7 @@ export async function checkoutOptions(today: string) {
     return [
       {
         id: asset.id,
+        category: asset.category,
         name: `${asset.make} ${asset.model}`,
         available: asset.status === 'available',
         priceCents: price.priceCents,

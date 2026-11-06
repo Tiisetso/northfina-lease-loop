@@ -19,3 +19,40 @@
     color: var(--color-on-dark);
   }
 }
+
+/* Keep the original select UI. On narrow screens, supported browsers render
+   the picker in the page's top layer, anchored to its own select field. */
+@supports (appearance: base-select) {
+  @media (max-width: 640px) {
+    .application-select,
+    .application-select::picker(select) {
+      appearance: base-select;
+    }
+
+    .application-select::picker(select) {
+      margin: 0;
+      inset: auto;
+      position-area: block-end span-inline-end;
+      position-try-order: normal;
+      position-try-fallbacks: flip-block;
+      inline-size: anchor-size(inline);
+      max-inline-size: calc(100vw - 32px);
+      max-block-size: min(18rem, 50dvh);
+      overflow-y: auto;
+      border: 1px solid var(--color-hairline);
+      border-radius: var(--radius-sm);
+      background: var(--color-canvas);
+      color: var(--color-ink);
+    }
+
+    .application-select option {
+      padding: 8px 16px;
+      overflow-wrap: anywhere;
+    }
+
+    .application-select option:checked {
+      background: var(--color-primary);
+      color: var(--color-on-primary);
+    }
+  }
+}

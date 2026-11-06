@@ -14,6 +14,7 @@ vi.mock('@/server/db', () => ({
 }));
 vi.mock('@/server/today', () => ({ todayIso: () => '2026-11-05' }));
 import { POST } from '@/app/api/checkout/route';
+import { POST as APPLY } from '@/app/api/applications/route';
 
 const origin = 'http://localhost:3000';
 const settings = {
@@ -24,6 +25,7 @@ const settings = {
 const token = 'b4ef9210-1e71-4865-a6b7-46382a47aad4';
 const body = {
   token,
+  applicationId: 'not-approved',
   date: '2026-11-05',
   items: [
     {
@@ -101,12 +103,36 @@ describe('simulated checkout', () => {
         )
       ).status
     ).toBe(409);
+    expect((await POST(request(cookie), undefined)).status).toBe(403);
     expect(await fixture.db.contract.count()).toBe(0);
   });
   it('creates an audited simulated lease once, without claiming payment', async () => {
     const { cookie, identity } = await customer();
-    expect((await POST(request(cookie), undefined)).status).toBe(201);
-    expect((await POST(request(cookie), undefined)).status).toBe(201);
+    const application = await APPLY(
+      new Request(`${origin}/api/applications`, {
+        method: 'POST',
+        headers: { origin, cookie, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          items: [{ id: 'ebike-003', termMonths: 36, downPaymentCents: 0 }],
+          answers: {
+            q_customer_type: 'consumer',
+            q_full_name: 'Customer',
+            q_birth_date: '1990-01-01',
+            q_email: 'checkout@example.com',
+            q_country: 'FI',
+            q_employment: 'employed',
+            q_monthly_income: 250000,
+            q_usage_purpose: 'commuting',
+          },
+        }),
+      }),
+      undefined
+    );
+    expect(application.status).toBe(201);
+    const { data } = await application.json();
+    const approved = { ...body, applicationId: data.id };
+    expect((await POST(request(cookie, approved), undefined)).status).toBe(201);
+    expect((await POST(request(cookie, approved), undefined)).status).toBe(201);
     const contracts = await fixture.db.contract.findMany({ include: { invoices: true } });
     expect(contracts).toHaveLength(1);
     expect(contracts[0]).toMatchObject({

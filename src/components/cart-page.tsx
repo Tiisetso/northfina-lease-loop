@@ -10,7 +10,15 @@ import type { CheckoutData } from '@/server/checkout-options';
 import { setCart, useCart } from './cart-store';
 import { ProductPhoto } from './product-photo';
 
-export function CartPage({ locale, data }: { locale: Locale; data: CheckoutData }) {
+export function CartPage({
+  locale,
+  data,
+  applicationId,
+}: {
+  locale: Locale;
+  data: CheckoutData;
+  applicationId?: string;
+}) {
   const t = getT(locale);
   const router = useRouter();
   const selections = useCart();
@@ -27,7 +35,7 @@ export function CartPage({ locale, data }: { locale: Locale; data: CheckoutData 
     );
     return quote ? { ...option, ...selection, ...quote } : undefined;
   });
-  const [step, setStep] = useState<'cart' | 'checkout'>('cart');
+  const [step, setStep] = useState<'cart' | 'checkout'>(applicationId ? 'checkout' : 'cart');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<'error' | 'login' | 'changed' | null>(null);
   const money = (cents: number) => formatEuro(cents, intlLocale[locale]);
@@ -48,6 +56,7 @@ export function CartPage({ locale, data }: { locale: Locale; data: CheckoutData 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           token,
+          applicationId,
           date: data.today,
           items: items.map((item) => ({
             id: item!.id,
@@ -63,7 +72,13 @@ export function CartPage({ locale, data }: { locale: Locale; data: CheckoutData 
         }),
       });
       if (!response.ok) {
-        setError(response.status === 401 ? 'login' : response.status === 409 ? 'changed' : 'error');
+        setError(
+          response.status === 401
+            ? 'login'
+            : [403, 409].includes(response.status)
+              ? 'changed'
+              : 'error'
+        );
         return;
       }
       sessionStorage.removeItem(tokenKey);
@@ -96,7 +111,7 @@ export function CartPage({ locale, data }: { locale: Locale; data: CheckoutData 
         {selections.length ? (
           <ol
             className="flex items-center gap-3 text-caption sm:gap-5"
-            aria-label={t('cart.continue')}
+            aria-label={t('application.start')}
           >
             <li
               className="flex items-center gap-2"
@@ -432,10 +447,10 @@ export function CartPage({ locale, data }: { locale: Locale; data: CheckoutData 
               <button
                 type="button"
                 disabled={!valid}
-                onClick={() => setStep('checkout')}
+                onClick={() => router.push(`/${locale}/application`)}
                 className={`${buttonClass} mt-6`}
               >
-                {t('cart.continue')} <span aria-hidden="true">→</span>
+                {t('application.start')} <span aria-hidden="true">→</span>
               </button>
             ) : (
               <button
