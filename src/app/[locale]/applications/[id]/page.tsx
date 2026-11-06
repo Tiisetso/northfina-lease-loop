@@ -3,11 +3,13 @@ import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { z } from 'zod';
 import { dateOfAge } from '@/domain/application-fields';
+import { UnderAgeHelp } from '@/components/under-age-help';
 import { formatEuro } from '@/domain/money';
 import { formatIsoDate } from '@/i18n/format';
 import { getT, type MessageKey } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
 import { applicationItemsSchema, findCustomerApplication } from '@/server/applications';
+import { authSettings } from '@/server/auth-config';
 import { readIdentity } from '@/server/auth-session';
 import { db } from '@/server/db';
 import { appToday } from '@/server/demo-mode';
@@ -22,29 +24,47 @@ export default async function Page({ params }: PageProps<'/[locale]/applications
   const t = getT(locale);
   const items = applicationItemsSchema.parse(JSON.parse(application.itemsJson));
   const reasons = z.array(z.string()).parse(JSON.parse(application.reasonsJson));
-  // Tell an under-age applicant when they can apply, rather than only that they can't yet.
+  const monthlyTotal = formatEuro(
+    items.reduce((sum, item) => sum + item.monthlyTotalCents, 0),
+    intlLocale[locale]
+  );
+  // An under-age applicant gets a gentle explanation, the date they can apply and the option
+  // to ask a parent or guardian, instead of a bare rule.
+  const underAge = reasons.includes('under_age');
   const answers = z
     .object({ q_birth_date: z.string().optional() })
     .catch({})
     .parse(JSON.parse(application.answersJson));
   const adultFrom = answers.q_birth_date ? dateOfAge(answers.q_birth_date, 18) : null;
-  const reasonText = (reason: string) =>
-    reason === 'under_age' && adultFrom
-      ? t('application.reason.under_age_until', { date: formatIsoDate(adultFrom, locale) })
-      : t(`application.reason.${reason}` as MessageKey);
+  const otherReasons = underAge ? reasons.filter((reason) => reason !== 'under_age') : reasons;
   const current = application.startDate === (await appToday());
   return (
     <div className="mx-auto max-w-copy px-card py-section-compact">
       <h1 className="font-display text-display-sm font-semibold tablet:text-display-lg">
-        {t(`application.status.${application.status}` as MessageKey)}
+        {underAge
+          ? t('application.underAge.title')
+          : t(`application.status.${application.status}` as MessageKey)}
       </h1>
-      <p className="mt-6 max-w-prose text-body text-ink-muted">
-        {t(`application.outcome.${application.status}` as MessageKey)}
-      </p>
-      {reasons.length ? (
+      {underAge ? (
+        <UnderAgeHelp
+          t={t}
+          adultFrom={adultFrom ? formatIsoDate(adultFrom, locale) : null}
+          monthlyTotal={monthlyTotal}
+          items={items.map((item) => ({
+            name: item.name,
+            months: t('product.months', { count: item.termMonths }),
+            link: `${authSettings().baseURL}/${locale}/products/${encodeURIComponent(item.id)}`,
+          }))}
+        />
+      ) : (
+        <p className="mt-6 max-w-prose text-body text-ink-muted">
+          {t(`application.outcome.${application.status}` as MessageKey)}
+        </p>
+      )}
+      {otherReasons.length ? (
         <ul className="mt-6 list-disc space-y-3 pl-5">
-          {reasons.map((reason) => (
-            <li key={reason}>{reasonText(reason)}</li>
+          {otherReasons.map((reason) => (
+            <li key={reason}>{t(`application.reason.${reason}` as MessageKey)}</li>
           ))}
         </ul>
       ) : null}
@@ -58,12 +78,7 @@ export default async function Page({ params }: PageProps<'/[locale]/applications
           ))}
         </ul>
         <p className="mt-6 text-caption">{t('cart.monthlyTotal')}</p>
-        <p className="mt-2 text-lead font-semibold">
-          {formatEuro(
-            items.reduce((sum, item) => sum + item.monthlyTotalCents, 0),
-            intlLocale[locale]
-          )}
-        </p>
+        <p className="mt-2 text-lead font-semibold">{monthlyTotal}</p>
       </section>
       <p className="mt-6 text-caption text-ink-muted">
         {t(current ? 'application.notice' : 'application.expired')}
