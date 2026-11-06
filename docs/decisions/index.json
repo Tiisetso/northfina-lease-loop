@@ -76,6 +76,44 @@
           "decision": "Publish generated decision history through one rolling documentation PR because main requires PRs and prohibits direct bot writes."
         }
       ]
+    },
+    {
+      "source": "docs/decisions/records/lease-application-eligibility.json",
+      "sha256": "23ce2ed17de48e5972af6f8257c051b044f67ee4eab1b030d14e605cc4dd3fa7",
+      "prNumber": 37,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/37",
+      "mergedAt": "2026-11-06T03:25:47.000Z",
+      "decisions": [
+        {
+          "id": "D-37-01",
+          "category": "API",
+          "decision": "Require a server-evaluated application approval for the same customer, cart and quote date before simulated checkout so clients cannot bypass eligibility with a flag or another customer's result."
+        },
+        {
+          "id": "D-37-02",
+          "category": "Contract",
+          "decision": "Evaluate consumer affordability and due-diligence thresholds across the entire cart so splitting items cannot hide the applicant's combined monthly commitment."
+        },
+        {
+          "id": "D-37-03",
+          "category": "Process",
+          "decision": "Route applications to manual review when the question bank omits the income answer needed for affordability rather than silently assuming the applicant can afford the lease."
+        }
+      ]
+    },
+    {
+      "source": "docs/decisions/records/concise-pr-summary-guidance.json",
+      "sha256": "22fe1ab4684bd8bcbcf658b4f8a2f3e7ab83491117bea800b9ba1995da7f755b",
+      "prNumber": 42,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/42",
+      "mergedAt": "2026-11-06T07:58:33.000Z",
+      "decisions": [
+        {
+          "id": "D-42-01",
+          "category": "Process",
+          "decision": "Require a brief plain-language summary before the detailed team PR template and share the commit and PR workflow through CONTRIBUTING.md so teammates and coding agents can quickly understand and review changes."
+        }
+      ]
     }
   ]
 }
