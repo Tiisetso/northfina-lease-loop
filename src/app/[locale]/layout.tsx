@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
 import { AccountNavigation } from '@/components/account-navigation';
+import { BrandWordmark } from '@/components/brand-wordmark';
 import { DemoBar } from '@/components/demo-bar';
 import { UiIcon } from '@/components/ui-icon';
 import { DEMO_DATE_MAX, DEMO_DATE_MIN } from '@/domain/demo';
@@ -55,10 +56,10 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
                 href={`/${locale}`}
                 className="pressable flex min-h-target items-center gap-2.5 rounded-sm text-primary"
               >
-                <LoopMark />
-                <span className="sr-only text-body font-semibold tracking-tight text-ink min-[23rem]:not-sr-only">
-                  {t('brand.name')}
-                </span>
+                <BrandWordmark
+                  label={t('brand.name')}
+                  className="text-[1.25rem] sm:text-[1.5rem]"
+                />
               </Link>
               <AccountNavigation
                 locale={locale}
@@ -105,7 +106,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
         ) : null}
         <footer className="bg-parchment text-ink-muted">
           <div className="mx-auto max-w-content px-card py-16">
-            <p className="text-caption font-semibold">{t('brand.name')}</p>
+            <BrandWordmark label={t('brand.name')} className="text-[1.5rem]" />
             <p className="mt-3 max-w-copy text-caption">{t('brand.tagline')}</p>
             <p className="mt-8 border-t border-hairline pt-6 text-fine">{t('footer.skeleton')}</p>
           </div>
@@ -165,25 +166,4 @@ async function demoControls(
       rateLimited: t('demo.rateLimited'),
     },
   };
-}
-
-/** Two arrows chasing each other: lease, return, lease again. */
-function LoopMark() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 32 32"
-      className="size-7 shrink-0"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M8 13a9 9 0 0 1 15.5-4.5L26 11" />
-      <path d="M26 5v6h-6" />
-      <path d="M24 19a9 9 0 0 1-15.5 4.5L6 21" />
-      <path d="M6 27v-6h6" />
-    </svg>
-  );
 }
