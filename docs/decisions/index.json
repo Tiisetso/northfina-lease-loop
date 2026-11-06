@@ -2,6 +2,63 @@
   "schemaVersion": 1,
   "records": [
     {
+      "source": "docs/decisions/backfills/pr-7-authentication.json",
+      "sha256": "34ce66d19e946c4cd5ecf9ff842dc1d6f44fa18bf47ad60c019cde76f83ae8ba",
+      "prNumber": 7,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/7",
+      "mergedAt": "2026-11-05T16:48:32.000Z",
+      "decisions": [
+        {
+          "id": "D-7-01",
+          "category": "Auth",
+          "decision": "Derive customer ownership and audit actors from verified server sessions so browser-supplied identifiers cannot authorize access."
+        },
+        {
+          "id": "D-7-02",
+          "category": "Database",
+          "decision": "Commit authentication writes and their audit entry in one transaction so an audit failure rolls back the identity change."
+        }
+      ]
+    },
+    {
+      "source": "docs/decisions/backfills/pr-11-lease-dashboard.json",
+      "sha256": "7a8a599b735f3286968ebe104f26a92e0b21ea48d67be9cb5cc82b5a520ccfcc",
+      "prNumber": 11,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/11",
+      "mergedAt": "2026-11-05T18:55:23.000Z",
+      "decisions": [
+        {
+          "id": "D-11-01",
+          "category": "Contract",
+          "decision": "Display stored VAT snapshots for issued invoices and treat future bills as forecasts so tax changes do not recalculate invoices already issued."
+        },
+        {
+          "id": "D-11-02",
+          "category": "Contract",
+          "decision": "Treat return, buyout and exchange actions as requests for review so submission alone leaves the current contract and asset unchanged."
+        }
+      ]
+    },
+    {
+      "source": "docs/decisions/backfills/pr-16-checkout.json",
+      "sha256": "3cfa36e11c1dfdfb0fe990d8f633a22ee28e264a8a9a36f03c0d558dcad636d5",
+      "prNumber": 16,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/16",
+      "mergedAt": "2026-11-05T20:54:56.000Z",
+      "decisions": [
+        {
+          "id": "D-16-01",
+          "category": "API",
+          "decision": "Recalculate checkout amounts from server-loaded pricing data and reject changed quotes so client-supplied totals are not authoritative."
+        },
+        {
+          "id": "D-16-02",
+          "category": "UI",
+          "decision": "Group future payment forecasts into periods of identical amounts so the dashboard shows the next forecast and each price change instead of repeating every month."
+        }
+      ]
+    },
+    {
       "source": "docs/decisions/records/reviewed-decision-log.json",
       "sha256": "3510ea4f8cc62cafa6947f6992ade30623d4856ceb475f4156aa2b8699d75fbf",
       "prNumber": 26,

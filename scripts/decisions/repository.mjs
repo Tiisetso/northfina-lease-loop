@@ -5,10 +5,14 @@ import { existsSync, lstatSync, readdirSync, readFileSync, writeFileSync } from 
 import { join } from 'node:path';
 import {
   RECORD_PREFIX,
+  SOURCE_PREFIXES,
+  BACKFILL_PREFIX,
   INDEX_PATH,
   TABLE_PATH,
   isRecordPath,
   parseRecord,
+  parseSourceRecord,
+  canonicalMerge,
   parseIndex,
   entryFor,
   addEntry,
@@ -45,7 +49,7 @@ export function paginated(api, path) {
 }
 export function sourcesAt(ref) {
   const sources = {};
-  for (const name of git('ls-tree', '-r', '--name-only', ref, '--', RECORD_PREFIX)
+  for (const name of git('ls-tree', '-r', '--name-only', ref, '--', ...SOURCE_PREFIXES)
     .split('\n')
     .filter(Boolean)) {
     if (name === `${RECORD_PREFIX}.gitkeep`) continue;
@@ -56,12 +60,15 @@ export function sourcesAt(ref) {
 }
 export function workingSources() {
   const sources = {};
-  for (const name of readdirSync(RECORD_PREFIX)) {
-    if (name === '.gitkeep') continue;
-    const file = join(RECORD_PREFIX, name);
-    if (!isRecordPath(file) || !lstatSync(file).isFile())
-      throw new Error(`Invalid record file: ${file}`);
-    sources[file] = readFileSync(file, 'utf8');
+  for (const prefix of SOURCE_PREFIXES) {
+    if (!existsSync(prefix)) continue;
+    for (const name of readdirSync(prefix)) {
+      if (name === '.gitkeep') continue;
+      const file = join(prefix, name);
+      if (!isRecordPath(file) || !lstatSync(file).isFile())
+        throw new Error(`Invalid record file: ${file}`);
+      sources[file] = readFileSync(file, 'utf8');
+    }
   }
   return sources;
 }
@@ -70,15 +77,18 @@ export function digest(text) {
 }
 export function loadState(repository, defaultBranch) {
   const sources = workingSources();
-  for (const [name, text] of Object.entries(sources)) parseRecord(text, name);
+  for (const [name, text] of Object.entries(sources)) parseSourceRecord(text, name);
   const index = parseIndex(readFileSync(INDEX_PATH, 'utf8'), repository, defaultBranch);
   for (const entry of index.records) {
     if (!(entry.source in sources) || digest(sources[entry.source]) !== entry.sha256) {
       throw new Error(`Published source missing or changed: ${entry.source}`);
     }
+    const parsed = parseSourceRecord(sources[entry.source], entry.source);
+    if (parsed.originalPrNumber && parsed.originalPrNumber !== entry.prNumber)
+      throw new Error('Backfill origin mismatch');
     const expected = entryFor(
       entry.source,
-      parseRecord(sources[entry.source]),
+      parsed.record,
       entry.sha256,
       {
         number: entry.prNumber,
@@ -116,6 +126,28 @@ export function reconcile({ repository, defaultBranch, sources, api, history, re
   let index = { schemaVersion: 1, records: [] };
   const cached = new Map();
   for (const [source, text] of Object.entries(sources)) {
+    const parsed = parseSourceRecord(text, source);
+    if (source.startsWith(BACKFILL_PREFIX)) {
+      const original = api(`pulls/${parsed.originalPrNumber}`);
+      if (!canonicalMerge(original, repository, defaultBranch))
+        throw new Error('Backfill origin must be merged into the default branch');
+      if (!/^[a-f0-9]{40}$/.test(original.merge_commit_sha))
+        throw new Error('Missing original merge SHA');
+      const files = paginated(api, `pulls/${original.number}/files`);
+      for (const evidence of parsed.evidenceFiles) {
+        if (
+          !files.some((file) => file.filename === evidence.path && file.status !== 'removed') ||
+          digest(readAt(original.merge_commit_sha, evidence.path)) !== evidence.sha256
+        ) {
+          throw new Error(`Backfill evidence does not match original PR: ${evidence.path}`);
+        }
+      }
+      index = addEntry(
+        index,
+        entryFor(source, parsed.record, digest(text), original, repository, defaultBranch)
+      );
+      continue;
+    }
     const commit = history(source);
     if (!/^[a-f0-9]{40}$/.test(commit)) throw new Error(`No original addition commit: ${source}`);
     const candidates = paginated(api, `commits/${commit}/pulls`);

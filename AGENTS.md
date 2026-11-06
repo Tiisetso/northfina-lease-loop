@@ -37,6 +37,9 @@ You are helping a hackathon team build **Lease Loop**. The challenge is in `CHAL
   from `scripts/decisions/model.mjs`. State the actual choice and reason concisely.
 - Review the wording with the implementation and run `npm run decisions:validate`
   before requesting review. Do not invent decisions to satisfy a checklist.
+- Backfill history only on explicit maintainer request, in a separate reviewed PR.
+  Use `docs/decisions/backfills/` with verified original-merge evidence; follow the
+  historical backfill procedure in the decision-log guide. Do not rewrite existing IDs.
 - Never edit the generated `docs/DECISIONS.md` or assign PR numbers, IDs or merge dates.
 - Merged records are immutable. Supersede a decision in a new PR with a new record
   referencing its old ID; never rewrite historical wording or renumber it.
