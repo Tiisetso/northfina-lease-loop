@@ -130,10 +130,11 @@ npm run decisions:reconcile
 npm run decisions:reconcile:check
 ```
 
-Reconciliation discovers the original addition commit for each tracked record,
-queries that commit's associated PRs, verifies the PR merged into the default
-branch and originally added that record, and checks the reviewed content at its
-merge commit. It rebuilds the index and table from scratch, including entries
+For ordinary records, reconciliation discovers the original addition commit,
+queries its associated PRs, verifies the PR merged into the default branch and
+originally added the record, and checks the reviewed content at its merge commit.
+Explicit historical backfills instead verify the declared original PR and its
+hashed evidence files as described below. It rebuilds the index and table from scratch, including entries
 missing after a failed publication. Ambiguous origin or altered source is an error,
 not permission to guess. Pagination handles large PRs. No historical PRs without
 tracked decision records are imported, and no examples are inserted as history.
@@ -148,3 +149,51 @@ Open a repair PR for generated changes rather than pushing them directly to main
 To retry publication after approval, an owner can manually run the **Publish
 decision log** workflow on the default branch. Existing mappings and merge dates
 are reconstructed; the retry does not create additional rows or duplicate commits.
+
+## Explicit historical backfills
+
+Historical backfill requires an explicit maintainer request and a separate review.
+The requested backfill of PRs #7, #11 and #16 is recorded under
+`docs/decisions/backfills/`, separate from decisions authored in their original PRs.
+The wording is a retrospective summary reviewed in the backfill PR; it must not be
+represented as wording originally approved in those old PRs.
+
+Each historical file has `schemaVersion`, `originalPrNumber`, `evidenceFiles`
+(an array of repository paths and SHA-256 digests) and an ordered `decisions` list.
+Evidence must be a file changed in the original PR, read at its actual merge SHA.
+Only record choices supported by that implementation/documentation and discussion;
+do not invent alternatives, rationales or approvals. Dates and PR URLs are retrieved
+from GitHub, not typed into the record. Evidence hashes are checked against the
+original merged files on every reconciliation.
+
+A backfill PR may add one historical file per original PR and include regenerated
+metadata/table in the same review. This is an explicit exception to the ordinary
+one-new-record-per-PR limit; ordinary records under `records/` retain that limit.
+Run `npm run decisions:reconcile` with GitHub read access to generate the outputs,
+then validate them with `npm run decisions:validate -- --base <full-base-sha>`.
+CI verifies original merge metadata and evidence for newly proposed historical
+records before accepting generated outputs. Reviewers approve the retrospective
+wording and generated rows together. After merge, future recovery uses the same
+original PR IDs and merge dates, never the later backfill PR's number or date.
+
+Historical source files and published metadata are immutable like ordinary records.
+Never renumber existing decisions to insert older ones; chronological table ordering
+places the added older PRs first while preserving all existing IDs. A second source
+for an already published original PR is rejected rather than creating collisions.
+
+### Review evidence for this requested backfill
+
+- PR #7: `AUTHENTICATION.md` and `src/server/auth-handler.ts` at original merge
+  `dc0efefcafe6d5f43272e65804e5ebce440827d4` support session-derived ownership and
+  atomic authentication/audit writes.
+- PR #11: `LEASE_DASHBOARD.md` at original merge
+  `f37fb543bd3b0a61b3dcd10738dcf5dbc4569b98` documents issued VAT snapshots,
+  forecasts, and lease-change requests that require review before fulfilment.
+- PR #16: `src/app/api/checkout/route.ts` and `src/domain/forecast-changes.ts` at
+  original merge `d28cc1b4baeb21d5d4bff78897932e6c10855fc8` support server-side
+  price validation and grouping forecasts into amount-change periods.
+
+Their original descriptions/reviews were inspected; PR #7 has no description or
+rationale discussion, so its written implementation guide is the evidence rather
+than an invented review conversation. These summaries still require review in the
+new backfill PR. Existing `D-26-01` and `D-26-02` remain byte-for-byte unchanged.

@@ -10,6 +10,8 @@ export const CATEGORIES = Object.freeze([
   'Process',
 ]);
 export const RECORD_PREFIX = 'docs/decisions/records/';
+export const BACKFILL_PREFIX = 'docs/decisions/backfills/';
+export const SOURCE_PREFIXES = [RECORD_PREFIX, BACKFILL_PREFIX];
 export const INDEX_PATH = 'docs/decisions/index.json';
 export const TABLE_PATH = 'docs/DECISIONS.md';
 export const GENERATED_PATHS = [INDEX_PATH, TABLE_PATH];
@@ -25,7 +27,7 @@ function exactKeys(value, keys, label) {
   }
 }
 export function isRecordPath(path) {
-  return /^docs\/decisions\/records\/[a-z0-9]+(?:-[a-z0-9]+)*\.json$/.test(path);
+  return /^docs\/decisions\/(?:records|backfills)\/[a-z0-9]+(?:-[a-z0-9]+)*\.json$/.test(path);
 }
 export function parseRecord(text, name = 'record') {
   let value;
@@ -54,6 +56,46 @@ export function parseRecord(text, name = 'record') {
     }
   }
   return value;
+}
+/** Retrospective wording is reviewed now; evidence comes from the original PR. */
+export function parseSourceRecord(text, source) {
+  if (!source.startsWith(BACKFILL_PREFIX)) return { record: parseRecord(text, source) };
+  let value;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    throw new Error(`${source}: invalid JSON`);
+  }
+  exactKeys(value, ['schemaVersion', 'originalPrNumber', 'evidenceFiles', 'decisions'], source);
+  if (!Number.isSafeInteger(value.originalPrNumber) || value.originalPrNumber < 1) {
+    throw new Error('Backfill requires a positive original PR number');
+  }
+  if (!Array.isArray(value.evidenceFiles) || value.evidenceFiles.length === 0) {
+    throw new Error('Backfill requires original-merge evidence');
+  }
+  const paths = new Set();
+  for (const evidence of value.evidenceFiles) {
+    exactKeys(evidence, ['path', 'sha256'], 'evidence');
+    if (
+      typeof evidence.path !== 'string' ||
+      !/^[A-Za-z0-9_./[\]-]+$/.test(evidence.path) ||
+      evidence.path.startsWith('/') ||
+      evidence.path.split('/').some((part) => !part || part === '..' || part === '.git') ||
+      !/^[a-f0-9]{64}$/.test(evidence.sha256) ||
+      paths.has(evidence.path)
+    ) {
+      throw new Error('Invalid or duplicate evidence path/digest');
+    }
+    paths.add(evidence.path);
+  }
+  return {
+    originalPrNumber: value.originalPrNumber,
+    evidenceFiles: value.evidenceFiles,
+    record: parseRecord(
+      JSON.stringify({ schemaVersion: value.schemaVersion, decisions: value.decisions }),
+      source
+    ),
+  };
 }
 export function canonicalMerge(pr, repository, defaultBranch) {
   if (!/^[\w.-]+\/[\w.-]+$/.test(repository)) throw new Error('Invalid repository identity');
@@ -157,7 +199,8 @@ export function validateChanges(baseSources, currentSources) {
       throw new Error(`Merged decision records are immutable: ${name}`);
   }
   const added = Object.keys(currentSources).filter((name) => !(name in baseSources));
-  if (added.length > 1) throw new Error('A PR may add no more than one decision record');
+  if (added.filter((name) => !name.startsWith(BACKFILL_PREFIX)).length > 1)
+    throw new Error('A PR may add no more than one decision record');
   return added;
 }
 export function recordAddedBy(pr, files, repository, defaultBranch) {

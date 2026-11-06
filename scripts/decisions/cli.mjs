@@ -1,6 +1,13 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { INDEX_PATH, parseIndex, renderTable, TABLE_PATH, serializeIndex } from './model.mjs';
+import {
+  BACKFILL_PREFIX,
+  INDEX_PATH,
+  parseIndex,
+  renderTable,
+  TABLE_PATH,
+  serializeIndex,
+} from './model.mjs';
 import {
   git,
   sourcesAt,
@@ -27,11 +34,17 @@ export function main(args = process.argv.slice(2)) {
   if (flags.length && (flags.length !== 2 || flags[0] !== '--base'))
     throw new Error('Expected --base <full SHA>');
   if (mode === 'validate') {
-    const { index } = validateLocal(repository, defaultBranch, base);
+    const { sources, index } = validateLocal(repository, defaultBranch, base);
     // Generated mappings in a PR must also be verified against GitHub, not merely self-consistent.
     if (base && git('diff', '--name-only', base, '--', INDEX_PATH)) {
       // This PR's own newly added record is unmerged; only baseline records can be published.
-      const expected = reconcileRepository(repository, defaultBranch, sourcesAt(base));
+      const accepted = sourcesAt(base);
+      // Explicit retrospective records may publish in the same reviewed backfill PR;
+      // original dates, files and hashes still come from GitHub, never its author.
+      for (const [name, text] of Object.entries(sources)) {
+        if (name.startsWith(BACKFILL_PREFIX)) accepted[name] = text;
+      }
+      const expected = reconcileRepository(repository, defaultBranch, accepted);
       if (serializeIndex(index) !== serializeIndex(expected))
         throw new Error('Metadata does not match original merged PRs');
     }
