@@ -16,6 +16,11 @@ export function StaffTabs({ locale }: { locale: Locale }) {
       label: t('admin.requests'),
       active: pathname.startsWith(`${base}/returns`),
     },
+    {
+      href: `${base}/audit`,
+      label: t('audit.tab'),
+      active: pathname.startsWith(`${base}/audit`),
+    },
   ];
   return (
     <nav aria-label={t('recovery.staff')} className="border-b border-hairline bg-parchment">

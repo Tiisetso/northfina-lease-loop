@@ -844,5 +844,11 @@
   "termEnded.body": "Sina otsustad, mis tootega {item} nüüd saab. Võid selle osta hinnaga {amount} koos käibemaksuga, mis lepingus kokku lepiti, või meile tagastada.",
   "termEnded.noBilling": "Igakuist renti enam ei arveldata. Kuni sa valid, jääb toode sinu kätte.",
   "termEnded.buy": "Osta",
-  "termEnded.return": "Tagasta"
+  "termEnded.return": "Tagasta",
+  "audit.tab": "Muudatuste logi",
+  "audit.title": "Muudatuste logi",
+  "audit.intro": "Kes mida ja millal muutis. Iga äriandmete muudatus (allkirjastamine, arved, maksed, tagastused, töötajate otsused, demotoimingud) kirjutab ühe kirje samas tehingus kui muudatus. Viimased {count}, uusim ees.",
+  "audit.system": "Süsteem ({name})",
+  "audit.details": "Üksikasjad",
+  "audit.empty": "Midagi pole veel salvestatud."
 }

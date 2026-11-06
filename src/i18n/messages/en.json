@@ -844,5 +844,11 @@
   "termEnded.body": "What happens to the {item} now is up to you. You can buy it for {amount} including VAT, the price agreed in your contract, or return it to us.",
   "termEnded.noBilling": "There's no more monthly rent. Until you choose, the item stays with you.",
   "termEnded.buy": "Buy it",
-  "termEnded.return": "Return it"
+  "termEnded.return": "Return it",
+  "audit.tab": "Audit trail",
+  "audit.title": "Audit trail",
+  "audit.intro": "Who changed what, and when. Every change to business data (signing, invoices, payments, returns, staff decisions, demo actions) writes one entry in the same transaction as the change. The newest {count}, newest first.",
+  "audit.system": "System ({name})",
+  "audit.details": "Details",
+  "audit.empty": "Nothing has been recorded yet."
 }
