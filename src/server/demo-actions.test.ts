@@ -47,8 +47,15 @@ async function me(cookie: string) {
   });
   return { status: response.status, body: await response.json() };
 }
-const switchTo = (personaId: string) =>
-  postPersona(post('/api/demo/persona', { personaId }), undefined);
+const switchTo = (personaId: string, demoDate?: string) =>
+  postPersona(
+    post(
+      '/api/demo/persona',
+      { personaId },
+      demoDate ? { cookie: `${DEMO_DATE_COOKIE}=${demoDate}` } : {}
+    ),
+    undefined
+  );
 
 describe('demoModeEnabled', () => {
   it('is on outside production, off in production, and the env flag overrides both', () => {
@@ -151,5 +158,73 @@ describe('POST /api/demo/persona', () => {
     vi.stubEnv('LEASE_LOOP_DEMO', 'false');
     expect((await switchTo('cust-aino')).status).toBe(404);
     expect(await fixture.db.user.count()).toBe(0);
+  });
+});
+
+describe('persona scenarios', () => {
+  const ainoLease = () =>
+    fixture.db.contract.findMany({
+      where: { customerId: 'cust-aino' },
+      include: { invoices: { orderBy: { dueDate: 'asc' } }, events: true, asset: true },
+    });
+  beforeEach(async () => {
+    const { seedAssets } = await import('./assets');
+    const { loadAssets } = await import('@/data/load');
+    await seedAssets(fixture.db, await loadAssets());
+  });
+
+  it('card 1: Aino already has her e-bike, signed on 5 Nov at the v1 price', async () => {
+    const response = await switchTo('cust-aino', '2027-01-10');
+    expect((await response.json()).data).toEqual({ personaId: 'cust-aino', cart: [] });
+    const [lease] = await ainoLease();
+    expect(lease).toMatchObject({
+      assetId: 'ebike-003',
+      startDate: '2026-11-05',
+      termMonths: 36,
+      listPriceCents: 389000,
+      monthlyNetCents: 10730,
+      priceListVersion: 1,
+      status: 'active',
+    });
+    expect(lease!.asset.status).toBe('reserved');
+    expect(lease!.invoices.map((invoice) => [invoice.dueDate, invoice.vatBasisPoints])).toEqual([
+      ['2026-11-05', 2550],
+      ['2026-12-05', 2550],
+      ['2027-01-05', 2600],
+    ]);
+    const audit = await fixture.db.auditLog.findFirst({
+      where: { action: 'demo.persona_switched' },
+    });
+    expect(JSON.parse(audit!.details_json!)).toMatchObject({
+      today: '2027-01-10',
+      scenarioLease: lease!.id,
+    });
+  });
+  it('creates the lease once, and not before the demo date reaches its start', async () => {
+    await switchTo('cust-aino', '2026-11-04');
+    expect(await ainoLease()).toHaveLength(0);
+    await switchTo('cust-aino', '2026-11-05');
+    await switchTo('cust-aino', '2026-12-24');
+    const leases = await ainoLease();
+    expect(leases).toHaveLength(1);
+    expect(leases[0]!.invoices).toHaveLength(1);
+  });
+  it('leaves the item alone if someone else leased it first', async () => {
+    await fixture.db.asset.update({ where: { id: 'ebike-003' }, data: { status: 'reserved' } });
+    expect((await switchTo('cust-aino', '2026-11-05')).status).toBe(200);
+    expect(await ainoLease()).toHaveLength(0);
+  });
+  it('cards 5, 6 and 7 start with their item in the cart, not yet applied', async () => {
+    for (const [id, cart] of [
+      ['cust-mikko', [{ id: 'laptop-008', termMonths: 24, downPaymentCents: 0 }]],
+      ['cust-norvi', [{ id: 'ebike-004', termMonths: 36, downPaymentCents: 0 }]],
+      ['cust-haapala', [{ id: 'farm-002', termMonths: 48, downPaymentCents: 2_000_000 }]],
+      ['cust-lena', []],
+    ] as const) {
+      const response = await switchTo(id, '2026-11-05');
+      expect((await response.json()).data).toEqual({ personaId: id, cart });
+    }
+    expect(await fixture.db.leaseApplication.count()).toBe(0);
+    expect(await fixture.db.contract.count()).toBe(0);
   });
 });

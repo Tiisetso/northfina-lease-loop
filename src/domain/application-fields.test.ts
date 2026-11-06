@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { ageOnDate, isCalendarDate, parseEuroCents, validBusinessId } from './application-fields';
+import {
+  ageOnDate,
+  dateOfAge,
+  isCalendarDate,
+  parseEuroCents,
+  validBusinessId,
+} from './application-fields';
 
 describe('application fields', () => {
   it('validates real calendar days including century leap-year boundaries', () => {
@@ -36,5 +42,24 @@ describe('application fields', () => {
     expect(parseEuroCents(' 0.01 ')).toBe(1);
     for (const amount of ['', '-1', '1e3', '1.234', '1,234.00', '9999999999999999999'])
       expect(parseEuroCents(amount)).toBeNull();
+  });
+});
+
+describe('dateOfAge', () => {
+  it('is the birthday on which the person reaches the age (Mikko turns 18 on 10 March 2027)', () => {
+    expect(dateOfAge('2009-03-10', 18)).toBe('2027-03-10');
+    expect(ageOnDate('2009-03-10', '2027-03-09')).toBe(17);
+    expect(ageOnDate('2009-03-10', '2027-03-10')).toBe(18);
+  });
+  it('uses Feb 28 for Feb 29 birthdays in non-leap years, consistent with ageOnDate', () => {
+    expect(dateOfAge('2008-02-29', 18)).toBe('2026-02-28');
+    expect(ageOnDate('2008-02-29', '2026-02-28')).toBe(18);
+    expect(ageOnDate('2008-02-29', '2026-02-27')).toBe(17);
+    expect(dateOfAge('2008-02-29', 20)).toBe('2028-02-29');
+  });
+  it('rejects invalid input', () => {
+    expect(dateOfAge('2009-02-30', 18)).toBeNull();
+    expect(dateOfAge('2009-03-10', -1)).toBeNull();
+    expect(dateOfAge('2009-03-10', 1.5)).toBeNull();
   });
 });

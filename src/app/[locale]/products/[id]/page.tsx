@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { DemoItemId } from '@/components/demo-item-id';
 import { connection } from 'next/server';
 import { LeaseCalculator } from '@/components/lease-calculator';
 import { ProductDetails } from '@/components/product-details';
@@ -14,7 +15,7 @@ import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
 import { toAsset } from '@/server/assets';
 import { db } from '@/server/db';
-import { appToday } from '@/server/demo-mode';
+import { appToday, demoModeEnabled } from '@/server/demo-mode';
 
 export default async function ProductPage({ params }: PageProps<'/[locale]/products/[id]'>) {
   const { locale, id } = await params;
@@ -78,6 +79,7 @@ export default async function ProductPage({ params }: PageProps<'/[locale]/produ
           <section aria-labelledby="product-title" className="min-w-0">
             <div className="flex flex-wrap items-center justify-between gap-3 text-caption">
               <p className="text-ink-muted">{asset.make}</p>
+              {demoModeEnabled() ? <DemoItemId id={asset.id} label={t('demo.itemId')} /> : null}
             </div>
             <h1
               id="product-title"

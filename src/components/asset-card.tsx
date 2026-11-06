@@ -6,6 +6,7 @@ import { invoiceAmounts } from '@/domain/lease-billing';
 import type { ListPriceResult } from '@/domain/price-list';
 import type { Translate } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
+import { DemoItemId } from './demo-item-id';
 import { ProductPhoto } from './product-photo';
 
 type AssetCardProps = {
@@ -14,9 +15,11 @@ type AssetCardProps = {
   locale: Locale;
   t: Translate;
   vatBasisPoints: number | null;
+  /** Demo mode: show the item's data-pack ID. */
+  showId?: boolean;
 };
 
-export function AssetCard({ asset, price, locale, t, vatBasisPoints }: AssetCardProps) {
+export function AssetCard({ asset, price, locale, t, vatBasisPoints, showId }: AssetCardProps) {
   const headingId = `asset-${asset.id}`;
   const priceId = `${headingId}-price`;
   const detailId = `${headingId}-detail`;
@@ -48,6 +51,11 @@ export function AssetCard({ asset, price, locale, t, vatBasisPoints }: AssetCard
         >
           {asset.make} {asset.model}
         </h3>
+        {showId ? (
+          <p className="mt-1">
+            <DemoItemId id={asset.id} label={t('demo.itemId')} />
+          </p>
+        ) : null}
         <p id={priceId} className="mt-1">
           <span className="block text-body font-semibold tabular-nums">
             {price.ok && vatBasisPoints !== null
