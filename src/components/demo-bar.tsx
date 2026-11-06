@@ -67,9 +67,14 @@ export function DemoBar({
       setBusy(false);
     }
   }
+  // Going back in time can remove a lease that the current page shows: leave such pages.
+  const rewound = (data: unknown) =>
+    (data as { removedLeases?: number }).removedLeases
+      ? landingAfterSwitch(pathname, { staff: true, cartCount: 0 })
+      : null;
   const submitDate = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    void send('/api/demo/date', { date: chosenDate });
+    void send('/api/demo/date', { date: chosenDate }, rewound);
   };
   const submitPersona = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -117,7 +122,7 @@ export function DemoBar({
             <button
               type="button"
               disabled={busy}
-              onClick={() => void send('/api/demo/date', { date: null })}
+              onClick={() => void send('/api/demo/date', { date: null }, rewound)}
               className="min-h-target px-2 text-caption text-on-dark underline disabled:opacity-60"
             >
               {labels.reset}
