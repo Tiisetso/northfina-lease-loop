@@ -129,7 +129,7 @@ Step-by-step instructions, what to point out and the exact gaps: [DEMO_TIPS.md](
 ## Engineering
 
 - **Pure, tested domain logic** in `src/domain/`: no I/O, no clock; dates are arguments.
-  Vitest tests sit next to every module (468 tests at the last run; coverage gate 60 %,
+  Vitest tests sit next to every module (467 tests at the last run; coverage gate 60 %,
   currently above 90 % for lines).
 - **Money** in integer cents with one deliberate rounding step per amount.
 - **One API envelope**: `ok()` / `fail()` / `handleRoute()`; no raw errors reach the browser.
