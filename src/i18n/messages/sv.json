@@ -282,6 +282,7 @@
   "application.reason.signatory": "En behörig firmatecknare måste medverka innan avtalet kan undertecknas.",
   "application.reason.large_amount": "Finansiering på minst 50 000 euro kräver personlig granskning.",
   "application.reason.income_check": "Frågorna samlade inte in inkomst för detta belopp, så en person måste kontrollera betalningsförmågan.",
+  "application.reason.income_not_required": "Inkomst efterfrågas inte för det här beloppet, så ingen kontroll av betalningsförmågan behövdes.",
   "application.reason.incomplete": "Vissa obligatoriska svar saknas eller är ogiltiga.",
   "application.reason.blocked_answer": "Ett svar uppfyller inte ansökans krav.",
   "application.option.consumer": "Privatperson",

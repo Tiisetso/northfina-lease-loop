@@ -282,6 +282,7 @@
   "application.reason.signatory": "Enne lepingu allkirjastamist peab osalema ettevõtte volitatud allkirjastaja.",
   "application.reason.large_amount": "Vähemalt 50 000 euro suurune rahastus vajab inimese ülevaatust.",
   "application.reason.income_check": "Selle summa puhul ei küsitud sissetulekut, seega peab inimene maksevõimet kontrollima.",
+  "application.reason.income_not_required": "Selle summa puhul sissetulekut ei küsita, seega maksevõime kontrolli ei olnud vaja.",
   "application.reason.incomplete": "Mõned kohustuslikud vastused puuduvad või on vigased.",
   "application.reason.blocked_answer": "Üks vastus ei vasta taotluse nõuetele.",
   "application.option.consumer": "Eraisik",
