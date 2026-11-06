@@ -850,5 +850,18 @@
   "audit.intro": "Kuka muutti mitä ja milloin. Jokainen liiketoimintatiedon muutos (allekirjoitus, laskut, maksut, palautukset, henkilöstön päätökset, demotoiminnot) kirjoittaa yhden merkinnän samassa transaktiossa kuin muutos. Uusimmat {count}, uusin ensin.",
   "audit.system": "Järjestelmä ({name})",
   "audit.details": "Tiedot",
-  "audit.empty": "Mitään ei ole vielä kirjattu."
+  "audit.empty": "Mitään ei ole vielä kirjattu.",
+  "review.tab": "Hakemukset",
+  "review.title": "Tarkistettavat hakemukset",
+  "review.intro": "Nämä hakemukset tarvitsevat ihmisen: esimerkiksi suuri summa tai poliittisesti vaikutusvaltainen henkilö. Lue syyt, kirjoita lyhyt huomautus ja hyväksy tai hylkää. Asiakas näkee tuloksen hakemussivullaan ja voi hyväksynnän jälkeen jatkaa allekirjoitukseen.",
+  "review.appliedOn": "Haettu {date}",
+  "review.down": "käsiraha {amount}",
+  "review.reasons": "Miksi ihmisen on päätettävä",
+  "review.note": "Huomautuksesi (pakollinen, tallennetaan muutoslokiin)",
+  "review.approve": "Hyväksy",
+  "review.reject": "Hylkää",
+  "review.error": "Se ei onnistunut. Päivitä sivu ja yritä uudelleen.",
+  "review.empty": "Yksikään hakemus ei odota tarkistusta.",
+  "application.status.awaiting_signatory": "Odottaa, että {email} allekirjoittaa",
+  "application.outcome.awaiting_signatory": "Hakemuksesi täyttää vaatimuksemme, mutta et voi allekirjoittaa yrityksen puolesta. Mitään ei hyväksytä yritykselle ennen kuin {email} allekirjoittaa. Kun jatkat, lukitsemme hinnan, varaamme tuotteen ja saat henkilökohtaisen allekirjoituslinkin lähetettäväksi hänelle. Sopimus tulee voimaan, eikä mitään veloiteta, vasta kun hän allekirjoittaa."
 }

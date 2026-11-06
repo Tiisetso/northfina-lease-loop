@@ -132,8 +132,9 @@ Point out the page title **"Not just yet"**:
 1. Demo date **2026-11-06**. Act as **Norvi Logistics Oy**. `ebike-004` is in the cart.
 2. Apply: "Can you sign contracts for the company?" is prefilled **No**, so the flow asks
    for the signatory's email. Enter e.g. `ceo@norvi.example.com`. Submit.
-3. **Approved**, with: "the contract will wait for ceo@norvi.example.com to sign it…
-   Nothing becomes active or is charged until they sign." Continue and confirm checkout.
+3. The page says **"Waiting for ceo@norvi.example.com to sign"**, not "approved": nothing
+   is approved for the company until they sign. Continue and confirm checkout to lock the
+   price and reserve the bike.
 4. **My leases**: the bike is **Waiting for signature**, with an amber panel and an
    **Email the signing link** button (opens the customer's mail app, link included).
 5. Set the date to **2026-11-20**, click **Open the signing page (demo)**: no login, the
@@ -153,6 +154,11 @@ Point out the page title **"Not just yet"**:
 
 Result: **a person needs to review**, with both reasons: PEP, and financing of €50,000 or
 more always gets a human review. Nothing is signed or charged.
+
+Then act as **Staff (demo)** → **Admin** → **Applications**: Haapalan Tila's application
+is waiting, with both reasons. Write a note (e.g. "PEP checked, revenue covers it") and
+**Approve**. Switch back to **Haapalan Tila Oy** and reopen the application: it's now
+**approved** and can continue to signing. The decision and note are in **Audit trail**.
 
 ## 8. Early exit: Aino in month 7
 

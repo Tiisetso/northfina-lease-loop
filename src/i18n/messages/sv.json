@@ -850,5 +850,18 @@
   "audit.intro": "Vem ändrade vad och när. Varje ändring av affärsdata (signering, fakturor, betalningar, returer, personalbeslut, demoåtgärder) skriver en post i samma transaktion som ändringen. De senaste {count}, nyast först.",
   "audit.system": "System ({name})",
   "audit.details": "Detaljer",
-  "audit.empty": "Inget har registrerats än."
+  "audit.empty": "Inget har registrerats än.",
+  "review.tab": "Ansökningar",
+  "review.title": "Ansökningar att granska",
+  "review.intro": "De här ansökningarna behöver en person: till exempel ett stort belopp eller en person i politiskt utsatt ställning. Läs skälen, skriv en kort anteckning och godkänn eller avslå. Kunden ser resultatet på sin ansökningssida och kan efter godkännande gå vidare till signering.",
+  "review.appliedOn": "Ansökte {date}",
+  "review.down": "{amount} handpenning",
+  "review.reasons": "Varför en person måste besluta",
+  "review.note": "Din anteckning (obligatorisk, sparas i ändringsloggen)",
+  "review.approve": "Godkänn",
+  "review.reject": "Avslå",
+  "review.error": "Det gick inte. Uppdatera sidan och försök igen.",
+  "review.empty": "Inga ansökningar väntar på granskning.",
+  "application.status.awaiting_signatory": "Väntar på att {email} signerar",
+  "application.outcome.awaiting_signatory": "Din ansökan uppfyller våra krav, men du kan inte signera för företaget. Inget godkänns för företaget förrän {email} signerar. När du fortsätter låser vi priset, reserverar produkten och du får en personlig signeringslänk att skicka till hen. Avtalet blir aktivt, och inget debiteras, först när hen signerar."
 }
