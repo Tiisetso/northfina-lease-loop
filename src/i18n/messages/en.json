@@ -25,6 +25,7 @@
   "status.available": "Available",
   "status.reserved": "Reserved",
   "status.returned": "Returned",
+  "status.sold": "Sold",
   "asset.modelYear": "Model year",
   "asset.usage": "Usage",
   "asset.previousLives": "Previous leases",
@@ -834,5 +835,10 @@
   "secondLife.failed.budget": "Rent over their budget",
   "secondLife.failed.term": "Term not offered",
   "secondLife.failed.deadline": "Their deadline has passed",
-  "secondLife.rule": "How we choose: someone qualifies if the condition, their deadline and the rent at their preferred term (excl. VAT) all fit. The earliest needed-by date wins; on the same date, whoever signed up first wins."
+  "secondLife.rule": "How we choose: someone qualifies if the condition, their deadline and the rent at their preferred term (excl. VAT) all fit. The earliest needed-by date wins; on the same date, whoever signed up first wins.",
+  "termEnded.title": "Your lease ended on {date}",
+  "termEnded.body": "What happens to the {item} now is up to you. You can buy it for {amount} including VAT, the price agreed in your contract, or return it to us.",
+  "termEnded.noBilling": "There's no more monthly rent. Until you choose, the item stays with you.",
+  "termEnded.buy": "Buy it",
+  "termEnded.return": "Return it"
 }

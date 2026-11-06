@@ -155,6 +155,14 @@ Point out:
   the early-return charge is the remaining value owed minus what the bike is worth, never
   more than the remaining rent. Same formula family, so buyout and return stay consistent.
 
+### End of term (Spine 6): Aino after month 36
+
+Set the demo date to **2029-11-06** and open Aino's lease. Her term ended on 5 Nov 2029, so
+the page says **"Your lease ended on 5 November 2029"**. She can buy it for **€735.21**
+(the locked €583.50 buyout plus 26 % VAT) or return it. No more rent is billed. Buying
+marks the bike **sold**: it leaves the fleet and never returns to the catalogue or the
+waiting list.
+
 ## 9. Second life: `ebike-007` (fair, 18,400 km)
 
 1. Act as **Staff (demo)** → **Admin** (floating button) → **Returns**.

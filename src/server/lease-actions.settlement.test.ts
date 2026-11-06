@@ -161,8 +161,9 @@ async function expectSuccessfulBuyout(receiptId: string, amountCents: number) {
     status: 'bought',
     endedOn: '2027-01-16',
   });
+  // Bought: the item has left the fleet for good, so it can't be relisted or leased again.
   expect(await fixture.db.asset.findUniqueOrThrow({ where: { id: terms.assetId } })).toMatchObject({
-    status: 'reserved',
+    status: 'sold',
   });
   const requests = await fixture.db.leaseRequest.findMany({ orderBy: { id: 'asc' } });
   expect(requests.map(({ id, status }) => ({ id, status }))).toEqual([

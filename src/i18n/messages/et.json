@@ -25,6 +25,7 @@
   "status.available": "Saadaval",
   "status.reserved": "Broneeritud",
   "status.returned": "Tagastatud",
+  "status.sold": "Müüdud",
   "asset.modelYear": "Mudeliaasta",
   "asset.usage": "Kasutus",
   "asset.previousLives": "Varasemad liisinguperioodid",
@@ -834,5 +835,10 @@
   "secondLife.failed.budget": "Rent ületab eelarve",
   "secondLife.failed.term": "Seda perioodi ei pakuta",
   "secondLife.failed.deadline": "Tähtaeg on möödas",
-  "secondLife.rule": "Kuidas valime: inimene sobib, kui seisukord, tähtaeg ja rent tema eelistatud perioodil (ilma käibemaksuta) sobivad. Varaseim tähtaeg võidab; sama kuupäeva korral võidab varem registreerunu."
+  "secondLife.rule": "Kuidas valime: inimene sobib, kui seisukord, tähtaeg ja rent tema eelistatud perioodil (ilma käibemaksuta) sobivad. Varaseim tähtaeg võidab; sama kuupäeva korral võidab varem registreerunu.",
+  "termEnded.title": "Sinu rendileping lõppes {date}",
+  "termEnded.body": "Sina otsustad, mis tootega {item} nüüd saab. Võid selle osta hinnaga {amount} koos käibemaksuga, mis lepingus kokku lepiti, või meile tagastada.",
+  "termEnded.noBilling": "Igakuist renti enam ei arveldata. Kuni sa valid, jääb toode sinu kätte.",
+  "termEnded.buy": "Osta",
+  "termEnded.return": "Tagasta"
 }

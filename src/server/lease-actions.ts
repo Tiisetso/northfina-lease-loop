@@ -186,7 +186,8 @@ export async function payBuyout(
         where: { id: input.contractId },
         data: { status: 'bought', endedOn: input.today },
       });
-      await tx.asset.update({ where: { id: data.contract.assetId }, data: { status: 'reserved' } });
+      // Bought: the item leaves the fleet and is never relisted or offered to the waiting list.
+      await tx.asset.update({ where: { id: data.contract.assetId }, data: { status: 'sold' } });
       return receipt.id;
     }
   );
