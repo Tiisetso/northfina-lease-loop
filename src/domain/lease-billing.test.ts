@@ -22,6 +22,8 @@ describe('lease billing', () => {
   });
   it('clamps short months without losing the original billing day', () => {
     expect(dueDateForMonth('2026-01-31', 1)).toBe('2026-02-28');
+    // Scenario card 4: February 2028 is a leap-year February.
+    expect(dueDateForMonth('2026-01-31', 25)).toBe('2028-02-29');
     expect(dueDateForMonth('2026-01-31', 2)).toBe('2026-03-31');
     expect(dueDateForMonth('2026-01-31', 25)).toBe('2028-02-29');
     expect(() => dueDateForMonth('2026-02-30', 0)).toThrow();

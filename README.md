@@ -1,44 +1,193 @@
 # Lease Loop
 
-A circular leasing app for e-bikes, laptops and farm machines, built for the
-Northfina × Hive Helsinki hackathon on 5–6 November 2026.
+**Team 4 · Northfina × Hive Helsinki hackathon, 5–6 November 2026**
 
-Browse an asset, choose lease terms, apply through a rules-based question flow and
-manage simulated leases from your account. The interface supports English, Finnish,
-Swedish and Estonian. All product decisions use rules, data and algorithms; there
-are no AI, ML or LLM features inside the app.
+Lease Loop lets one e-bike, laptop or farm machine live several lives: browse, price,
+apply, sign, pay monthly, then buy it, return it or exchange it, and the returned item is
+inspected, refurbished, re-priced and leased to the next person. Every decision is made by
+rules, data and algorithms, with no AI, ML or LLM features in the app. The interface is in
+English, Finnish, Swedish and Estonian.
 
-## Quick start
+This README is our submission document: what we built against the
+[challenge](CHALLENGE.md), how it works, and how to run it. To present the scenario cards,
+follow **[DEMO_TIPS.md](DEMO_TIPS.md)**.
 
-You need Git, npm, Node.js **22** (the exact version is in [.nvmrc](.nvmrc)) and
-GNU Make. macOS and Linux are supported; on Windows, use WSL. Make is optional:
-the npm commands below provide the same workflow.
+## Team
+
+| Name | GitHub | Main focus |
+| ---- | ------ | ---------- |
+| TODO | TODO   | TODO       |
+
+## The Spine
+
+| #   | Step            | Status | What we built                                                                                                                                                                                                                                                                      |
+| --- | --------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Catalogue**   | ✅     | All assets with today's price including VAT, from the dated price lists (`listPriceOn`). Reserved and returned items are labelled; returned items come back with a second-life price.                                                                                              |
+| 2   | **Price**       | ✅     | Product-page sliders for term and down payment update the monthly rent live from the coefficient bands (`monthlyFactorFor`, `quoteAmounts`). Amounts outside the bands are explained, not hidden.                                                                                  |
+| 3   | **Application** | ✅     | The `questions.json` question engine gives yes, no or "a person will check", always with reasons (see Smart Problem 4).                                                                                                                                                            |
+| 4   | **Contract**    | ⚠️     | Signing stores the list price, rent, buyout, interest rate and price-list version, and reserves the item; later price lists never touch it. A company contract waits for its named signatory. **Gap:** a quote made one day and signed the next isn't explained yet (card 2, #36). |
+| 5   | **Invoices**    | ⚠️     | Every invoice comes from the locked contract: net rent, VAT at the rate on its due date, due dates clamped to month end. Demo and seeded leases have issued invoices with VAT snapshots; new checkouts show the forecast schedule until regular issuance lands (#44).              |
+| 6   | **End of term** | ✅     | **Buy** (self-service, priced and paid in one step), **return** (guided condition check, then staff inspection) or **exchange** for another item, which passes the old one on to its next life. Co-leasing splits invoices between participants.                                   |
+| 7   | **Second life** | ✅     | Staff inspect a returned item, sign off the refurbishment, see the new price (original price × age × condition × usage from `residual-curves.json`, minus the work) and put it back in the catalogue, where it can be leased again.                                                |
+
+## Smart Problems
+
+We chose **4 (smart question flow)**, **1 (lock the price, not the tax)** and **2 (fair
+early exit)**, and went part of the way on 5, 6 and 7.
+
+### 🧠 4. The smart question flow ✅
+
+- **Ask only what's needed.** `applicationQuestions` (`src/domain/application.ts`) walks
+  the ordered bank once and evaluates each `ask_when` condition (customer type, category,
+  financed amount, term, earlier answers) against the **whole cart**, so splitting a cart
+  can't avoid a threshold.
+- **Changing an answer.** Answers to questions that no longer apply are pruned in the same
+  pass, before later conditions read them, so a stale answer can never affect the result.
+- **Why we ask** is shown for every question in all four languages.
+- **Clear outcomes with reasons**: approved, rejected or manual review, as stable reason
+  codes with plain, kind explanations. Highlights:
+  - the Finnish business-ID check digit is verified (`validBusinessId`);
+  - the consumer affordability rule (rent incl. VAT ≤ 30 % of net income) applies only
+    when the bank asks for income, from €2,000 financed;
+  - a PEP, or €50,000 or more financed, always goes to a person;
+  - an applicant who **can't sign** for their company names who can, and the contract
+    waits for that person, who signs by link (card 6, `src/domain/signatory.ts`);
+  - an applicant **under 18** gets a gentle explanation, the date they can apply and a
+    ready-written email to a parent or guardian (card 5).
+
+### 🧾 1. Lock the price, not the tax ✅
+
+- The contract stores the **net** rent. VAT is looked up for each invoice's **due date**
+  (`forecastInvoices` in `src/domain/lease-billing.ts`) and rounded once per invoice, half
+  up, in integer cents. An issued invoice keeps its VAT snapshot (`vatBasisPoints`,
+  `vatCents`), so a later rate change never rewrites it.
+- The 26 % rate from 1 January 2027 therefore changes the total of the January invoice
+  while the net rent stays the same. The lease page groups upcoming payments into periods
+  of equal amounts (`forecastPaymentChanges`), so the change is visible as its own line,
+  labelled "VAT 25.5 %" → "VAT 26 %", with a note that the net rent is locked.
+
+### 🚪 2. Fair early exit ✅
+
+`settlementQuote` (`src/domain/lease-settlement.ts`) prices both ways out from the same
+inputs, in exact rational arithmetic, rounded once:
+
+- **Buyout** = present value of the remaining rent at the contract's own monthly rate +
+  present value of the end-of-term buyout, plus VAT once, plus any unpaid invoices. Paying
+  early costs less than paying monthly, and in the final month it equals the normal buyout.
+- **Early return** = the smaller of the remaining rent and what's still owed after the
+  item's market value (`residual-curves.json`) is credited, with repair damage as a floor.
+  A well-kept item returned early costs little; a worn one costs more.
+- The buyout and return pages show the formula and every amount (`PriceFormula`).
+
+### 💶 5. Money that adds up ⚠️ partly
+
+Integer euro cents everywhere, with `BigInt` arithmetic and a documented "round once, half
+up" rule for rent, VAT, buyout and settlements. Due dates keep the start day and clamp to
+the month's end (31 Jan → 28 Feb 2026 → … → 29 Feb 2028), all tested. **Not yet:**
+property-based tests over thousands of random contracts (#47).
+
+### 🔍 6. Explain my price ⚠️ partly
+
+As the sliders move, the product page shows the down payment, the financed amount and the
+monthly payment including VAT, and the buyout and return pages show their formula with
+every term. **Not yet:** a side-by-side comparison of terms (#56).
+
+### 🌍 7. Circular impact ⚠️ partly
+
+Each reused item's lease page shows the CO₂ avoided by not making a new one, reduced for
+worse condition (`reuseEstimate`, fictional factors from `co2-factors.json`). **Not yet:**
+fleet-wide totals.
+
+### ♻️ 3. Second-life matchmaking ❌ not yet
+
+Refurbish-and-re-price works (Spine 7). Choosing who on the waiting list gets the item and
+the item passport are #48.
+
+## Wildcards
+
+- **Time travel and personas for demos.** A demo bar sets the date the whole app treats as
+  today and signs in as any of the ten data-pack personas, each starting at their
+  scenario card (Aino already has her bike; Mikko, Norvi and Haapala have their item in
+  the cart). Both are audited and off in production unless `LEASE_LOOP_DEMO=true`.
+- **Signing by link** for a company's authorised signatory, with no account needed.
+- **Co-lease:** share a lease and split its invoices between participants.
+- **Staff workspace:** returns queue, inspection, refurbishment sign-off and relisting,
+  plus an overview with 24 months of simulated history (revenue and active leases).
+
+## Scenario cards
+
+| Card | Scenario         | Status | Card              | Status |
+| ---- | ---------------- | ------ | ----------------- | ------ |
+| 1    | Happy path       | ✅     | 6 · Who can sign? | ✅     |
+| 2    | The price lock   | ⚠️ #36 | 7 · Big ticket    | ✅     |
+| 3    | Tax is not price | ✅     | 8 · Early exit    | ✅     |
+| 4    | Calendar traps   | ⚠️ #44 | 9 · Second life   | ⚠️ #48 |
+| 5    | Too young        | ✅     | 10 · Third life   | ⚠️ #48 |
+
+Step-by-step instructions, what to point out and the exact gaps: [DEMO_TIPS.md](DEMO_TIPS.md).
+
+## Engineering
+
+- **Pure, tested domain logic** in `src/domain/`: no I/O, no clock; dates are arguments.
+  Vitest tests sit next to every module (468 tests at the last run; coverage gate 60 %,
+  currently above 90 % for lines).
+- **Money** in integer cents with one deliberate rounding step per amount.
+- **One API envelope**: `ok()` / `fail()` / `handleRoute()`; no raw errors reach the browser.
+- **Audit trail**: every data change goes through `withAudit()` in the same transaction,
+  including demo actions and signatures (the signatory is the actor).
+- **Guards**: hooks (secret scan, Prettier, ESLint, conventional commits, pre-push tests),
+  CI on every PR (format, lint, types, file size, no-AI, secrets, decision records,
+  coverage, build, PR description), files under 600 lines.
+- **Decisions** are recorded with each PR and published in [docs/DECISIONS.md](docs/DECISIONS.md).
+
+## Run it
+
+You need Git, npm, Node.js **22** (the exact version is in [.nvmrc](.nvmrc)) and GNU Make
+(optional). macOS and Linux are supported; on Windows, use WSL.
 
 ```bash
 git clone https://github.com/Tiisetso/northfina-lease-loop.git
 cd northfina-lease-loop
-nvm install
-nvm use
-make setup
-make dev
+nvm install && nvm use
+make setup   # or: npm ci && RUST_LOG=info npm run db:setup
+make dev     # or: npm run dev
 ```
 
-Open **http://localhost:3000**. The catalogue is public; register an account to
-apply and view your leases. Stop the development server with **Ctrl+C**.
+Open **http://localhost:3000**. Setup installs the locked dependencies and Git hooks,
+creates `.env` with a local auth secret, applies migrations and seeds the 30 assets plus
+simulated history. SQLite runs locally; no external services or credentials are needed.
 
-`make setup` runs `npm ci` followed by `RUST_LOG=info npm run db:setup`. It installs the locked
-dependencies and Git hooks, generates the Prisma client, creates `.env` if missing,
-generates a local authentication secret, applies migrations and seeds the 30 assets.
-Existing environment values and database records are preserved. SQLite runs locally;
-no separate database server or external service credentials are needed.
+**Then:** use the dark demo bar to pick a date and a persona (see
+[DEMO_TIPS.md](DEMO_TIPS.md)). `npm run db:reset` returns to a fresh database.
 
-Without Make:
+**Test it:** `make check` (or `npm run check:all`) runs everything CI runs. `make test`
+runs the tests once, `make coverage` adds the coverage report.
 
-```bash
-npm ci
-RUST_LOG=info npm run db:setup
-npm run dev
-```
+### Demo mode
+
+In demo mode (on by default outside production) the bar above the header has two
+controls. **Demo date** makes the whole app treat a date from 2026-01-01 to 2031-12-31 as
+today. **Act as** signs in as one of the ten personas in `data/customers.json` or as
+_Staff (demo)_: an account is created on first use, its password is derived from
+`BETTER_AUTH_SECRET` (never stored or shared), and the application form starts with the
+answers the persona's record can give. `LEASE_LOOP_DEMO=false` turns demo mode off;
+`LEASE_LOOP_DEMO=true` allows it in a production build.
+
+### Local configuration
+
+Setup creates the ignored `.env` file from [.env.example](.env.example).
+
+| Variable             | Purpose                                                       |
+| -------------------- | ------------------------------------------------------------- |
+| `DATABASE_URL`       | Local SQLite file; defaults to `file:./dev.db`                |
+| `BETTER_AUTH_URL`    | Exact application origin; defaults to `http://localhost:3000` |
+| `BETTER_AUTH_SECRET` | Generated locally by setup; keep it private                   |
+| `LEASE_LOOP_DEMO`    | Optional: `true`/`false` forces demo mode on/off              |
+
+If you change the host or port, update `BETTER_AUTH_URL` to the same origin. Use the same
+Node version for installing and running, because SQLite uses a native module. The Makefile
+sets `RUST_LOG=info` for database setup because affected Prisma versions can fail SQLite
+initialization otherwise; see [the Prisma guide](PRISMA_GUIDE.md).
 
 ## Everyday commands
 
@@ -77,82 +226,6 @@ make build ARGS=--webpack
 The Webpack option is useful in environments that block Turbopack's internal worker
 ports. `make check` always runs the unchanged `check:all` script and its default build.
 
-## Returns and second life
-
-See [RECOVERY.md](RECOVERY.md) for customer returns, staff assessment access,
-the valuation and settlement formulas, and publishing a second-life offer.
-
-## Returns and second life
-
-See [RECOVERY.md](RECOVERY.md) for customer returns, staff assessment access,
-the valuation and settlement formulas, and publishing a second-life offer.
-
-## Demo mode (scenario cards)
-
-Every scenario card names a person and a date. In demo mode (on by default outside
-production) a dark bar above the header provides two controls:
-
-- **Demo date:** the whole app treats this date as today: the price list that applies,
-  contract start dates, due invoices and VAT. Pick any date from 2026-01-01 to
-  2031-12-31, or choose _Use today's date_ to return to the real date.
-- **Act as:** sign in as one of the ten personas in `data/customers.json`, or as
-  _Staff (demo)_. An account is created on first use. Its password is derived from
-  `BETTER_AUTH_SECRET`, so it is never stored or shared. The application form starts
-  with the answers the persona's record can give; all of them stay editable.
-
-Example, scenario card 1: set the demo date to 2026-11-05, act as Aino, add
-`ebike-003` (36 months, no down payment) to the cart, apply and sign. The rent is
-€107.30 net, €134.66 including VAT, and the contract starts on 2026-11-05.
-
-Both controls are audited. `LEASE_LOOP_DEMO=false` turns demo mode off;
-`LEASE_LOOP_DEMO=true` allows it in a production build.
-
-## Project decisions
-
-Stop the running app before refreshing dependencies or database models.
-
-```bash
-make setup
-make dev
-```
-
-If dependencies have not changed, `make db-setup` is enough to apply new migrations,
-regenerate the client and add missing seed assets. The development command also
-regenerates the Prisma client before starting Next.js.
-
-## Local configuration
-
-Setup creates the ignored `.env` file from [.env.example](.env.example).
-
-| Variable             | Purpose                                                       |
-| -------------------- | ------------------------------------------------------------- |
-| `DATABASE_URL`       | Local SQLite file; defaults to `file:./dev.db`                |
-| `BETTER_AUTH_URL`    | Exact application origin; defaults to `http://localhost:3000` |
-| `BETTER_AUTH_SECRET` | Generated locally by setup; keep it private                   |
-| `LEASE_LOOP_DEMO`    | Optional: `true`/`false` forces demo mode on/off              |
-
-If you change the host or port, update `BETTER_AUTH_URL` to the same origin before
-starting the app. Never commit `.env` or local database files. Use the same Node
-version for installing dependencies and running the app because SQLite uses a native module.
-
-The Makefile sets `RUST_LOG=info` for database setup because affected Prisma versions
-can fail SQLite initialization when engine output is suppressed. This setting is
-scoped to setup; it does not change the app's logging. When using npm directly,
-use `RUST_LOG=info npm run db:setup`. See [the Prisma guide](PRISMA_GUIDE.md).
-
-## Current application
-
-- Catalogue and product pages with dated net prices, illustrative photos and lease sliders.
-- Email/password accounts, protected customer data and account settings.
-- Cart, conditional application questions, eligibility reasons and an approval gate.
-- Simulated checkout with stored price snapshots.
-- Lease dashboard with invoice forecasts, issued invoice/payment displays and management requests.
-
-Checkout currently creates simulated leases. Return, buyout and exchange controls
-submit requests; they do not yet fulfil those actions. Full contract signing,
-regular invoice issuance and returned-item re-pricing/re-leasing remain work for the
-required challenge loop. See [the challenge](CHALLENGE.md) for the full requirements.
-
 ## Project structure
 
 | Location          | Responsibility                                                  |
@@ -167,56 +240,34 @@ required challenge loop. See [the challenge](CHALLENGE.md) for the full requirem
 | `data/`           | Synthetic assets, prices, questions and other challenge inputs  |
 | `scripts/`        | Quality checks, local setup and decision-log tooling            |
 
-Read [data/DATA.md](data/DATA.md) before using the data pack. Prices are integer
-euro cents and exclude VAT unless stated otherwise. Personas, brands, the future
-VAT change and CO₂ factors are fictional; product photographs are illustrative.
+Read [data/DATA.md](data/DATA.md) before using the data pack. Prices are integer euro
+cents and exclude VAT unless stated otherwise. Personas, brands, the 2027 VAT change and
+CO₂ factors are fictional; product photographs are illustrative.
+
+More detail: [applications](APPLICATIONS.md), [returns and second life](RECOVERY.md),
+[lease dashboard](LEASE_DASHBOARD.md), [authentication](AUTHENTICATION.md),
+[Prisma](PRISMA_GUIDE.md) and [UI/UX](UI_UX.md).
 
 ## Contributing
 
-Follow [AGENTS.md](AGENTS.md) and [RULES.md](RULES.md). Keep business rules pure and
-tested in `src/domain/`, use the shared API envelope, put every data change through
-`withAudit()` and add interface strings in all four languages. Edit the Prisma schema
-and use `make migrate` for database changes; never hand-write migration SQL.
-
-Run `make check` before requesting review. It checks formatting, lint, types, file
-size, no-AI rules, secret scanning, decision records, test coverage and the production build. Coverage
-must reach 60% for lines, statements, functions and branches. GitHub CI additionally
-validates commit messages. Use conventional commits such as
-`feat(pricing): explain monthly rent`; keep Git hooks enabled.
-
-Follow [CONTRIBUTING.md](CONTRIBUTING.md) for the commit and PR workflow. Start each
-team PR with a plain-language summary of what changed and why it matters: 1–2 short
-sentences, at most 50 words. Use the [team PR template](.github/pull_request_template.md)
-in order; PR title, section structure and summary length are checked automatically.
-Use CI for automated results and include useful local observations or visual evidence.
-No manual checklist or checkbox signoff is required for team PRs. Keep the PR title
-and any squash commit title conventional so the resulting history passes CI.
-Meaningful choices follow the
-[decision-record guide](docs/decisions/README.md); accepted choices appear in the
-[generated decision log](docs/DECISIONS.md).
-
-Further guides: [applications](APPLICATIONS.md), [authentication](AUTHENTICATION.md),
-[lease dashboard](LEASE_DASHBOARD.md), [Prisma](PRISMA_GUIDE.md) and [UI/UX](UI_UX.md).
+Follow [AGENTS.md](AGENTS.md), [RULES.md](RULES.md) and [CONTRIBUTING.md](CONTRIBUTING.md):
+pure tested rules in `src/domain/`, the shared API envelope, `withAudit()` for every data
+change, strings in all four languages, `make migrate` for schema changes (never hand-written
+SQL), conventional commits with hooks enabled, and the [team PR template](.github/pull_request_template.md).
+Meaningful choices follow the [decision-record guide](docs/decisions/README.md).
 
 ## Submitting
 
 Enable GitHub Actions in the team fork and open the judging PR against
 `etufillari/northfina-lease-loop` → `main` **before Friday 6 November 2026 at 16:00
 Helsinki time**. The title must be `Team <name>: <your product name>`; use the
-[hackathon submission template](.github/hackathon_submission.md).
-
-Include the team members, at least two chosen Smart Problems, working scenario cards
-and reproducible demo instructions. The latest commit of each open PR is recorded
-at 16:00; later pushes are ignored and PRs opened after the deadline do not count.
-Judging PRs are not merged. The pitch is four minutes followed by two minutes of Q&A.
-Copying another team's work disqualifies both copies.
+[hackathon submission template](.github/hackathon_submission.md). The latest commit of
+each open PR is recorded at 16:00; later pushes are ignored. Judging PRs are not merged.
 
 ## License and help
 
-The starter code and data pack use the [MIT license](LICENSE). Your team owns the
-code it writes. Opening the judging PR permits Northfina to read and run that code
-for judging and interviews; it does not grant permission to reuse or publish it
-elsewhere without asking.
-
+The starter code and data pack use the [MIT license](LICENSE). Your team owns the code it
+writes. Opening the judging PR permits Northfina to read and run that code for judging and
+interviews; it does not grant permission to reuse or publish it elsewhere without asking.
 Ask mentors in the hackathon Discord's **#ask-a-mentor** channel. Follow the
 [Code of Conduct](CODE_OF_CONDUCT.md).
