@@ -66,6 +66,9 @@ early exit)**, also solved **3 (second-life matchmaking)**, and went part of the
   while the net rent stays the same. The lease page groups upcoming payments into periods
   of equal amounts (`forecastPaymentChanges`), so the change is visible as its own line,
   labelled "VAT 25.5 %" → "VAT 26 %", with a note that the net rent is locked.
+- Wherever the rate changes, on the forecast or an issued invoice, a note gives the exact
+  cent difference ("+€0.54 a month") and the unchanged net rent, and says that the 26 %
+  rate is fictional, as marked in the data pack (`vatChange` in `src/domain/vat-change.ts`).
 
 ### 🚪 2. Fair early exit ✅
 

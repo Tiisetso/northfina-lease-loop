@@ -45,6 +45,8 @@ Point out:
 - Signed **5 Nov 2026** on price list v1: list price €3,890.00, 36 months, no down payment.
 - Monthly rent **€107.30 net**, **€134.66 incl. VAT** (data guide's worked example, to the cent).
 - **Issued invoices:** 5 Nov, 5 Dec (VAT 25.5 %, €27.36) and **5 Jan 2027 (VAT 26 %, €27.90)**.
+  Under January: "VAT goes from 25.5 % to 26 %, so the monthly payment changes by
+  **+€0.54**. Your net rent stays €107.30", and that the 26 % rate is fictional.
 - **Payments and agreement** lists upcoming payments and the end-of-term buyout (€583.50 net).
 - Move the date to **2027-02-05** and reopen the lease: the February invoice has been
   issued (billing runs when the customer opens their account, and the audit log records

@@ -836,6 +836,8 @@
   "secondLife.failed.term": "Kestoa ei tarjota",
   "secondLife.failed.deadline": "Määräpäivä on mennyt",
   "secondLife.rule": "Näin valitsemme: henkilö sopii, jos kunto, määräpäivä ja vuokra hänen toivomallaan kestolla (alv 0 %) sopivat. Aikaisin määräpäivä voittaa; samalla päivällä ensin ilmoittautunut voittaa.",
+  "vatChange.note": "Arvonlisävero muuttuu {from} %:sta {to} %:iin, joten kuukausimaksu muuttuu {difference}. Nettovuokrasi pysyy {net}: vain vero muuttui.",
+  "vatChange.fictional": "{to} %:n verokanta on kuvitteellinen, keksitty tätä hackathonia varten.",
   "termEnded.title": "Vuokrasopimuksesi päättyi {date}",
   "termEnded.body": "Sinä päätät, mitä tuotteelle {item} nyt tapahtuu. Voit ostaa sen hintaan {amount} sis. alv, sopimuksessa sovittuun hintaan, tai palauttaa sen meille.",
   "termEnded.noBilling": "Kuukausivuokraa ei enää laskuteta. Tuote pysyy sinulla, kunnes valitset.",

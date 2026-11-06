@@ -5,6 +5,7 @@ import { paidForInvoice, summarizeLease } from '@/domain/lease-dashboard';
 import { forecastPaymentChanges } from '@/domain/forecast-changes';
 import { endOfTerm } from '@/domain/end-of-term';
 import { reuseEstimate } from '@/domain/lease-insights';
+import { VatChangeNote } from './vat-change-note';
 import { formatEuro } from '@/domain/money';
 import Link from 'next/link';
 import { TermEndedNotice } from './term-ended-notice';
@@ -105,6 +106,10 @@ export function LeaseDetail({
           today
         )
       : [];
+  // Each payment as vatChange compares them: the one before is the previous period or invoice.
+  const issuedPayments = lease.invoices
+    .filter((invoice) => invoice.status === 'issued')
+    .map((invoice) => ({ ...invoice, totalCents: invoice.netCents + invoice.vatCents }));
   const impact = reuseEstimate(
     lease.asset.category,
     lease.asset.condition,
@@ -327,7 +332,7 @@ export function LeaseDetail({
             {info.forecast.ok ? (
               forecastPeriods.length ? (
                 <ul className="mt-2 divide-y divide-divider">
-                  {forecastPeriods.map((period) => (
+                  {forecastPeriods.map((period, index) => (
                     <li key={period.startDate} className="py-4 text-caption">
                       <div className="flex flex-wrap justify-between gap-3">
                         <p>
@@ -353,6 +358,16 @@ export function LeaseDetail({
                           rate: formatNumber(period.vatBasisPoints / 100, locale),
                         })}
                       </p>
+                      <VatChangeNote
+                        previous={
+                          index
+                            ? { ...forecastPeriods[index - 1]!, dueDate: period.startDate }
+                            : issuedPayments.at(-1)
+                        }
+                        payment={{ ...period, dueDate: period.startDate }}
+                        rates={rates}
+                        locale={locale}
+                      />
                     </li>
                   ))}
                 </ul>
@@ -371,7 +386,7 @@ export function LeaseDetail({
               <ul className="mt-2 divide-y divide-divider">
                 {lease.invoices
                   .filter((invoice) => invoice.status === 'issued')
-                  .map((invoice) => {
+                  .map((invoice, index) => {
                     const total = invoice.netCents + invoice.vatCents;
                     const paid = paidForInvoice(invoice, lease.isDemo);
                     return (
@@ -394,6 +409,12 @@ export function LeaseDetail({
                             vat: currency(invoice.vatCents),
                           })}
                         </p>
+                        <VatChangeNote
+                          previous={issuedPayments[index - 1]}
+                          payment={issuedPayments[index]!}
+                          rates={rates}
+                          locale={locale}
+                        />
                         <p className="mt-1 text-fine text-ink-muted">
                           {t('dashboard.paidAmount', { amount: currency(paid) })}
                         </p>
