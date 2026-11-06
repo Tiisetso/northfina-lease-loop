@@ -349,6 +349,25 @@
           "decision": "Show an item passport on used items' product pages with every life's dates, term, starting condition and outcome but never who leased it, and count CO₂ avoided per reuse life as manufacturing CO₂ minus the refurbishment share, scaled by the condition the life started in."
         }
       ]
+    },
+    {
+      "source": "docs/decisions/records/end-of-term-and-sold.json",
+      "sha256": "39946abe760fbdff3170dc50fa335f0c741af5141dfec7ce6fad80b787ca8fc6",
+      "prNumber": 92,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/92",
+      "mergedAt": "2026-11-06T12:52:46.000Z",
+      "decisions": [
+        {
+          "id": "D-92-01",
+          "category": "Contract",
+          "decision": "Keep a lease active after its last month until the customer buys or returns the item, because they still hold it and ownership is unsettled; stop billing rent and show the end-of-term choice with the locked buyout instead of completing the contract automatically."
+        },
+        {
+          "id": "D-92-02",
+          "category": "Database",
+          "decision": "Mark a bought item's asset as sold rather than reserved, so it leaves the fleet for good and can never be relisted, offered to the waiting list or leased again."
+        }
+      ]
     }
   ]
 }
