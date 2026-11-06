@@ -372,6 +372,13 @@ export function LeaseDetail({
                           </p>
                         </div>
                         <p className="mt-2 text-fine text-ink-muted">
+                          {t('dashboard.vatBreakdown', {
+                            net: currency(invoice.netCents),
+                            rate: formatNumber(invoice.vatBasisPoints / 100, locale),
+                            vat: currency(invoice.vatCents),
+                          })}
+                        </p>
+                        <p className="mt-1 text-fine text-ink-muted">
                           {t('dashboard.paidAmount', { amount: currency(paid) })}
                         </p>
                         {sharesOn(lease.coLeaseShares, invoice.dueDate).length > 1 ? (

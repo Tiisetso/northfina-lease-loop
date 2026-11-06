@@ -20,15 +20,15 @@ follow **[DEMO_TIPS.md](DEMO_TIPS.md)**.
 
 ## The Spine
 
-| #   | Step            | Status | What we built                                                                                                                                                                                                                                                                      |
-| --- | --------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | **Catalogue**   | ✅     | All assets with today's price including VAT, from the dated price lists (`listPriceOn`). Reserved and returned items are labelled; returned items come back with a second-life price.                                                                                              |
-| 2   | **Price**       | ✅     | Product-page sliders for term and down payment update the monthly rent live from the coefficient bands (`monthlyFactorFor`, `quoteAmounts`). Amounts outside the bands are explained, not hidden.                                                                                  |
-| 3   | **Application** | ✅     | The `questions.json` question engine gives yes, no or "a person will check", always with reasons (see Smart Problem 4).                                                                                                                                                            |
-| 4   | **Contract**    | ⚠️     | Signing stores the list price, rent, buyout, interest rate and price-list version, and reserves the item; later price lists never touch it. A company contract waits for its named signatory. **Gap:** a quote made one day and signed the next isn't explained yet (card 2, #36). |
-| 5   | **Invoices**    | ⚠️     | Every invoice comes from the locked contract: net rent, VAT at the rate on its due date, due dates clamped to month end. Demo and seeded leases have issued invoices with VAT snapshots; new checkouts show the forecast schedule until regular issuance lands (#44).              |
-| 6   | **End of term** | ✅     | **Buy** (self-service, priced and paid in one step), **return** (guided condition check, then staff inspection) or **exchange** for another item, which passes the old one on to its next life. Co-leasing splits invoices between participants.                                   |
-| 7   | **Second life** | ✅     | Staff inspect a returned item, sign off the refurbishment, see the new price (original price × age × condition × usage from `residual-curves.json`, minus the work) and put it back in the catalogue, where it can be leased again.                                                |
+| #   | Step            | Status | What we built                                                                                                                                                                                                                                                                                  |
+| --- | --------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Catalogue**   | ✅     | All assets with today's price including VAT, from the dated price lists (`listPriceOn`). Reserved and returned items are labelled; returned items come back with a second-life price.                                                                                                          |
+| 2   | **Price**       | ✅     | Product-page sliders for term and down payment update the monthly rent live from the coefficient bands (`monthlyFactorFor`, `quoteAmounts`). Amounts outside the bands are explained, not hidden.                                                                                              |
+| 3   | **Application** | ✅     | The `questions.json` question engine gives yes, no or "a person will check", always with reasons (see Smart Problem 4).                                                                                                                                                                        |
+| 4   | **Contract**    | ✅     | Signing locks the price list of the signing day and stores the list price, rent, buyout, interest rate and price-list version; later price lists never touch it. A price that differs from the quote is shown and must be accepted (card 2). A company contract waits for its named signatory. |
+| 5   | **Invoices**    | ✅     | Each month's invoice is issued on its due date from the locked contract (`invoicesDue`): net rent, VAT at the rate on that due date stored on the invoice, due dates clamped to month end. Billing runs idempotently when the customer opens their account, with an audit row.                 |
+| 6   | **End of term** | ✅     | **Buy** (self-service, priced and paid in one step), **return** (guided condition check, then staff inspection) or **exchange** for another item, which passes the old one on to its next life. Co-leasing splits invoices between participants.                                               |
+| 7   | **Second life** | ✅     | Staff inspect a returned item, sign off the refurbishment, see the new price (original price × age × condition × usage from `residual-curves.json`, minus the work) and put it back in the catalogue, where it can be leased again.                                                            |
 
 ## Smart Problems
 
@@ -119,9 +119,9 @@ the item passport are #48.
 | Card | Scenario         | Status | Card              | Status |
 | ---- | ---------------- | ------ | ----------------- | ------ |
 | 1    | Happy path       | ✅     | 6 · Who can sign? | ✅     |
-| 2    | The price lock   | ⚠️ #36 | 7 · Big ticket    | ✅     |
+| 2    | The price lock   | ✅     | 7 · Big ticket    | ✅     |
 | 3    | Tax is not price | ✅     | 8 · Early exit    | ✅     |
-| 4    | Calendar traps   | ⚠️ #44 | 9 · Second life   | ⚠️ #48 |
+| 4    | Calendar traps   | ✅     | 9 · Second life   | ⚠️ #48 |
 | 5    | Too young        | ✅     | 10 · Third life   | ⚠️ #48 |
 
 Step-by-step instructions, what to point out and the exact gaps: [DEMO_TIPS.md](DEMO_TIPS.md).
@@ -129,7 +129,7 @@ Step-by-step instructions, what to point out and the exact gaps: [DEMO_TIPS.md](
 ## Engineering
 
 - **Pure, tested domain logic** in `src/domain/`: no I/O, no clock; dates are arguments.
-  Vitest tests sit next to every module (467 tests at the last run; coverage gate 60 %,
+  Vitest tests sit next to every module (492 tests at the last run; coverage gate 60 %,
   currently above 90 % for lines).
 - **Money** in integer cents with one deliberate rounding step per amount.
 - **One API envelope**: `ok()` / `fail()` / `handleRoute()`; no raw errors reach the browser.
