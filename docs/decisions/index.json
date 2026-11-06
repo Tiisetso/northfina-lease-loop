@@ -325,6 +325,30 @@
           "decision": "On demo leases only, record a simulated payment for invoices already past their due date, matching the persona scenarios, so moving the demo clock forward doesn't show months of overdue rent; real leases are never paid by the billing run."
         }
       ]
+    },
+    {
+      "source": "docs/decisions/records/second-life-matching.json",
+      "sha256": "1d32c505cf76db0cb6693f30573d52c1e30ba79cc8cbc15d619411f653b5d9e5",
+      "prNumber": 88,
+      "prUrl": "https://github.com/Tiisetso/northfina-lease-loop/pull/88",
+      "mergedAt": "2026-11-06T12:24:45.000Z",
+      "decisions": [
+        {
+          "id": "D-88-01",
+          "category": "Contract",
+          "decision": "Refurbish a returned item only when it can be leased again and its price after the work is more than the work costs; otherwise retire it rather than refurbish at a loss."
+        },
+        {
+          "id": "D-88-02",
+          "category": "Contract",
+          "decision": "Match a second-life item to waiting-list entries whose minimum condition, deadline, financeable preferred term and net budget at that term all fit, using the condition after refurbishment; the earliest needed-by date wins and, on the same date, whoever signed up first wins, so the result is deterministic and explainable."
+        },
+        {
+          "id": "D-88-03",
+          "category": "UI",
+          "decision": "Show an item passport on used items' product pages with every life's dates, term, starting condition and outcome but never who leased it, and count CO₂ avoided per reuse life as manufacturing CO₂ minus the refurbishment share, scaled by the condition the life started in."
+        }
+      ]
     }
   ]
 }
