@@ -16,6 +16,7 @@ import { db } from '@/server/db';
 import { findCustomerLease } from '@/server/leases';
 import { leaseActionContext } from '@/server/lease-actions';
 import { appToday, demoModeEnabled } from '@/server/demo-mode';
+import { issueDueInvoices } from '@/server/invoice-issuance';
 
 export default async function LeaseDetailPage({
   params,
@@ -24,10 +25,12 @@ export default async function LeaseDetailPage({
   if (!isLocale(locale)) notFound();
   const identity = await readIdentity(db, await headers());
   if (!identity) redirect(`/${locale}/login`);
+  const today = await appToday();
+  // Bill the months that came due since the last visit, before showing them.
+  await issueDueInvoices(db, identity.customerId, today);
   const lease = await findCustomerLease(db, identity.customerId, id);
   if (!lease) notFound();
   const [vat, factors] = await Promise.all([loadVatRates(), loadCo2Factors()]);
-  const today = await appToday();
   const liveBuyout =
     lease.status === 'active' ? await leaseActionContext(db, identity.customerId, id, today) : null;
   const t = getT(locale);

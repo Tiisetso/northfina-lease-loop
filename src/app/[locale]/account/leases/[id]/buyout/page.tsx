@@ -9,6 +9,7 @@ import { readIdentity } from '@/server/auth-session';
 import { db } from '@/server/db';
 import { leaseActionContext } from '@/server/lease-actions';
 import { appToday } from '@/server/demo-mode';
+import { issueDueInvoices } from '@/server/invoice-issuance';
 export default async function Page({ params }: PageProps<'/[locale]/account/leases/[id]/buyout'>) {
   const { locale, id } = await params;
   if (!isLocale(locale)) notFound();
@@ -20,6 +21,7 @@ export default async function Page({ params }: PageProps<'/[locale]/account/leas
   });
   if (!owned) notFound();
   const today = await appToday();
+  await issueDueInvoices(db, identity.customerId, today);
   const data = await leaseActionContext(db, identity.customerId, id, today);
   const t = getT(locale);
   return (

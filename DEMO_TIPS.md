@@ -20,18 +20,18 @@ set when you switch.
 
 ## Status at a glance
 
-| Card | Scenario                | Status | Notes                                                       |
-| ---- | ----------------------- | ------ | ----------------------------------------------------------- |
-| 1    | Happy path (Aino)       | ✅     | Lease ready on switch; invoices issued up to the demo date  |
-| 2    | The price lock          | ⚠️     | Price is locked at signing; quote-to-signing story is #36   |
-| 3    | Tax is not price        | ✅     | VAT change shown on Aino's invoices and on any forecast     |
-| 4    | Calendar traps          | ⚠️     | Due dates are right in the domain; UI groups equal payments |
-| 5    | Too young (Mikko)       | ✅     | Kind explanation, date he can apply, email to a guardian    |
-| 6    | Who can sign? (Norvi)   | ✅     | Contract waits for the named signatory, who signs by link   |
-| 7    | Big ticket (Haapala)    | ✅     | Due-diligence and PEP questions, manual review with reasons |
-| 8    | Early exit (Aino)       | ✅     | Buyout and early return, formula shown                      |
-| 9    | Second life (ebike-007) | ⚠️     | Refurbish and re-price work; waiting-list match is #48      |
-| 10   | Third life (ebike-008)  | ⚠️     | Relist and lease again work; passport is #48                |
+| Card | Scenario                | Status | Notes                                                        |
+| ---- | ----------------------- | ------ | ------------------------------------------------------------ |
+| 1    | Happy path (Aino)       | ✅     | Lease ready on switch; invoices issued up to the demo date   |
+| 2    | The price lock          | ✅     | Thursday quote vs Friday price shown; signing locks Friday's |
+| 3    | Tax is not price        | ✅     | VAT change shown on Aino's invoices and on any forecast      |
+| 4    | Calendar traps          | ✅     | Issued invoices list 28 Feb 2026 and 29 Feb 2028             |
+| 5    | Too young (Mikko)       | ✅     | Kind explanation, date he can apply, email to a guardian     |
+| 6    | Who can sign? (Norvi)   | ✅     | Contract waits for the named signatory, who signs by link    |
+| 7    | Big ticket (Haapala)    | ✅     | Due-diligence and PEP questions, manual review with reasons  |
+| 8    | Early exit (Aino)       | ✅     | Buyout and early return, formula shown                       |
+| 9    | Second life (ebike-007) | ⚠️     | Refurbish and re-price work; waiting-list match is #48       |
+| 10   | Third life (ebike-008)  | ⚠️     | Relist and lease again work; passport is #48                 |
 
 ---
 
@@ -46,6 +46,10 @@ Point out:
 - Monthly rent **€107.30 net**, **€134.66 incl. VAT** (data guide's worked example, to the cent).
 - **Issued invoices:** 5 Nov, 5 Dec (VAT 25.5 %, €27.36) and **5 Jan 2027 (VAT 26 %, €27.90)**.
 - **Payments and agreement** lists upcoming payments and the end-of-term buyout (€583.50 net).
+- Move the date to **2027-02-05** and reopen the lease: the February invoice has been
+  issued (billing runs when the customer opens their account, and the audit log records
+  it). On demo leases, invoices past their due date are marked paid by a simulated
+  payment; the one due today stays open.
 
 To sign card 1 live instead: set the date to **2026-11-04** before switching to Aino (no
 lease yet), then on **2026-11-05** add `ebike-003`, apply and sign. Or lease the identical
@@ -57,12 +61,17 @@ twin `ebike-012`.
 2. Open `laptop-004`: **€3,490.00** net (price list v1). Add to cart, apply.
 3. Demo date **2026-11-06**: the catalogue now shows **€3,211.00** (v2, laptops −8 %).
 
-What works: once signed, the contract stores the list price, rent, buyout and price-list
-version, and later price lists never change it (try moving the date after signing).
+4. Open the cart and continue to checkout. The approval still holds (it's valid for 7
+   days), and an amber panel says **"The price changed since your quote"**: quoted
+   €3,490.00 (v1), today €3,211.00 (v2), the lower monthly payment, and "Good news: the
+   item is €279.00 cheaper."
+5. Tick **"I accept today's price. Signing locks it for the whole lease."** and confirm.
+   Without the tick, signing is refused: a price never changes silently, in either direction.
+6. Open the lease: "Price locked from price list v2" and "You were quoted €3,490.00
+   (price list v1) on 5 November 2026; signing locked €3,211.00…".
 
-**Not yet (#36):** signing on Friday with Thursday's quote is refused as "the quote has
-changed", with no explanation of which price is locked and why. Present the rule verbally:
-the price is locked at signing, from the price list valid on the signing day.
+The rule: a quote is an estimate; **signing** locks the price list valid on the signing
+day. Move the date further on: later price lists never change the signed contract.
 
 ## 3. Tax is not price: `ebike-001` from 15 Sep 2026
 
@@ -83,9 +92,10 @@ The rule: due dates keep the start day and clamp to the month's last day, so the
 **February 2026** invoice is due **28 Feb 2026** and **February 2028** is due **29 Feb 2028**
 (leap year). See `dueDateForMonth` in `src/domain/lease-billing.ts`; its tests check both.
 
-**Caveat:** the lease page groups payments with the same amount into date ranges, so
-individual February dates only appear once invoices are issued (#44). Show the test cases
-if asked.
+To show it live: move the demo date to **2028-03-01** and open the lease again.
+**Issued invoices** lists every month, including **28 Feb 2026**, **30 Apr 2026** and
+**29 Feb 2028**, each with its net rent, VAT rate and VAT. Each month is issued on its
+due date the next time the customer opens their account (see card 1).
 
 ## 5. Too young: Mikko (17), `laptop-008`
 

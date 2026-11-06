@@ -13,6 +13,7 @@ import { readIdentity } from '@/server/auth-session';
 import { db } from '@/server/db';
 import { listCustomerLeases, type CustomerLease } from '@/server/leases';
 import { appToday } from '@/server/demo-mode';
+import { issueDueInvoices } from '@/server/invoice-issuance';
 import { DashboardShell, type DashboardSection } from './dashboard-shell';
 import { CancelLeaseRequest } from './cancel-lease-request';
 import { LeaseCard } from './lease-card';
@@ -28,11 +29,13 @@ export async function DashboardSectionPage({
   if (!isLocale(locale)) notFound();
   const identity = await readIdentity(db, await headers());
   if (!identity) redirect(`/${locale}/login`);
+  const today = await appToday();
+  // Bill the months that came due since the last visit, before showing them.
+  await issueDueInvoices(db, identity.customerId, today);
   const [leases, vat] = await Promise.all([
     listCustomerLeases(db, identity.customerId),
     loadVatRates(),
   ]);
-  const today = await appToday();
   const t = getT(locale);
   return (
     <DashboardShell locale={locale} active={section}>
