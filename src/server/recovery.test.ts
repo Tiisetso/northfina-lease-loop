@@ -7,6 +7,7 @@ import { createDemoLease } from './demo-lease';
 import { requestLeaseChange } from './leases';
 import { acceptReturn, assessReturn, progressReturn } from './recovery';
 import { recoveryCalculationSchema } from './recovery-input';
+import { completeRefurbishment, publishRelisting } from './relisting';
 import { settlementQuote } from '@/domain/lease-settlement';
 
 let fixture: Awaited<ReturnType<typeof createTestDb>>;
@@ -96,9 +97,11 @@ describe('audited return lifecycle', () => {
         outstandingCents: 0,
       }).buyoutNetCents
     );
-    await expect(
-      progressReturn(fixture.db, { requestId, staffId: 'staff', today, action: 'publish' })
-    ).rejects.toMatchObject({ status: 409 });
+    const publish = (expectedPriceCents: number) =>
+      publishRelisting(fixture.db, { requestId, staffId: 'staff', today, expectedPriceCents });
+    await expect(publish(initialQuote.recovery.postRepairValueCents)).rejects.toMatchObject({
+      status: 409,
+    });
     const accept = {
       requestId,
       contractId,
@@ -128,12 +131,17 @@ describe('audited return lifecycle', () => {
     expect((await fixture.db.asset.findUniqueOrThrow({ where: { id: 'ebike-005' } })).status).toBe(
       'returned'
     );
-    const result = await progressReturn(fixture.db, {
+    await completeRefurbishment(fixture.db, {
       requestId,
       staffId: 'staff',
-      today,
-      action: 'publish',
+      work: {
+        completedWork: initialQuote.recovery.workItems.map((item) => item.id),
+        retestedChecks: [],
+        sanitization: null,
+        notes: '',
+      },
     });
+    const result = await publish(initialQuote.recovery.postRepairValueCents);
     const snapshot = recoveryCalculationSchema.parse(JSON.parse(result.calculationJson));
     const asset = await fixture.db.asset.findUniqueOrThrow({ where: { id: 'ebike-005' } });
     expect(asset).toMatchObject({
@@ -146,6 +154,13 @@ describe('audited return lifecycle', () => {
     });
     expect(asset.originalPriceCents).toBeGreaterThan(0);
     expect(asset.firstLeaseDate).toBe('2025-11-06');
+    expect(result).toMatchObject({
+      status: 'published',
+      publishedPriceCents: snapshot.recovery.postRepairValueCents,
+    });
+    expect(
+      (await fixture.db.contract.findUniqueOrThrow({ where: { id: contractId } })).endedOn
+    ).toBe(today);
     expect(await fixture.db.auditLog.count({ where: { action: 'return.publish' } })).toBe(1);
   });
   it('preserves the accepted quote and can retire instead of publishing', async () => {
@@ -170,7 +185,7 @@ describe('audited return lifecycle', () => {
     await progressReturn(fixture.db, { requestId, staffId: 'staff', today, action: 'receive' });
     await progressReturn(fixture.db, { requestId, staffId: 'staff', today, action: 'retire' });
     await expect(
-      progressReturn(fixture.db, { requestId, staffId: 'staff', today, action: 'publish' })
+      publishRelisting(fixture.db, { requestId, staffId: 'staff', today, expectedPriceCents: 1 })
     ).rejects.toMatchObject({ status: 409 });
     expect(
       (await fixture.db.asset.findUniqueOrThrow({ where: { id: 'ebike-005' } }))

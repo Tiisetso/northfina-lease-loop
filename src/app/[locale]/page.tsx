@@ -27,7 +27,11 @@ export default async function CataloguePage({ params }: PageProps<'/[locale]'>) 
   const today = todayIso(); // the page decides what "today" is; domain code never reads the clock
   const [rows, priceLists, vat] = await Promise.all([
     db.asset.findMany({
-      where: { status: 'available', contracts: { none: { status: 'active' } } },
+      where: {
+        status: 'available',
+        isFleetHistory: false,
+        contracts: { none: { status: 'active' } },
+      },
       orderBy: { id: 'asc' },
     }),
     loadPriceLists(),

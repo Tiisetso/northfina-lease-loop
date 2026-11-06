@@ -1,68 +1,86 @@
-# Lease Loop · Northfina × Hive Helsinki hackathon
+# Lease Loop
 
-Starter repo for the **Lease Loop** challenge, 5–6 November 2026 at Hive Helsinki. Teams of 3 build a circular-economy leasing app: one e-bike, laptop or tractor, three lives.
+A circular leasing app for e-bikes, laptops and farm machines, built for the
+Northfina × Hive Helsinki hackathon on 5–6 November 2026.
 
-- 📋 **The challenge:** [CHALLENGE.md](CHALLENGE.md)
-- 📐 **Engineering rules (35 % of your score):** [RULES.md](RULES.md)
-- 🗂️ **The data pack:** [data/DATA.md](data/DATA.md)
-
-**Northfina** is a Helsinki-based leasing platform. It started as Etufillari, a bike-leasing service, and now leases any kind of asset. Dealers, banks and customers use it to get from a price quote to a signed contract, then through monthly invoices to the end of the lease. This repo is a small, independent playground, not our product code.
-
----
+Browse an asset, choose lease terms, apply through a rules-based question flow and
+manage simulated leases from your account. The interface supports English, Finnish,
+Swedish and Estonian. All product decisions use rules, data and algorithms; there
+are no AI, ML or LLM features inside the app.
 
 ## Quick start
 
-You need **Git** and **Node.js 22** (with [nvm](https://github.com/nvm-sh/nvm): `nvm install` reads `.nvmrc`).
+You need Git, npm, Node.js **22** (the exact version is in [.nvmrc](.nvmrc)) and
+GNU Make. macOS and Linux are supported; on Windows, use WSL. Make is optional:
+the npm commands below provide the same workflow.
 
 ```bash
-git clone https://github.com/<your-team>/northfina-lease-loop.git
+git clone https://github.com/Tiisetso/northfina-lease-loop.git
 cd northfina-lease-loop
-nvm install          # Node 22
-npm ci               # installs dependencies and the Git hooks
-npm run db:setup     # creates .env and a local SQLite database with the 30 assets
-npm run dev          # http://localhost:3000
+nvm install
+nvm use
+make setup
+make dev
 ```
 
-You should see the asset catalogue in English. Switch to Finnish, Swedish or Estonian in the header.
+Open **http://localhost:3000**. The catalogue is public; register an account to
+apply and view your leases. Stop the development server with **Ctrl+C**.
 
-| Command                 | What it does                                                   |
-| ----------------------- | -------------------------------------------------------------- |
-| `npm run dev`           | Start the app with hot reload                                  |
-| `npm test`              | Run all tests once (`npm run test:watch` to keep them running) |
-| `npm run test:coverage` | Tests with the 60 % coverage gate                              |
-| `npm run check:all`     | **Everything CI runs.** Run it before you push                 |
-| `npm run db:migrate`    | After you change `prisma/schema.prisma`: creates a migration   |
-| `npm run db:reset`      | Wipe the local database and seed it again                      |
-| `npm run db:studio`     | Browse the database in your browser                            |
+`make setup` runs `npm ci` followed by `RUST_LOG=info npm run db:setup`. It installs the locked
+dependencies and Git hooks, generates the Prisma client, creates `.env` if missing,
+generates a local authentication secret, applies migrations and seeds the 30 assets.
+Existing environment values and database records are preserved. SQLite runs locally;
+no separate database server or external service credentials are needed.
 
-After pulling database changes, run `npm run db:setup` before starting the app. It applies
-pending migrations and adds missing seed assets without resetting your data. `npm run dev`
-also regenerates the Prisma client on startup.
+Without Make:
 
----
+```bash
+npm ci
+RUST_LOG=info npm run db:setup
+npm run dev
+```
 
-## 15-minute tour
+## Everyday commands
 
-New to TypeScript, Next.js or Prisma? Read these files in this order:
+Run `make` or `make help` to list the available commands.
 
-1. **`data/`**: the synthetic data pack. Open `assets.json` and `coefficient-table.json`, then the worked example in [DATA.md](data/DATA.md).
-2. **`src/data/`**: Zod schemas that load and type-check every data file. If you want to know a field's type, look here.
-3. **`src/domain/coefficient.ts`** and its test: a pure function that finds the pricing factor, and how we test it. **Your business logic goes in `src/domain/`**, written the same way.
-4. **`src/domain/price-list.ts`**: picks the right price for a date. The price list changes on Friday.
-5. **`src/app/[locale]/page.tsx`**: the catalogue page. Next.js App Router: every folder under `src/app/` is a URL.
-6. **`src/app/api/assets/`**: API routes. They use the response envelope (`src/server/api-response.ts`), and the status change writes an audit row in the same transaction (`src/server/audit.ts`).
-7. **`prisma/schema.prisma`**: the database. Add your own models (Contract, Invoice, …) and run `npm run db:migrate`.
+| Task                                             | Make                                         | npm equivalent                                          |
+| ------------------------------------------------ | -------------------------------------------- | ------------------------------------------------------- |
+| First setup or refresh dependencies and database | `make setup`                                 | `npm ci && RUST_LOG=info npm run db:setup`              |
+| Start development                                | `make dev` or `make run`                     | `npm run dev`                                           |
+| Run all local checks                             | `make check`                                 | `npm run check:all`                                     |
+| Run tests once                                   | `make test`                                  | `npm test`                                              |
+| Watch tests                                      | `make test-watch`                            | `npm run test:watch`                                    |
+| Tests with coverage                              | `make coverage`                              | `npm run test:coverage`                                 |
+| Lint                                             | `make lint`                                  | `npm run lint`                                          |
+| Format files                                     | `make format`                                | `npm run format`                                        |
+| Check types                                      | `make typecheck`                             | `npm run typecheck`                                     |
+| Build for production                             | `make build`                                 | `npm run build`                                         |
+| Serve a production build                         | `make start`                                 | `npm run start`                                         |
+| Apply migrations and add missing seed assets     | `make db-setup`                              | `RUST_LOG=info npm run db:setup`                        |
+| Seed an initialized database                     | `make db-seed`                               | `npm run db:seed`                                       |
+| Create a migration after editing the schema      | `make migrate ARGS="--name describe_change"` | `npm run db:migrate -- --name describe_change`          |
+| Browse the database                              | `make studio`                                | `npm run db:studio`                                     |
+| Remove generated caches                          | `make clean`                                 | Remove `.next/`, `coverage/` and `tsconfig.tsbuildinfo` |
 
-Handy docs: [Next.js App Router](https://nextjs.org/docs/app), [TypeScript for programmers who know C](https://www.typescriptlang.org/docs/handbook/typescript-in-5-minutes.html), [Prisma](https://www.prisma.io/docs), [Vitest](https://vitest.dev/guide/), [Tailwind CSS](https://tailwindcss.com/docs).
+`make clean` keeps `.env`, the database and installed dependencies. All command
+targets are phony, so files with matching names cannot prevent them from running.
 
-Everything in the skeleton is replaceable. Keep the rules, not necessarily the code.
+Pass extra CLI options through `ARGS` on development, build, start, test and migration
+commands, for example:
 
----
+```bash
+make test ARGS="src/domain/pricing.test.ts"
+make build ARGS=--webpack
+```
 
-## Lease applications
+The Webpack option is useful in environments that block Turbopack's internal worker
+ports. `make check` always runs the unchanged `check:all` script and its default build.
 
-See [APPLICATIONS.md](APPLICATIONS.md) for the question flow, eligibility rules,
-manual-review outcomes and the approval required before simulated checkout.
+## Returns and second life
+
+See [RECOVERY.md](RECOVERY.md) for customer returns, staff assessment access,
+the valuation and settlement formulas, and publishing a second-life offer.
 
 ## Returns and second life
 
@@ -71,45 +89,113 @@ the valuation and settlement formulas, and publishing a second-life offer.
 
 ## Project decisions
 
-[Read the generated decision log](docs/DECISIONS.md) for accepted project choices
-and their reasons. [The contribution guide](docs/decisions/README.md) explains
-reviewed source records, publication through a rolling documentation PR and recovery.
+Stop the running app before refreshing dependencies or database models.
 
-## Team pull requests
+```bash
+make setup
+make dev
+```
 
-Use [.github/pull_request_template.md](.github/pull_request_template.md) for team
-feature and bug-fix PRs. It provides the shared structure for authors and coding
-agents: context, implementation, reproducible testing, visual evidence and a checklist.
-Fill every section, report actual check results and explain anything that is not applicable.
-Use a short title such as `fix(auth): prevent registration crash [T1038]` when a ticket exists.
+If dependencies have not changed, `make db-setup` is enough to apply new migrations,
+regenerate the client and add missing seed assets. The development command also
+regenerates the Prisma client before starting Next.js.
+
+## Local configuration
+
+Setup creates the ignored `.env` file from [.env.example](.env.example).
+
+| Variable             | Purpose                                                       |
+| -------------------- | ------------------------------------------------------------- |
+| `DATABASE_URL`       | Local SQLite file; defaults to `file:./dev.db`                |
+| `BETTER_AUTH_URL`    | Exact application origin; defaults to `http://localhost:3000` |
+| `BETTER_AUTH_SECRET` | Generated locally by setup; keep it private                   |
+
+If you change the host or port, update `BETTER_AUTH_URL` to the same origin before
+starting the app. Never commit `.env` or local database files. Use the same Node
+version for installing dependencies and running the app because SQLite uses a native module.
+
+The Makefile sets `RUST_LOG=info` for database setup because affected Prisma versions
+can fail SQLite initialization when engine output is suppressed. This setting is
+scoped to setup; it does not change the app's logging. When using npm directly,
+use `RUST_LOG=info npm run db:setup`. See [the Prisma guide](PRISMA_GUIDE.md).
+
+## Current application
+
+- Catalogue and product pages with dated net prices, illustrative photos and lease sliders.
+- Email/password accounts, protected customer data and account settings.
+- Cart, conditional application questions, eligibility reasons and an approval gate.
+- Simulated checkout with stored price snapshots.
+- Lease dashboard with invoice forecasts, issued invoice/payment displays and management requests.
+
+Checkout currently creates simulated leases. Return, buyout and exchange controls
+submit requests; they do not yet fulfil those actions. Full contract signing,
+regular invoice issuance and returned-item re-pricing/re-leasing remain work for the
+required challenge loop. See [the challenge](CHALLENGE.md) for the full requirements.
+
+## Project structure
+
+| Location          | Responsibility                                                  |
+| ----------------- | --------------------------------------------------------------- |
+| `src/app/`        | Next.js pages and API routes                                    |
+| `src/components/` | Shared interface components                                     |
+| `src/domain/`     | Pure business rules and adjacent Vitest tests                   |
+| `src/server/`     | Authentication, persistence, audit transactions and API helpers |
+| `src/data/`       | Typed data loaders, schemas and photo credits                   |
+| `src/i18n/`       | Formatting and en/fi/sv/et messages                             |
+| `prisma/`         | Database schema, generated migrations and seed entry point      |
+| `data/`           | Synthetic assets, prices, questions and other challenge inputs  |
+| `scripts/`        | Quality checks, local setup and decision-log tooling            |
+
+Read [data/DATA.md](data/DATA.md) before using the data pack. Prices are integer
+euro cents and exclude VAT unless stated otherwise. Personas, brands, the future
+VAT change and CO₂ factors are fictional; product photographs are illustrative.
+
+## Contributing
+
+Follow [AGENTS.md](AGENTS.md) and [RULES.md](RULES.md). Keep business rules pure and
+tested in `src/domain/`, use the shared API envelope, put every data change through
+`withAudit()` and add interface strings in all four languages. Edit the Prisma schema
+and use `make migrate` for database changes; never hand-write migration SQL.
+
+Run `make check` before requesting review. It checks formatting, lint, types, file
+size, no-AI rules, secret scanning, decision records, test coverage and the production build. Coverage
+must reach 60% for lines, statements, functions and branches. GitHub CI additionally
+validates commit messages. Use conventional commits such as
+`feat(pricing): explain monthly rent`; keep Git hooks enabled.
+
+Follow [CONTRIBUTING.md](CONTRIBUTING.md) for the commit and PR workflow. Start each
+team PR with a plain-language summary of what changed and why it matters: 1–2 short
+sentences, at most 50 words. Use the [team PR template](.github/pull_request_template.md)
+in order; PR title, section structure and summary length are checked automatically.
+Use CI for automated results and include useful local observations or visual evidence.
+No manual checklist or checkbox signoff is required for team PRs. Keep the PR title
+and any squash commit title conventional so the resulting history passes CI.
+Meaningful choices follow the
+[decision-record guide](docs/decisions/README.md); accepted choices appear in the
+[generated decision log](docs/DECISIONS.md).
+
+Further guides: [applications](APPLICATIONS.md), [authentication](AUTHENTICATION.md),
+[lease dashboard](LEASE_DASHBOARD.md), [Prisma](PRISMA_GUIDE.md) and [UI/UX](UI_UX.md).
 
 ## Submitting
 
-You can't push to this repo. You work in **your own fork** and send us a **pull request**.
+Enable GitHub Actions in the team fork and open the judging PR against
+`etufillari/northfina-lease-loop` → `main` **before Friday 6 November 2026 at 16:00
+Helsinki time**. The title must be `Team <name>: <your product name>`; use the
+[hackathon submission template](.github/hackathon_submission.md).
 
-1. **One person per team forks** this repo (the **Fork** button, top right) and adds the other two as collaborators in the fork (_Settings → Collaborators_).
-2. **Enable Actions in the fork**: open the fork's **Actions** tab and click _"I understand my workflows, go ahead and enable them"_. Now CI runs on every push.
-3. Everyone clones the fork and commits as usual. Small, conventional commits; the hooks help.
-4. **Before Friday 6 November 16:00**, open a pull request from your fork to `etufillari/northfina-lease-loop` `main`.
-   - Title: `Team <name>: <your product name>`.
-   - Use the [final hackathon submission structure](.github/hackathon_submission.md): members, the Smart Problems you picked, and how to demo.
-   - You can open it early and keep pushing until the deadline.
-5. **At 16:00 we record the latest commit of every open pull request.** That commit is what we judge. Anything pushed later is ignored, and pull requests opened after 16:00 don't count.
+Include the team members, at least two chosen Smart Problems, working scenario cards
+and reproducible demo instructions. The latest commit of each open PR is recorded
+at 16:00; later pushes are ignored and PRs opened after the deadline do not count.
+Judging PRs are not merged. The pitch is four minutes followed by two minutes of Q&A.
+Copying another team's work disqualifies both copies.
 
-We won't merge pull requests. They're only how you hand in your work.
+## License and help
 
-**Heads-up:** forks of a public repo are public, so other teams can see your fork. Your commit history shows who built what, and copying another team's work disqualifies both copies.
+The starter code and data pack use the [MIT license](LICENSE). Your team owns the
+code it writes. Opening the judging PR permits Northfina to read and run that code
+for judging and interviews; it does not grant permission to reuse or publish it
+elsewhere without asking.
 
----
-
-## Your code is yours
-
-The starter code in this repo is MIT-licensed (see [LICENSE](LICENSE)); use it however you like.
-
-**Your team owns the code you write.** Opening a pull request gives Northfina permission to read and run your code for judging and for interviews with your team. Nothing more: we won't merge it, reuse it or publish it elsewhere without asking you first.
-
-## Help
-
-- During the hackathon: **#ask-a-mentor** on the hackathon Discord.
-- A bug in this starter repo: open a GitHub issue here.
-- Please follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+Ask mentors in the hackathon Discord's **#ask-a-mentor** channel. Follow the
+[Code of Conduct](CODE_OF_CONDUCT.md).

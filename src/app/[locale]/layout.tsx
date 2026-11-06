@@ -83,7 +83,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
 
         {identity?.role === 'staff' ? (
           <Link
-            href={`/${locale}/staff/returns`}
+            href={`/${locale}/staff`}
             className="pressable fixed right-5 bottom-5 z-40 inline-flex min-h-target items-center gap-2 rounded-pill border border-hairline bg-ink px-5 py-3 text-caption font-semibold text-white shadow-lg"
           >
             <UiIcon name="settings" className="size-4" />

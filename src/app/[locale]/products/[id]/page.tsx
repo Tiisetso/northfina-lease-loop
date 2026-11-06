@@ -29,7 +29,7 @@ export default async function ProductPage({ params }: PageProps<'/[locale]/produ
     loadCoefficientTable(),
     loadVatRates(),
   ]);
-  if (!row) notFound();
+  if (!row || row.isFleetHistory) notFound();
   const asset = toAsset(row);
   const available = asset.status === 'available' && row.contracts.length === 0;
   const today = todayIso();

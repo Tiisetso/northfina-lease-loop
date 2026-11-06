@@ -1,5 +1,12 @@
 import { z } from 'zod';
 import { assetConditionSchema } from '@/data/schemas';
+import {
+  checkResults,
+  damageLiabilities,
+  damageTypes,
+  sanitizationMethods,
+  usageSources,
+} from '@/domain/inspection';
 import { ApiError, readJsonBody } from './api-response';
 
 export const reportIssuesByCategory = {
@@ -68,13 +75,46 @@ export const recoveryReportSchema = z.strictObject({
     .optional(),
 });
 export type RecoveryReport = z.infer<typeof recoveryReportSchema>;
-export const inspectionSchema = z.strictObject({
+const repairCents = z.number().int().min(0).max(25_000_000);
+export const inspectionRecordSchema = z.strictObject({
+  usageSource: z.enum(usageSources),
+  customerPresent: z.boolean(),
+  checks: z
+    .array(
+      z.strictObject({
+        id: z.string().min(1).max(60),
+        result: z.enum(checkResults),
+        repairCents,
+        note: z.string().trim().max(300),
+      })
+    )
+    .max(40),
+  readings: z
+    .array(z.strictObject({ id: z.string().min(1).max(60), value: z.number().nullable() }))
+    .max(20),
+  damage: z
+    .array(
+      z.strictObject({
+        area: z.string().trim().min(1).max(80),
+        type: z.enum(damageTypes),
+        liability: z.enum(damageLiabilities),
+        repairCents,
+      })
+    )
+    .max(12),
+});
+const inspectionFields = {
   condition: assetConditionSchema,
   targetCondition: z.enum(['good', 'like_new']),
   usageValue: z.number().int().min(0).max(100_000_000),
   ageMonths: z.number().int().min(0).max(1200),
-  additionalRepairCents: z.number().int().min(0).max(25_000_000),
   notes: z.string().trim().min(1).max(1000),
+};
+export const inspectionSchema = z.strictObject({
+  ...inspectionFields,
+  additionalRepairCents: repairCents,
+  /** Absent only on assessments saved before itemized inspections existed. */
+  record: inspectionRecordSchema.optional(),
 });
 export type RecoveryInspection = z.infer<typeof inspectionSchema>;
 export const recoveryCalculationSchema = z.object({
@@ -88,6 +128,10 @@ export const recoveryCalculationSchema = z.object({
   outstandingInvoiceCents: z.number().int().nonnegative().default(0),
   accruedUnissuedCents: z.number().int().nonnegative().default(0),
   damageNetCents: z.number().int().nonnegative().default(0),
+  /** The logged damage behind the customer's charge, so they can see what they are paying for. */
+  chargeableDamage: z
+    .array(z.object({ area: z.string(), type: z.string(), netCents: z.number().int() }))
+    .default([]),
   recovery: z.object({
     asReturnedValueCents: z.number().int().nonnegative(),
     postRepairValueCents: z.number().int().nonnegative(),
@@ -109,16 +153,46 @@ export const recoveryCalculationSchema = z.object({
   }),
 });
 export type RecoveryCalculation = z.infer<typeof recoveryCalculationSchema>;
+const shortText = z.string().trim().min(1).max(120);
+export const workRecordSchema = z.strictObject({
+  completedWork: z.array(z.string().max(60)).max(30),
+  retestedChecks: z.array(z.string().max(60)).max(40),
+  sanitization: z
+    .strictObject({
+      storageModel: shortText,
+      storageSerial: shortText,
+      method: z.enum(sanitizationMethods),
+      technique: shortText,
+      tool: shortText,
+      verification: shortText,
+    })
+    .nullable(),
+  notes: z.string().trim().max(1000),
+});
 export const staffRecoveryActionSchema = z.discriminatedUnion('action', [
-  inspectionSchema.extend({ action: z.literal('assess') }),
+  z.strictObject({
+    ...inspectionFields,
+    action: z.literal('assess'),
+    // The repair total is derived from these lines on the server, never sent separately.
+    record: inspectionRecordSchema,
+  }),
   z.strictObject({ action: z.literal('receive') }),
-  z.strictObject({ action: z.literal('publish'), workCompleted: z.literal(true) }),
+  z.strictObject({ action: z.literal('complete_work'), work: workRecordSchema }),
+  z.strictObject({
+    action: z.literal('publish'),
+    // The price the staff member saw; publishing fails if today's price differs.
+    expectedPriceCents: z.number().int().nonnegative(),
+  }),
   z.strictObject({ action: z.literal('retire') }),
 ]);
 export type StaffRecoveryAction = z.infer<typeof staffRecoveryActionSchema>;
 
 /** Bound JSON even when Content-Length is omitted; return the app's safe API errors. */
-export async function readRecoveryBody<S extends z.ZodType>(request: Request, schema: S) {
+export async function readRecoveryBody<S extends z.ZodType>(
+  request: Request,
+  schema: S,
+  maxBytes = 8192
+) {
   if (request.headers.get('content-type')?.split(';')[0]?.trim() !== 'application/json')
     throw new ApiError(415, 'INVALID_CONTENT_TYPE', 'JSON is required.');
   const reader = request.body?.getReader();
@@ -130,7 +204,7 @@ export async function readRecoveryBody<S extends z.ZodType>(request: Request, sc
         const next = await reader.read();
         if (next.done) break;
         size += next.value.length;
-        if (size > 8192) {
+        if (size > maxBytes) {
           await reader.cancel();
           throw new ApiError(413, 'TOO_LARGE', 'Request is too large.');
         }

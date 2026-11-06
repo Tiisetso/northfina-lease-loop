@@ -62,7 +62,7 @@ export function AccountNavigation({
         ))}
         {staff ? (
           <Link
-            href={`/${locale}/staff/returns`}
+            href={`/${locale}/staff`}
             className="mt-2 flex min-h-target items-center gap-3 rounded-sm border-t border-hairline px-3 text-caption text-primary hover:bg-parchment"
           >
             <UiIcon name="leases" className="size-5" />

@@ -19,7 +19,7 @@ export async function RecoveryHistory({
   const assessment = await db.returnAssessment.findFirst({
     where: { status: 'published', request: { contract: { assetId } } },
     orderBy: { updatedAt: 'desc' },
-    select: { calculationJson: true, updatedAt: true },
+    select: { calculationJson: true, updatedAt: true, publishedPriceCents: true },
   });
   if (!assessment) return null;
   const calculation = recoveryCalculationSchema.parse(JSON.parse(assessment.calculationJson));
@@ -49,8 +49,10 @@ export async function RecoveryHistory({
               <dt className="text-caption text-ink-muted">{t('recovery.nextPrice')}</dt>
               <dd className="mt-1 font-semibold">
                 {formatEuro(
-                  invoiceAmounts(calculation.recovery.postRepairValueCents, vatBasisPoints)
-                    .totalCents,
+                  invoiceAmounts(
+                    assessment.publishedPriceCents ?? calculation.recovery.postRepairValueCents,
+                    vatBasisPoints
+                  ).totalCents,
                   intlLocale[locale]
                 )}
               </dd>

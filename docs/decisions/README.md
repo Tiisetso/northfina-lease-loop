@@ -100,6 +100,9 @@ Never add a token or bypass protections silently.
 PRs created by `GITHUB_TOKEN` may not trigger other workflows automatically. If
 required checks are introduced for the rolling PR, use an owner-approved way to
 trigger them or an approved App credential; never mark them passed or bypass them.
+GitHub can require approval before running these workflows; this is separate from
+PR-description checkboxes. Newly created publication PRs use the shared summary-first
+format with no manual checklist. The publisher preserves existing PR descriptions.
 
 ## Local commands and recovery
 
@@ -119,6 +122,11 @@ immutability and the one-record limit, pass the full base commit SHA:
 ```bash
 npm run decisions:validate -- --base <full-base-commit-sha>
 ```
+
+The PR workflow takes this SHA from the first parent of GitHub's checked-out test
+merge, after confirming that the checkout is a merge. This pins validation to the
+base actually represented by the checkout. An older base SHA in an event payload
+must not make already-merged source records look like new additions to a rolling PR.
 
 For recovery, use a clean, up-to-date default-branch checkout with full Git history
 and a working `origin`. Authenticate `gh` with repository contents and pull-request

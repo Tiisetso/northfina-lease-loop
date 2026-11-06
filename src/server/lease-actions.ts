@@ -182,7 +182,10 @@ export async function payBuyout(
         where: { contractId: input.contractId, status: { in: ['pending', 'approved'] } },
         data: { status: 'cancelled' },
       });
-      await tx.contract.update({ where: { id: input.contractId }, data: { status: 'bought' } });
+      await tx.contract.update({
+        where: { id: input.contractId },
+        data: { status: 'bought', endedOn: input.today },
+      });
       await tx.asset.update({ where: { id: data.contract.assetId }, data: { status: 'reserved' } });
       return receipt.id;
     }

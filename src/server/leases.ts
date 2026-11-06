@@ -120,7 +120,7 @@ export async function requestLeaseChange(
             where: {
               OR: [
                 { status: 'pending' },
-                { assessment: { status: { in: ['quoted', 'accepted', 'received'] } } },
+                { assessment: { status: { in: ['quoted', 'accepted', 'received', 'ready'] } } },
               ],
             },
           },

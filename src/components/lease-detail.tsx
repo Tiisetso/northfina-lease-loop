@@ -216,6 +216,30 @@ export function LeaseDetail({ locale, lease, rates, factors, today, liveBuyoutTo
                         : 'return.returnMethod'
                     )}
                   </p>
+                  {quote.chargeableDamage.length ? (
+                    <>
+                      <p className="mt-4 text-caption font-semibold">
+                        {t('return.chargeableDamage')}
+                      </p>
+                      <ul className="mt-2 divide-y divide-divider text-caption">
+                        {quote.chargeableDamage.map((item) => (
+                          <li key={item.area} className="flex justify-between gap-4 py-2">
+                            <span>
+                              {item.area} · {t(`inspection.damage.${item.type}` as MessageKey)}
+                            </span>
+                            <span className="shrink-0">
+                              {currency(
+                                invoiceAmounts(item.netCents, quote.vatBasisPoints).totalCents
+                              )}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="mt-2 text-caption text-ink-muted">
+                        {t('return.chargeableNote')}
+                      </p>
+                    </>
+                  ) : null}
                 </details>
                 {assessment.status === 'quoted' && quote.quoteDate === today ? (
                   <ReturnQuoteAccept

@@ -31,6 +31,8 @@ model Asset {
   secondLifePriceCents  Int?
   maintenanceUsageValue Int        @default(0)
   priceRevision         Int        @default(1)
+  // Simulated fleet rows that only give the admin charts a history. Never offered for lease.
+  isFleetHistory        Boolean    @default(false)
   created_at            DateTime   @default(now())
   updated_at            DateTime   @updatedAt
   contracts             Contract[]
@@ -80,11 +82,11 @@ model Customer {
 // Contract amounts are the agreed net price snapshot, in whole euro cents.
 // startDate is the first invoice date (YYYY-MM-DD); future invoices are forecasts.
 model Contract {
-  id                    String         @id @default(cuid())
+  id                    String               @id @default(cuid())
   customerId            String
-  customer              Customer       @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  customer              Customer             @relation(fields: [customerId], references: [id], onDelete: Restrict)
   assetId               String
-  asset                 Asset          @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  asset                 Asset                @relation(fields: [assetId], references: [id], onDelete: Restrict)
   startDate             String
   termMonths            Int
   listPriceCents        Int
@@ -92,12 +94,14 @@ model Contract {
   monthlyNetCents       Int
   buyoutCents           Int
   priceListVersion      Int
-  status                String         @default("active")
-  isDemo                Boolean        @default(false)
+  status                String               @default("active")
+  isDemo                Boolean              @default(false)
   annualRateBasisPoints Int?
   startCondition        String?
   startUsageValue       Int?
-  createdAt             DateTime       @default(now())
+  // The date the lease stopped running, for month-by-month reporting. Null while active.
+  endedOn               String?
+  createdAt             DateTime             @default(now())
   invoices              Invoice[]
   requests              LeaseRequest[]
   events                LeaseEvent[]
@@ -166,15 +170,19 @@ model LeaseRequest {
 
 // An immutable quote snapshot followed by explicit customer/staff lifecycle transitions.
 model ReturnAssessment {
-  id              String       @id @default(cuid())
-  requestId       String       @unique
-  request         LeaseRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
-  assessedBy      String
-  inspectionJson  String
-  calculationJson String
-  status          String       @default("quoted") // quoted | accepted | received | published | retired | bought
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  id                  String       @id @default(cuid())
+  requestId           String       @unique
+  request             LeaseRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  assessedBy          String
+  inspectionJson      String
+  calculationJson     String
+  status              String       @default("quoted") // quoted | accepted | received | ready | published | retired | bought
+  // Who finished what after receipt: completed work, re-tests and any data-wipe record.
+  workRecordJson      String?
+  // The price actually published. It can be lower than the quote if the item aged meanwhile.
+  publishedPriceCents Int?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
 }
 
 // Only customer-safe events are displayed. Never store previous customers' details.
