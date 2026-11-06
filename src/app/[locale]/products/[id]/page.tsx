@@ -5,18 +5,17 @@ import { connection } from 'next/server';
 import { LeaseCalculator } from '@/components/lease-calculator';
 import { ProductDetails } from '@/components/product-details';
 import { ItemPassport } from '@/components/item-passport';
-import { RecoveryHistory } from '@/components/recovery-history';
 import { ProductPhoto } from '@/components/product-photo';
 import { loadCoefficientTable, loadPriceLists, loadVatRates } from '@/data/load';
 import { formatEuro } from '@/domain/money';
 import { assetOfferPrice } from '@/domain/asset-offer';
 import { invoiceAmounts } from '@/domain/lease-billing';
-import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
 import { toAsset } from '@/server/assets';
 import { db } from '@/server/db';
 import { appToday, demoModeEnabled } from '@/server/demo-mode';
+import { publishedRefurbishment } from '@/server/relisting';
 
 export default async function ProductPage({ params }: PageProps<'/[locale]/products/[id]'>) {
   const { locale, id } = await params;
@@ -40,6 +39,8 @@ export default async function ProductPage({ params }: PageProps<'/[locale]/produ
     (rate) => rate.valid_from <= today && (rate.valid_to === null || rate.valid_to >= today)
   );
   const vatBasisPoints = rate ? Math.round(rate.rate_percent * 100) : 0;
+  const refurbishment =
+    row.secondLifePriceCents !== null ? await publishedRefurbishment(db, asset.id) : null;
   const t = getT(locale);
 
   return (
@@ -67,13 +68,15 @@ export default async function ProductPage({ params }: PageProps<'/[locale]/produ
           <span className="text-ink-muted">{asset.model}</span>
         </nav>
 
-        <div className="mt-8 grid items-start gap-10 tablet:grid-cols-2 desktop:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] desktop:gap-12">
+        <div className="mt-8 grid items-start gap-10 tablet:grid-cols-2 tablet:items-stretch desktop:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] desktop:gap-12">
           <div className="min-w-0">
             <ProductPhoto
+              fillHeight
+              showCaption={false}
               assetId={asset.id}
               productName={`${asset.make} ${asset.model}`}
               locale={locale}
-              sizes="(min-width: 1200px) 580px, (min-width: 834px) 50vw, 100vw"
+              sizes="(min-width: 834px) 1200px, 100vw"
             />
           </div>
 
@@ -131,23 +134,12 @@ export default async function ProductPage({ params }: PageProps<'/[locale]/produ
                   : t('asset.noPrice')}
               </span>
             </div>
-            <p className="mt-2 text-fine text-ink-muted">
-              <time dateTime={today}>
-                {t('catalogue.pricesOn', { date: formatIsoDate(today, locale) })}
-              </time>
-              {price.ok
-                ? ` · ${t('asset.priceListVersion', { version: price.priceListVersion })}`
-                : null}
-            </p>
             <p className="mt-2 text-fine text-ink-muted">{t('pricing.roundingRule')}</p>
           </section>
         </div>
       </div>
-      {row.secondLifePriceCents !== null ? (
-        <RecoveryHistory assetId={asset.id} locale={locale} vatBasisPoints={vatBasisPoints} />
-      ) : null}
       <ItemPassport asset={asset} locale={locale} />
-      <ProductDetails asset={asset} locale={locale} />
+      <ProductDetails asset={asset} locale={locale} refurbishment={refurbishment} />
     </div>
   );
 }

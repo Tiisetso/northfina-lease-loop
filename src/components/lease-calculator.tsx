@@ -38,7 +38,7 @@ export function LeaseCalculator({
   const money = (cents: number) => formatEuro(cents, intlLocale[locale]);
 
   return (
-    <div className="mt-6 space-y-8">
+    <div className="mt-5 space-y-4">
       <div>
         <label
           htmlFor="lease-term"
@@ -56,7 +56,7 @@ export function LeaseCalculator({
           value={termIndex}
           aria-valuetext={t('product.months', { count: term })}
           onChange={(event) => setTermIndex(Number(event.target.value))}
-          className="mt-3 min-h-target w-full cursor-pointer accent-primary"
+          className="min-h-target w-full cursor-pointer accent-primary"
         />
       </div>
       <div>
@@ -76,7 +76,7 @@ export function LeaseCalculator({
           value={downPayment}
           aria-valuetext={money(gross(downPayment))}
           onChange={(event) => setDownPayment(Number(event.target.value))}
-          className="mt-3 min-h-target w-full cursor-pointer accent-primary"
+          className="min-h-target w-full cursor-pointer accent-primary"
         />
       </div>
       <div

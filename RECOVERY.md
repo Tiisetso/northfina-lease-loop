@@ -1,8 +1,23 @@
 # Returns, assessment and second-life offers
 
-The customer journey is **My leases → open lease → guided condition check → staff confirms the return → customer accepts → staff receives → refurbishment sign-off → price review → second-life catalogue offer**.
+The customer journey is **My leases → open lease → guided condition check → staff inspect → customer pays → staff receive → ready to relist → price review → second-life catalogue offer**.
 
-The condition check uses the recorded starting condition and lifetime usage, then asks about power, battery health (or unable to check), category-specific functions, new cosmetic damage and accessories. A running item-value and damage estimate remains visible. Existing wear and ordinary light use are not charged again; faults whose cost is not in the supplied table require a professional repair quote. This is inspired by the assessment/revised-offer pattern, not Swappie's proprietary valuation algorithm.
+The condition check uses the recorded starting condition and lifetime usage, then asks how each part actually behaves, with answers written for that part, plus battery health, new cosmetic damage and accessories. One running amount stays visible: what the customer would pay. Existing wear and ordinary light use are not charged again.
+
+**What the customer pays, policies `condition-v3` and `settlement-v3`:** the cost of ending early plus their share of repairs plus unpaid rent, added together.
+
+- **Ending early** is what is still owed today minus what the item is worth to us after the work every return needs, never more than the remaining rent. It falls as the lease goes on: leaving at month 2 of 36 costs more than at month 30. The return screen has a slider that recalculates this for any month.
+- **Repairs** come from the part each answer points to. Laptops use prices by price class in `src/domain/laptop-parts.ts`: demo figures set inside the ranges published by [Which?](https://www.which.co.uk/reviews/finding-a-tradesperson/article/how-much-do-laptop-and-computer-repairs-cost-aj2mz8y6SD9C), [a German repair shop](https://macinrepair.de/en/prices/), [a London shop](https://www.laptoprepairfix.co.uk/laptop-repair.htm) and [a UK guide](https://nearmetrades.uk/guides/it-and-consultancy/laptop-repair-costs-work-guide). They are not supplier quotes. Other categories still use a share of the original price.
+- **Share of repairs** falls evenly from 100 % at the start of the lease to 50 % at the end, because the lease has paid for most of the item and its parts are older. It is our demo policy.
+- **Battery** is judged against age. We replace below 80 %, and charge only below what age explains: 95 % minus 1.25 points a month, never below 60 %. So 70 % after two months is charged and 70 % after two years is not. The rule is ours; published figures only suggest about 80 % after three to five years.
+
+Repairs are never charged above what the item was worth.
+
+**The price from the return form is the price.** When the form is submitted, the server recalculates the amount from the customer's answers and saves it with the report; it ignores any price a client sends. Inspection does not change it, so the customer sees the same ending-early and repair lines on every screen. Inspection records the item and our own costs, and those costs are the only thing its repair lines affect. Each suggested cost starts from what the customer was quoted for that part. Unpaid rent is added at its current amount, because it comes from the invoices: rent paid in the meantime is not charged again. The trade-off is deliberate, to keep the journey simple: damage the customer did not report is our cost, not theirs. A report with no answers, such as an older one, has no agreed price, so its quote still comes from the inspection, including the new-damage lines staff mark.
+
+Relisting shows the work, what the customer pays toward it and what we keep.
+
+**Paying:** on a demo lease the customer pays the quote with a simulated payment, recorded once per assessment as a receipt separate from monthly invoices. Unpaid rent in the amount is settled with it. A paid return cannot be cancelled. A non-demo lease only accepts the quote, because no real payment service exists.
 
 **Buyout is self-service:** open Buy this item, review the discounted-rent/residual/tax breakdown, choose a simulated payment method, and confirm payment. No condition form or staff approval is required. An audited, idempotent settlement receipt is stored separately from monthly invoices. Unpaid and accrued rent included in the buyout is settled once; the contract becomes bought. Real contracts cannot be closed through simulated payment.
 
@@ -26,7 +41,7 @@ If your local database contains exactly one account, `npm run staff:grant -- --o
 
 Reports collect condition, lifetime usage, relevant faults, missing accessories, notes and a preferred return date. Laptops include screen, keyboard and battery issues; bikes include brakes, tyres, battery and drive; farm machinery includes engine, hydraulic and service issues.
 
-A report is not an inspection. Staff complete the itemized inspection described below, then confirm age and target condition. Inspection notes must describe the planned work. The saved quote contains the inputs, age/original-price baseline, tax and finance rate, line-item work costs, outputs and policy versions. Customer responses omit private inspector notes and identity.
+A report is not an inspection. Staff complete the itemized inspection described below, then confirm age and target condition. Inspection notes are optional. The saved quote contains the inputs, age/original-price baseline, tax and finance rate, line-item work costs, outputs and policy versions. Customer responses omit private inspector notes and identity.
 
 For legacy assets missing the original price/date, the earliest recorded contract supplies the price baseline and staff document age. This is an estimate, not proof of the original new-item value. New contracts preserve the original baseline and financing rate; a later lease never restarts the item's age.
 
@@ -47,19 +62,18 @@ The form is built from what dealers, lease companies, machinery buyers and IT re
 | Measurements                          | Real forms record numbers, such as Nissan's pad thickness per wheel                            | Nissan, ATTRA                                                                                                                                                                                                                                                                                                                                |
 | Damage log with responsibility        | The core lease question: normal wear is not charged, damage from an event can be               | BVRLA                                                                                                                                                                                                                                                                                                                                        |
 | Grade limit from the worst finding    | Auctions cap frame-damaged vehicles at a low grade, whatever else looks good                   | [NAAA grading scale](https://www.naaa.com/Policy/Vehicle_GradingScale.html)                                                                                                                                                                                                                                                                  |
-| Data wipe record, per laptop          | Drive identity, method, technique, tool and verification                                       | [NIST SP 800-88 Rev. 2](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-88r2.pdf) section 4.6, read through [this summary](https://recore.replugit.com/blog/nist-800-88-rev-2-itad-sanitization-evidence)                                                                                                                  |
 
 Rules that follow from the findings:
 
 - Every check needs an answer, and its repair cost is entered as a line. The server totals the lines; the browser never sends a repair total.
-- The worst finding limits the grade: structure or identity → poor, safety or function → fair, paperwork, accessories, any wear or any logged damage → good, otherwise like new. The server rejects a better grade.
+- The worst finding limits the grade: structure or identity → poor (a laptop hinge counts as a function fault, not structure), safety or function → fair, paperwork, accessories, any wear or any logged damage → good, otherwise like new. The server rejects a better grade.
 - The sources set no thresholds that carry across categories, so no numeric reading fails an item. The one exception is a prompt, not a rule: a battery under 80 % suggests a replacement, a common refurbisher benchmark that varies by seller.
 
-Known gaps: photos are not stored, a laptop has one wipe record even if it has several drives, and the customer does not countersign the inspection.
+Known gaps: photos are not stored, there is no data wipe record or re-test log, and the customer does not countersign the inspection.
 
-## Refurbishment sign-off and relisting
+## Relisting
 
-After receipt, staff confirm every planned task, re-test every check that needed repair or was not tested, and for laptops complete the wipe record. This moves the item to `ready` and publishes nothing.
+Confirming physical receipt moves the item straight to `ready` and publishes nothing. There is no separate sign-off: the inspection already lists the work, which keeps the demo to one assessment per item. A real business would add back a completion record, including a NIST SP 800-88 data wipe record per drive.
 
 **Put back on the market** then shows the new price before anything happens: the VAT-inclusive price, an example monthly payment, the original price, the work cost, the price minus work, any drop since the quote and a warning for a loss or a price too low to finance. Confirming sends the price staff saw. The server recalculates it and refuses with `PRICE_CHANGED` if the two differ, so an aged quote cannot be published unseen. A price below the financing table cannot be published at all.
 
@@ -91,9 +105,9 @@ All internal money is integer net euro cents; customer amounts include applicabl
 - Published second-life net price: the post-repair value, recalculated for the relist date because an item keeps ageing after its quote. The same quote engine, eligibility checks and VAT rules apply when it is leased again.
 - Lifetime usage never resets. A completed battery replacement or major service advances a separate maintenance baseline, avoiding charging for the same service repeatedly.
 
-The professional confirms every required task and reported fault has been dealt with before publication. If recovery is unsuitable, a received item can be retired instead. An economic loss is visible rather than hidden; the decision to proceed remains a staff decision. Waiting-list matchmaking is not implemented in this workflow.
+The professional decides whether to publish after the item is received. If recovery is unsuitable, a received item can be retired instead. An economic loss is visible rather than hidden; the decision to proceed remains a staff decision. Waiting-list matchmaking is not implemented in this workflow.
 
-### Settlement policy `settlement-v2`
+### Settlement policy `settlement-v3`
 
 Let `M` be locked monthly net rent, `B` the contractual net buyout, `n` future unissued payment periods and `r` the snapshotted nominal annual rate divided by 12. Issued payments are excluded from that future balance; unpaid issued invoices and past unissued accrued rent are added once, separately, as gross balances.
 
@@ -101,22 +115,22 @@ Let `M` be locked monthly net rent, `B` the contractual net buyout, `n` future u
 remaining rent value = sum(M / (1 + r)^k), k = 1..n
 buyout net = remaining rent value + B / (1 + r)^n
 financial return shortfall = min(remaining rent value, max(0, buyout net - net recovery))
-return net = max(financial return shortfall, incremental damage cost)
+return net = financial return shortfall + customer's share of repairs
 ```
 
-At the agreed end (`n = 0`), ordinary return settlement is zero for normal wear; confirmed new damage is still payable and buyout is `B`, before arrears and VAT. The customer is not charged to restore pre-existing cosmetic wear. New/like-new items may reach good condition through normal use. Staff confirm the incremental repair charge; customer estimates remain provisional. With an itemized inspection the incremental damage cost is the larger of the grade-drop cost and the damage lines logged as the customer's responsibility, and the customer can see each of those lines. The financial early-return shortfall is capped at discounted remaining rents so the provider retains residual-value risk; confirmed new damage is a separate minimum obligation. Use the greater amount instead of adding the same repair effect twice. No arbitrary administration fee or second damage charge is added. The same damage must not reduce recovery value and also create an unitemized duplicate charge.
+At the agreed end (`n = 0`), ordinary return settlement is zero for normal wear; confirmed new damage is still payable and buyout is `B`, before arrears and VAT. The customer is not charged to restore pre-existing cosmetic wear. New/like-new items may reach good condition through normal use. Staff confirm the incremental repair charge; customer estimates remain provisional. Without a price agreed in the return form, an itemized inspection's incremental damage cost is the larger of the grade-drop cost and the damage lines logged as the customer's responsibility, and the customer can see each of those lines. The financial early-return shortfall is capped at discounted remaining rents so the provider retains residual-value risk. Worth is measured before damage repairs, so adding the customer's share of repairs does not count them twice. No arbitrary administration fee or second damage charge is added. The same damage must not reduce recovery value and also create an unitemized duplicate charge.
 
 Discounting uses integer rational arithmetic; round each final net quote half up to cents. Apply the quote-date standard VAT policy once and then add already-gross outstanding issued invoices and past accrued unissued rent once. Real settlement tax treatment would need a separate reviewed policy. Existing contracts without a saved finance rate explicitly use the current coefficient table as a legacy fallback, recorded in the quote.
 
-A quote expires at the end of its quote date. Customer acceptance must match its exact assessment version. Once accepted, the settlement snapshot is frozen for subsequent physical receipt. Self-service buyout writes an explicitly simulated settlement receipt; non-demo contracts require a real recorded settlement-payment integration first.
+A quote expires at the end of its quote date. Staff can refresh it; a price agreed in the return form stays the same. Customer payment must match its exact assessment version. Once paid, the settlement snapshot is frozen for subsequent physical receipt. Self-service buyout writes an explicitly simulated settlement receipt; non-demo contracts require a real recorded settlement-payment integration first.
 
 ## Lifecycle and data guarantees
 
 - A request alone leaves the lease active.
 - Staff assessment produces a quote, not a physical return or completed repair.
-- Customer acceptance does not mark the item received.
+- Customer payment does not mark the item received.
 - Physical receipt closes the original lease and increments prior lives once, while keeping its financial snapshot.
-- Received and retired items stay unavailable. Publication requires a recorded sign-off and a reviewed price, and creates an assessed offer revision.
+- Received and retired items stay unavailable. Publication requires a reviewed price and creates an assessed offer revision.
 - Catalogue and checkout use that offer rather than falling back to the original new-item list price.
 - Checkout reserves the physical item and locks the new agreement values. An idempotent retry returns the existing lease instead of creating another one.
 - Every transition uses `withAudit()` in one transaction, including role and ownership checks. Conflicting active leases block receipt.

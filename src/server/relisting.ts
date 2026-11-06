@@ -7,12 +7,13 @@ import {
   loadVatRates,
 } from '@/data/load';
 import { assetCategorySchema } from '@/data/schemas';
-import { requiredSignoff, signoffGaps } from '@/domain/inspection';
+import { batteryIsRepairLine } from '@/domain/inspection';
+import { batteryAfterWork, itemChanges } from '@/domain/item-changes';
 import { relistOffer } from '@/domain/relist-offer';
 import { matchWaitingList, refurbishDecision } from '@/domain/second-life';
 import { ApiError } from './api-response';
 import { withAudit, type TransactionClient } from './audit';
-import { inspectionSchema, recoveryCalculationSchema, workRecordSchema } from './recovery-input';
+import { inspectionSchema, recoveryCalculationSchema } from './recovery-input';
 
 type Database = PrismaClient | TransactionClient;
 
@@ -54,6 +55,8 @@ function offerFor(
       maintenanceUsageValue: asset.maintenanceUsageValue,
       additionalRepairCents: inspection.additionalRepairCents,
       quotedPriceCents: snapshot.recovery.postRepairValueCents,
+      customerRepairCents: snapshot.settlement.customerRepairNetCents,
+      skipBatteryTask: batteryIsRepairLine(inspection.record),
       today,
     },
     data.curves,
@@ -72,6 +75,31 @@ async function marketData() {
   ]);
   return { curves, costs, table, vat };
 }
+
+/** What the public may see of an item's last refurbishment. No customer or inspector text. */
+export async function publishedRefurbishment(db: PrismaClient, assetId: string) {
+  const found = await db.returnAssessment.findFirst({
+    where: { status: 'published', request: { contract: { assetId } } },
+    orderBy: { updatedAt: 'desc' },
+    select: { inspectionJson: true, calculationJson: true, updatedAt: true },
+  });
+  if (!found) return null;
+  const inspection = inspectionSchema.parse(JSON.parse(found.inspectionJson));
+  const { recovery } = recoveryCalculationSchema.parse(JSON.parse(found.calculationJson));
+  return {
+    date: found.updatedAt.toISOString().slice(0, 10),
+    changes: itemChanges({
+      condition: inspection.condition,
+      targetCondition: inspection.targetCondition,
+      workItems: recovery.workItems,
+      record: inspection.record,
+    }),
+    battery: batteryAfterWork(recovery.workItems, inspection.record),
+  };
+}
+export type PublishedRefurbishment = NonNullable<
+  Awaited<ReturnType<typeof publishedRefurbishment>>
+>;
 
 /** The price this item would be published at today, for staff to review before deciding. */
 export async function relistOfferFor(db: PrismaClient, requestId: string, today: string) {
@@ -107,45 +135,6 @@ export async function secondLifePlanFor(db: PrismaClient, requestId: string, tod
 }
 export type SecondLifePlan = Awaited<ReturnType<typeof secondLifePlanFor>>;
 
-/** Records who finished the work. Nothing is published yet: this only makes the item ready. */
-export async function completeRefurbishment(
-  db: PrismaClient,
-  input: { requestId: string; staffId: string; work: unknown }
-) {
-  const work = workRecordSchema.parse(input.work);
-  return withAudit(
-    db,
-    {
-      actor: input.staffId,
-      action: 'return.work_completed',
-      entityType: 'lease_request',
-      entityId: input.requestId,
-      details: {
-        completedWork: work.completedWork,
-        retestedChecks: work.retestedChecks,
-        sanitizationMethod: work.sanitization?.method ?? null,
-      },
-    },
-    async (tx) => {
-      await requireStaff(tx, input.staffId);
-      const found = await loadCase(tx, input.requestId);
-      if (found.assessment.status !== 'received')
-        throw new ApiError(409, 'RETURN_STATE', 'The item must be received before sign-off.');
-      const required = requiredSignoff(
-        found.category,
-        found.snapshot.recovery.workItems,
-        found.inspection.record
-      );
-      if (!signoffGaps(required, work).ok)
-        throw new ApiError(400, 'WORK_INCOMPLETE', 'Some required work is not confirmed.');
-      return tx.returnAssessment.update({
-        where: { id: found.assessment.id },
-        data: { status: 'ready', workRecordJson: JSON.stringify(work) },
-      });
-    }
-  );
-}
-
 /** Puts a ready item back on the market at the price the staff member reviewed. */
 export async function publishRelisting(
   db: PrismaClient,
@@ -165,8 +154,12 @@ export async function publishRelisting(
       await requireStaff(tx, input.staffId);
       const found = await loadCase(tx, input.requestId);
       const { assessment, asset, inspection, snapshot, request } = found;
-      if (assessment.status !== 'ready' || request.contract.status !== 'returned')
-        throw new ApiError(409, 'RETURN_STATE', 'The item must be marked ready first.');
+      // 'received' only remains on cases saved before receipt made an item ready.
+      if (
+        !['received', 'ready'].includes(assessment.status) ||
+        request.contract.status !== 'returned'
+      )
+        throw new ApiError(409, 'RETURN_STATE', 'The item must be received first.');
       if (asset.status !== 'returned')
         throw new ApiError(409, 'ASSET_IN_USE', 'This item is no longer waiting to be relisted.');
       const offer = offerFor(found, input.today, data);

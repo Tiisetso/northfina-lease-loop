@@ -8,7 +8,7 @@ import { createDemoLease } from './demo-lease';
 import { requestLeaseChange } from './leases';
 import { acceptReturn, assessReturn, progressReturn } from './recovery';
 import { recoveryCalculationSchema, type RecoveryInspection } from './recovery-input';
-import { completeRefurbishment, publishRelisting, relistOfferFor } from './relisting';
+import { publishedRefurbishment, publishRelisting, relistOfferFor } from './relisting';
 
 let fixture: Awaited<ReturnType<typeof createTestDb>>;
 let contractId: string;
@@ -93,16 +93,11 @@ async function assessAndReceive() {
     today,
     action: 'accept',
     expectedAssessmentUpdatedAt: assessment.updatedAt.toISOString(),
+    paymentMethod: 'card',
   });
   await progressReturn(fixture.db, { requestId, staffId: 'staff', today, action: 'receive' });
   return recoveryCalculationSchema.parse(JSON.parse(assessment.calculationJson));
 }
-const finished = (work: string[], retests = ['brakes']) => ({
-  completedWork: work,
-  retestedChecks: retests,
-  sanitization: null,
-  notes: 'Done',
-});
 
 describe('itemized assessment', () => {
   it('rejects an incomplete record, a mismatched total and a grade above the findings', async () => {
@@ -132,39 +127,18 @@ describe('itemized assessment', () => {
       inspection: inspection({ damage }, 46000),
     });
     const quote = recoveryCalculationSchema.parse(JSON.parse(assessment.calculationJson));
-    expect(quote.damageNetCents).toBe(40000);
-    expect(quote.chargeableDamage).toEqual([{ area: 'Fork', type: 'dent', netCents: 40000 }]);
-  });
-});
-
-describe('refurbishment sign-off', () => {
-  it('stays closed until the item is received and all work is confirmed', async () => {
-    const complete = (work: unknown) =>
-      completeRefurbishment(fixture.db, { requestId, staffId: 'staff', work });
-    await expect(complete(finished([]))).rejects.toMatchObject({ status: 404 });
-    const quote = await assessAndReceive();
-    const work = quote.recovery.workItems.map((item) => item.id);
-    await expect(complete(finished([]))).rejects.toMatchObject({ code: 'WORK_INCOMPLETE' });
-    await expect(complete(finished(work, []))).rejects.toMatchObject({ code: 'WORK_INCOMPLETE' });
-    await expect(
-      completeRefurbishment(fixture.db, { requestId, staffId: 'owner', work: finished(work) })
-    ).rejects.toMatchObject({ status: 403 });
-    expect(await complete(finished(work))).toMatchObject({ status: 'ready' });
-    await expect(complete(finished(work))).rejects.toMatchObject({ status: 409 });
-    expect(await fixture.db.auditLog.count({ where: { action: 'return.work_completed' } })).toBe(1);
+    expect(quote.damageNetCents).toBe(45000);
+    expect(quote.chargeableDamage).toEqual([
+      { area: 'brakes', type: 'repair', netCents: 5000, checkId: 'brakes' },
+      { area: 'Fork', type: 'dent', netCents: 40000 },
+    ]);
+    expect(quote.settlement.customerRepairNetCents).toBeGreaterThan(0);
+    expect(quote.settlement.customerRepairNetCents).toBeLessThanOrEqual(45000);
   });
 });
 
 describe('relisting', () => {
-  async function ready() {
-    const quote = await assessAndReceive();
-    await completeRefurbishment(fixture.db, {
-      requestId,
-      staffId: 'staff',
-      work: finished(quote.recovery.workItems.map((item) => item.id)),
-    });
-    return quote;
-  }
+  const ready = assessAndReceive;
 
   it('shows the quoted price on the quote date and publishes exactly that', async () => {
     const quote = await ready();
@@ -220,22 +194,12 @@ describe('relisting', () => {
     expect(published.publishedPriceCents).toBe(offer.priceNetCents);
   });
 
-  it('needs staff and the ready state, and a ready item can still be retired', async () => {
+  it('needs staff and a received item, and a ready item can still be retired', async () => {
+    await expect(
+      publishRelisting(fixture.db, { requestId, staffId: 'staff', today, expectedPriceCents: 1 })
+    ).rejects.toMatchObject({ status: 404 });
     const quote = await assessAndReceive();
     const price = quote.recovery.postRepairValueCents;
-    await expect(
-      publishRelisting(fixture.db, {
-        requestId,
-        staffId: 'staff',
-        today,
-        expectedPriceCents: price,
-      })
-    ).rejects.toMatchObject({ code: 'RETURN_STATE' });
-    await completeRefurbishment(fixture.db, {
-      requestId,
-      staffId: 'staff',
-      work: finished(quote.recovery.workItems.map((item) => item.id)),
-    });
     await expect(
       publishRelisting(fixture.db, {
         requestId,
@@ -255,6 +219,41 @@ describe('relisting', () => {
         expectedPriceCents: price,
       })
     ).rejects.toMatchObject({ status: 409 });
+  });
+
+  it('still publishes a case saved as received before receipt made items ready', async () => {
+    const quote = await assessAndReceive();
+    await withAudit(
+      fixture.db,
+      { actor: 'test', action: 'test.legacy', entityType: 'lease_request', entityId: requestId },
+      (tx) => tx.returnAssessment.update({ where: { requestId }, data: { status: 'received' } })
+    );
+    expect(
+      await publishRelisting(fixture.db, {
+        requestId,
+        staffId: 'staff',
+        today,
+        expectedPriceCents: quote.recovery.postRepairValueCents,
+      })
+    ).toMatchObject({ status: 'published' });
+  });
+
+  it('shows the public what changed only once published, without any notes', async () => {
+    await ready();
+    expect(await publishedRefurbishment(fixture.db, 'ebike-005')).toBeNull();
+    const offer = await relistOfferFor(fixture.db, requestId, today);
+    await publishRelisting(fixture.db, {
+      requestId,
+      staffId: 'staff',
+      today,
+      expectedPriceCents: offer.priceNetCents,
+    });
+    const found = await publishedRefurbishment(fixture.db, 'ebike-005');
+    expect(found).toMatchObject({
+      battery: { kind: 'measured', percent: 90 },
+    });
+    expect(found?.changes).toContainEqual({ kind: 'part', checkId: 'brakes', action: 'repaired' });
+    expect(JSON.stringify(found)).not.toContain('Replace the brake pads');
   });
 
   it('reports an unknown case as not found', async () => {

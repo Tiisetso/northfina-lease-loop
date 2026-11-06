@@ -97,9 +97,9 @@ describe('open cases', () => {
 
   it('gives staff work at each stage, through the real services', async () => {
     const counts = await staffAttentionCounts(fixture.db);
-    expect(counts).toEqual({ toAssess: 3, toSignOff: 4, toRelist: 2 });
-    expect(await fixture.db.auditLog.count({ where: { action: 'return.assessed' } })).toBe(6);
-    expect(await fixture.db.auditLog.count({ where: { action: 'return.receive' } })).toBe(6);
+    expect(counts).toEqual({ toAssess: 3, toReceive: 0, toRelist: 7 });
+    expect(await fixture.db.auditLog.count({ where: { action: 'return.assessed' } })).toBe(7);
+    expect(await fixture.db.auditLog.count({ where: { action: 'return.receive' } })).toBe(7);
   });
 
   it('itemizes chargeable damage on the quote', async () => {
@@ -108,7 +108,11 @@ describe('open cases', () => {
       include: { assessment: true },
     });
     const quote = recoveryCalculationSchema.parse(JSON.parse(request.assessment!.calculationJson));
-    expect(quote.chargeableDamage).toEqual([{ area: 'Lid corner', type: 'dent', netCents: 6000 }]);
+    expect(quote.chargeableDamage).toContainEqual({
+      area: 'Lid corner',
+      type: 'dent',
+      netCents: 6000,
+    });
     expect(quote.damageNetCents).toBeGreaterThanOrEqual(6000);
   });
 
@@ -138,7 +142,7 @@ describe('open cases', () => {
     try {
       await seedAssets(other.db, await loadAssets());
       await other.db.asset.update({ where: { id: 'ebike-012' }, data: { status: 'reserved' } });
-      expect((await seedDemoCases(other.db, today)).created).toBe(8);
+      expect((await seedDemoCases(other.db, today)).created).toBe(9);
     } finally {
       await other.cleanup();
     }

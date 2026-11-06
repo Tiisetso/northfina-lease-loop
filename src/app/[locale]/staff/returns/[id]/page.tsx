@@ -5,10 +5,12 @@ import { notFound, redirect } from 'next/navigation';
 import { RecoveryWorkbench } from '@/components/recovery-workbench';
 import { SecondLifePanel } from '@/components/second-life-panel';
 import { recoveryAgeMonths } from '@/domain/asset-recovery';
+import { agreedReturnTotalCents } from '@/domain/lease-settlement';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import { readIdentity } from '@/server/auth-session';
 import { db } from '@/server/db';
+import { leaseActionContext } from '@/server/lease-actions';
 import { findReturnCase } from '@/server/recovery';
 import {
   inspectionSchema,
@@ -42,9 +44,22 @@ export default async function Page({ params }: PageProps<'/[locale]/staff/return
     (rate) => rate.valid_from <= today && (rate.valid_to === null || rate.valid_to >= today)
   );
   const vatBasisPoints = rate ? Math.round(rate.rate_percent * 100) : 0;
-  const status = request.assessment?.status ?? 'pending';
-  const offer = ['received', 'ready'].includes(status)
-    ? await relistOfferFor(db, id, today).catch(() => null)
+  const saved = request.assessment?.status ?? 'pending';
+  // 'received' only remains on cases saved before receipt made an item ready.
+  const status = saved === 'received' ? 'ready' : saved;
+  const offer = status === 'ready' ? await relistOfferFor(db, id, today).catch(() => null) : null;
+  const context =
+    request.contract.status === 'active'
+      ? await leaseActionContext(db, request.contract.customerId, request.contract.id, today).catch(
+          () => null
+        )
+      : null;
+  const agreedPrice = request.kind === 'buyout' ? undefined : report?.agreedPrice;
+  const agreed = agreedPrice
+    ? {
+        totalCents: agreedReturnTotalCents(agreedPrice, context?.finance.outstandingCents ?? 0),
+        lines: agreedPrice.lines,
+      }
     : null;
   // Card 9: only once the item is back, while it can still go to someone on the waiting list.
   const plan = offer ? await secondLifePlanFor(db, id, today).catch(() => null) : null;
@@ -58,8 +73,7 @@ export default async function Page({ params }: PageProps<'/[locale]/staff/return
       >
         ← {t('recovery.queue')}
       </Link>
-      <p className="mt-4 text-caption font-semibold text-primary">{t('recovery.staff')}</p>
-      <h1 className="mt-2 font-display text-display-sm font-semibold">{itemName}</h1>
+      <h1 className="mt-4 font-display text-display-sm font-semibold">{itemName}</h1>
       <p className="mt-3 text-caption text-ink-muted">
         {request.contract.customer.owner.name} · {request.contract.asset.serial_number}
       </p>
@@ -68,9 +82,21 @@ export default async function Page({ params }: PageProps<'/[locale]/staff/return
         vatBasisPoints={vatBasisPoints}
         locale={locale}
         requestId={id}
+        kind={request.kind}
         assetId={request.contract.asset.id}
         itemName={itemName}
         offer={offer}
+        returnContext={
+          context && {
+            baselineCondition: context.baselineCondition,
+            finance: context.finance,
+            recoveryFacts: context.recoveryFacts,
+            costs: context.costs,
+            curves: context.curves,
+          }
+        }
+        agreed={agreed}
+        quoteExpired={calculation !== null && calculation.quoteDate !== today}
         publishedPriceCents={request.assessment?.publishedPriceCents ?? null}
         category={request.contract.asset.category as 'e_bike' | 'laptop' | 'farm_machine'}
         report={report}

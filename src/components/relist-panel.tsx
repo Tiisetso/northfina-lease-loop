@@ -6,13 +6,15 @@ import { invoiceAmounts } from '@/domain/lease-billing';
 import { formatEuro } from '@/domain/money';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
-import { primaryButtonClass } from './inspection-form';
+import { primaryButtonClass } from './form-classes';
+import type { WorkLine } from './work-plan';
 
 /** The decision to put an item back on the market. Nothing is published until it is confirmed. */
 export function RelistPanel({
   locale,
   itemName,
   offer,
+  work,
   vatBasisPoints,
   busy,
   priceChanged,
@@ -22,6 +24,7 @@ export function RelistPanel({
   locale: Locale;
   itemName: string;
   offer: RelistOffer;
+  work: readonly WorkLine[];
   vatBasisPoints: number;
   busy: boolean;
   priceChanged: boolean;
@@ -72,6 +75,14 @@ export function RelistPanel({
         <p className="mt-1 text-caption text-ink-muted">
           {t('relist.netPrice', { price: currency(offer.priceNetCents) })}
         </p>
+        <p className="mt-3 text-caption tabular-nums">
+          {currency(gross(offer.originalPriceCents))} ×{' '}
+          {t('relist.formula', {
+            age: Math.round(offer.factors.agePercent * 10) / 10,
+            condition: Math.round(offer.factors.conditionPercent * 10) / 10,
+            usage: Math.round(offer.factors.usagePercent * 10) / 10,
+          })}
+        </p>
         <dl className="mt-5 divide-y divide-divider text-caption">
           {offer.monthlyTotalCents !== null ? (
             <Row
@@ -82,11 +93,35 @@ export function RelistPanel({
           <Row label={t('relist.original')} value={currency(gross(offer.originalPriceCents))} />
           <Row label={t('relist.age')} value={String(offer.ageMonths)} />
           <Row label={t('relist.workCost')} value={currency(gross(offer.refurbishmentCostCents))} />
+          {offer.customerRepairCents > 0 ? (
+            <Row
+              label={t('relist.customerRepairs')}
+              value={`−${currency(gross(offer.customerRepairCents))}`}
+            />
+          ) : null}
           <Row
             label={t('relist.netResult')}
             value={`${offer.netResultCents < 0 ? '−' : ''}${currency(gross(Math.abs(offer.netResultCents)))}`}
           />
         </dl>
+        <details className="mt-3">
+          <summary className="flex min-h-target cursor-pointer items-center text-caption font-semibold text-primary">
+            {t('relist.workDetails')}
+          </summary>
+          <ul className="divide-y divide-divider text-caption">
+            {work.map((line) => (
+              <li key={line.key} className="flex justify-between gap-4 py-2">
+                <span>
+                  {line.title}
+                  {line.customerPays ? (
+                    <span className="block text-ink-muted">{t('recovery.customerLine')}</span>
+                  ) : null}
+                </span>
+                <span className="shrink-0">{line.cents ? currency(gross(line.cents)) : '—'}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
         {dropped ? (
           <p className="mt-4 text-caption">
             {t('relist.droppedSinceQuote', {

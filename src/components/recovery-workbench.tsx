@@ -5,23 +5,27 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import type { AssetCategory } from '@/data/schemas';
 import type { RelistOffer } from '@/domain/relist-offer';
+import type { ReturnPreviewContext } from '@/domain/return-preview';
 import { invoiceAmounts } from '@/domain/lease-billing';
 import { formatEuro } from '@/domain/money';
-import { getT, type MessageKey } from '@/i18n/get-t';
+import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import type {
   RecoveryCalculation,
   RecoveryInspection,
   RecoveryReport,
 } from '@/server/recovery-input';
-import { InspectionForm, primaryButtonClass } from './inspection-form';
+import { CustomerReport } from './customer-report';
+import { primaryButtonClass } from './form-classes';
+import { InspectionForm } from './inspection-form';
 import { InspectionSummary } from './inspection-summary';
-import { RefurbishmentSignoff } from './refurbishment-signoff';
 import { RelistPanel } from './relist-panel';
+import { WorkPlan, workLines } from './work-plan';
 
 type Props = {
   locale: Locale;
   requestId: string;
+  kind: string;
   assetId: string;
   itemName: string;
   category: AssetCategory;
@@ -34,12 +38,16 @@ type Props = {
   defaultAge: number;
   vatBasisPoints: number;
   offer: RelistOffer | null;
+  returnContext: ReturnPreviewContext | null;
+  agreed: { totalCents: number; lines: readonly { id: string; netCents: number }[] } | null;
   publishedPriceCents: number | null;
+  quoteExpired: boolean;
 };
 
 export function RecoveryWorkbench({
   locale,
   requestId,
+  kind,
   assetId,
   itemName,
   category,
@@ -52,19 +60,23 @@ export function RecoveryWorkbench({
   defaultAge,
   vatBasisPoints,
   offer,
+  returnContext,
+  agreed,
   publishedPriceCents,
+  quoteExpired,
 }: Props) {
   const t = getT(locale);
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<'general' | 'price' | null>(null);
+  const [changingQuote, setChangingQuote] = useState(false);
   const currency = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const quoteGross = (cents: number) =>
     invoiceAmounts(Math.max(0, cents), calculation?.vatBasisPoints ?? vatBasisPoints).totalCents;
   const todayGross = (cents: number) =>
     invoiceAmounts(Math.max(0, cents), vatBasisPoints).totalCents;
 
-  async function send(body: unknown) {
+  async function send(body: unknown, { backToTop = false } = {}) {
     setBusy(true);
     setFailure(null);
     try {
@@ -81,6 +93,8 @@ export function RecoveryWorkbench({
         if (code === 'PRICE_CHANGED') router.refresh();
         return;
       }
+      // Staff are at the bottom of a long form, far from the confirmation that replaces it.
+      if (backToTop) window.scrollTo(0, 0);
       router.refresh();
     } catch {
       setFailure('general');
@@ -89,44 +103,33 @@ export function RecoveryWorkbench({
     }
   }
 
-  const canAssess = status === 'pending' || status === 'quoted';
+  const showForm = status === 'pending' || (status === 'quoted' && changingQuote);
+  const published = status === 'published';
   const priceNet = publishedPriceCents ?? offer?.priceNetCents ?? null;
   return (
     <div className="mt-8 grid items-start gap-8 desktop:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
       <div className="space-y-8">
-        <section className="rounded-lg bg-parchment p-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-tagline font-semibold">{t('recovery.report')}</h2>
-            <span className="rounded-pill bg-canvas px-3 py-1 text-caption">
-              {t(`recovery.state.${status}` as MessageKey)}
-            </span>
-          </div>
-          {report ? (
-            <>
-              <dl className="mt-5 grid grid-cols-2 gap-4">
-                <Fact label={t('condition.label')} value={t(`condition.${report.condition}`)} />
-                <Fact label={t(`product.usage.${category}`)} value={String(report.usageValue)} />
-              </dl>
-              <ul className="mt-5 space-y-2 text-caption">
-                {report.issues.map((issue) => (
-                  <li key={issue}>• {t(`return.issue.${issue}` as MessageKey)}</li>
-                ))}
-              </ul>
-              {report.notes ? (
-                <p className="mt-5 whitespace-pre-wrap text-body">{report.notes}</p>
-              ) : null}
-              {report.preferredDate ? (
-                <p className="mt-3 text-caption">
-                  {t('return.preferredDate')}: {report.preferredDate}
-                </p>
-              ) : null}
-            </>
-          ) : (
-            <p className="mt-4 text-caption text-ink-muted">{t('recovery.noReport')}</p>
-          )}
-        </section>
+        <CustomerReport locale={locale} category={category} report={report} status={status} />
 
-        {canAssess ? (
+        {status === 'quoted' && !changingQuote ? (
+          <section role="status" className="rounded-lg border border-hairline p-6">
+            <h2 className="text-tagline font-semibold">
+              {t(quoteExpired ? 'recovery.quoteExpired.title' : 'recovery.quoteSent.title')}
+            </h2>
+            <p className="mt-3 text-body text-ink-muted">
+              {t(quoteExpired ? 'recovery.quoteExpired' : 'recovery.quoteSent')}
+            </p>
+            <button
+              type="button"
+              onClick={() => setChangingQuote(true)}
+              className="mt-3 min-h-target text-caption font-semibold text-primary underline"
+            >
+              {t('recovery.editInspection')}
+            </button>
+          </section>
+        ) : null}
+
+        {showForm ? (
           <InspectionForm
             locale={locale}
             category={category}
@@ -138,47 +141,37 @@ export function RecoveryWorkbench({
             recordedAge={recordedAge}
             defaultAge={defaultAge}
             vatBasisPoints={vatBasisPoints}
+            returnContext={returnContext}
+            agreed={agreed}
             busy={busy}
             failed={failure === 'general'}
-            onSubmit={(body) => void send(body)}
+            onSubmit={(body) => void send(body, { backToTop: true })}
           />
         ) : null}
 
-        {status === 'received' && calculation ? (
-          <RefurbishmentSignoff
-            locale={locale}
-            category={category}
-            workItems={calculation.recovery.workItems}
-            record={inspection?.record}
-            busy={busy}
-            failed={failure === 'general'}
-            onSubmit={(body) => void send(body)}
-          />
-        ) : null}
-
-        {!canAssess && inspection?.record ? (
-          <InspectionSummary
-            locale={locale}
-            category={category}
-            record={inspection.record}
-            notes={inspection.notes}
-            currency={(net) => currency(quoteGross(net))}
-          />
-        ) : null}
-
-        {calculation ? (
-          <section className="rounded-lg border border-hairline p-6">
-            <h2 className="text-tagline font-semibold">{t('recovery.work')}</h2>
-            <ul className="mt-5 divide-y divide-divider">
-              {calculation.recovery.workItems.map((item) => (
-                <li key={item.id} className="flex justify-between gap-4 py-3 text-caption">
-                  <span>{t(`recovery.task.${item.id}` as MessageKey)}</span>
-                  <strong className="shrink-0">{currency(quoteGross(item.costCents))}</strong>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-3 text-caption text-ink-muted">{t('pricing.includesVat')}</p>
-          </section>
+        {/* The assessment is finished work by now, so it stays out of the way until someone asks. */}
+        {calculation && status !== 'bought' ? (
+          <details>
+            <summary className="flex min-h-target cursor-pointer items-center text-caption font-semibold text-primary">
+              {t('recovery.assessmentDetails')}
+            </summary>
+            <div className="mt-4 space-y-8">
+              <WorkPlan
+                locale={locale}
+                workItems={calculation.recovery.workItems}
+                record={inspection?.record}
+                currency={(net) => currency(quoteGross(net))}
+              />
+              {!showForm && inspection?.record ? (
+                <InspectionSummary
+                  locale={locale}
+                  category={category}
+                  record={inspection.record}
+                  notes={inspection.notes}
+                />
+              ) : null}
+            </div>
+          </details>
         ) : null}
       </div>
 
@@ -188,22 +181,24 @@ export function RecoveryWorkbench({
           <>
             <p className="mt-5 text-caption text-ink-muted">
               {t(
-                status === 'published'
+                published
                   ? 'relist.listedAt'
                   : priceNet !== null
                     ? 'relist.priceToday'
-                    : 'recovery.nextPrice'
+                    : 'recovery.customerPays'
               )}
             </p>
             <p className="mt-2 font-display text-display-lg font-semibold">
               {currency(
                 priceNet !== null
                   ? todayGross(priceNet)
-                  : quoteGross(calculation.recovery.postRepairValueCents)
+                  : kind === 'buyout'
+                    ? calculation.settlement.buyoutTotalCents
+                    : calculation.settlement.returnTotalCents
               )}
             </p>
             <p className="mt-1 text-caption text-ink-muted">{t('pricing.includesVat')}</p>
-            {status === 'published' ? (
+            {published ? (
               <Link
                 href={`/${locale}/products/${assetId}`}
                 className="mt-3 inline-flex min-h-target items-center text-caption text-primary"
@@ -217,6 +212,7 @@ export function RecoveryWorkbench({
                 locale={locale}
                 itemName={itemName}
                 offer={offer}
+                work={workLines(locale, calculation.recovery.workItems, inspection?.record)}
                 vatBasisPoints={vatBasisPoints}
                 busy={busy}
                 priceChanged={failure === 'price'}
@@ -226,34 +222,37 @@ export function RecoveryWorkbench({
                 onRetire={() => void send({ action: 'retire' })}
               />
             ) : null}
-            <dl className="mt-6 space-y-5">
-              <Fact
-                label={t('recovery.originalPrice')}
-                value={currency(quoteGross(calculation.originalPriceCents))}
-              />
-              <Fact label={t('recovery.ageMonths')} value={String(calculation.ageMonths)} />
-              <Fact
-                label={t('recovery.returnedValue')}
-                value={currency(quoteGross(calculation.recovery.asReturnedValueCents))}
-              />
-              <Fact
-                label={t('recovery.refurbCost')}
-                value={currency(quoteGross(calculation.recovery.refurbishmentCostCents))}
-              />
-              <Fact
-                label={t('recovery.returnSettlement')}
-                value={currency(calculation.settlement.returnTotalCents)}
-              />
-              <Fact
-                label={t('recovery.buyoutQuote')}
-                value={currency(calculation.settlement.buyoutTotalCents)}
-              />
-            </dl>
-            <p className="mt-5 text-caption text-ink-muted">{t('recovery.quoteNote')}</p>
-            {status === 'quoted' ? (
-              <p className="mt-5 rounded-sm bg-canvas p-4 text-caption">
-                {t('recovery.awaitCustomer')}
-              </p>
+            {offer && !published ? (
+              <dl className="mt-6 space-y-5">
+                <Fact
+                  label={t('recovery.refurbCost')}
+                  value={currency(todayGross(offer.refurbishmentCostCents))}
+                />
+                {offer.customerRepairCents > 0 ? (
+                  <Fact
+                    label={t('relist.customerRepairs')}
+                    value={`−${currency(todayGross(offer.customerRepairCents))}`}
+                  />
+                ) : null}
+                <Fact
+                  label={t('relist.netResult')}
+                  value={`${offer.netResultCents < 0 ? '−' : ''}${currency(todayGross(Math.abs(offer.netResultCents)))}`}
+                />
+              </dl>
+            ) : null}
+            {priceNet === null ? (
+              <dl className="mt-6 space-y-5">
+                <Fact
+                  label={t('flow.endingEarly')}
+                  value={currency(quoteGross(calculation.settlement.earlyReturnNetCents))}
+                />
+                <Fact
+                  label={t('flow.yourRepairShare', {
+                    percent: Math.round(calculation.settlement.repairShareBasisPoints / 100),
+                  })}
+                  value={currency(quoteGross(calculation.settlement.customerRepairNetCents))}
+                />
+              </dl>
             ) : null}
             {status === 'accepted' ? (
               <button
@@ -265,26 +264,19 @@ export function RecoveryWorkbench({
                 {t('recovery.receive')}
               </button>
             ) : null}
-            {status === 'received' ? (
-              <>
-                <p className="mt-5 rounded-sm bg-canvas p-4 text-caption">
-                  {t('signoff.awaiting')}
-                </p>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void send({ action: 'retire' })}
-                  className="mt-3 min-h-target w-full text-caption text-primary underline"
-                >
-                  {t('recovery.retire')}
-                </button>
-              </>
-            ) : null}
+          </>
+        ) : agreed ? (
+          <>
+            <p className="mt-5 text-caption text-ink-muted">{t('recovery.agreedPrice')}</p>
+            <p className="mt-2 font-display text-display-lg font-semibold">
+              {currency(agreed.totalCents)}
+            </p>
+            <p className="mt-1 text-caption text-ink-muted">{t('pricing.includesVat')}</p>
           </>
         ) : (
           <p className="mt-5 text-body text-ink-muted">{t('recovery.beforeQuote')}</p>
         )}
-        {failure === 'general' && !canAssess && status !== 'received' ? (
+        {failure === 'general' && !showForm ? (
           <p
             role="alert"
             className="mt-5 rounded-sm border border-hairline bg-canvas p-4 text-caption"

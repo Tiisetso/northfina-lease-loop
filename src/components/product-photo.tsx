@@ -11,6 +11,8 @@ type ProductPhotoProps = {
   sizes?: string;
   variant?: 'default' | 'catalogue';
   showCaption?: boolean;
+  /** From tablet width, grow to the height of the column beside it instead of staying square. */
+  fillHeight?: boolean;
 };
 
 /** Photos illustrate the fictional model, not the physical item or its condition. */
@@ -21,13 +23,14 @@ export function ProductPhoto({
   sizes = '(min-width: 1069px) 33vw, (min-width: 641px) 50vw, 100vw',
   variant = 'default',
   showCaption = true,
+  fillHeight = false,
 }: ProductPhotoProps) {
   const t = getT(locale);
   const photo = photoForAsset(assetId);
   return (
-    <figure>
+    <figure className={fillHeight ? 'tablet:flex tablet:h-full tablet:flex-col' : undefined}>
       <div
-        className={`relative aspect-square overflow-hidden bg-parchment ${variant === 'catalogue' ? 'rounded-lg' : 'rounded-sm'}`}
+        className={`relative aspect-square overflow-hidden bg-parchment ${fillHeight ? 'tablet:aspect-auto tablet:flex-1' : ''} ${variant === 'catalogue' ? 'rounded-lg' : 'rounded-sm'}`}
       >
         {photo ? (
           <Image

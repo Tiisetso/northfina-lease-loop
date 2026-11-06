@@ -9,11 +9,13 @@ import { checkoutQuote } from '@/domain/checkout-quote';
 import { assetOfferPrice } from '@/domain/asset-offer';
 import { todayIso } from './today';
 import { conditionReport } from '@/domain/condition-report';
+import { returnPreview } from '@/domain/return-preview';
 import type { Prisma, PrismaClient } from '@/generated/prisma/client';
 import { assetCategorySchema, assetConditionSchema, usageUnitSchema } from '@/data/schemas';
 import { canRequestLeaseChange, type RequestKind } from '@/domain/lease-insights';
 import { ApiError } from './api-response';
 import { withAudit } from './audit';
+import { leaseActionContext } from './lease-actions';
 import {
   recoveryReportSchema,
   reportIssuesByCategory,
@@ -37,6 +39,7 @@ const include = {
       usage_unit: true,
       usage_value: true,
       previous_lives: true,
+      serial_number: true,
     },
   },
   invoices: { include: { payments: true }, orderBy: { dueDate: 'asc' as const } },
@@ -48,6 +51,7 @@ const include = {
   },
   events: { orderBy: { eventDate: 'desc' as const } },
   coLeaseShares: { include: { user: { select: { id: true, name: true } } } },
+  actionPayments: { select: { kind: true } },
 };
 
 export async function listCustomerLeases(db: PrismaClient, customerId: string) {
@@ -199,6 +203,27 @@ export async function requestLeaseChange(
           report.issues.some((issue) => !(allowedIssues as readonly string[]).includes(issue))
         )
           throw new ApiError(400, 'INVALID_REPORT', 'The reported usage or issues are invalid.');
+        // Never trust a price from the client: recalculate what the form showed and keep that.
+        const { agreedPrice: _ignored, ...reported } = report;
+        report = reported;
+        if (report.answers && input.kind !== 'buyout') {
+          const context = await leaseActionContext(tx, input.customerId, contract.id, today);
+          let preview;
+          try {
+            preview = returnPreview(context, report.answers, report.usageValue);
+          } catch (error) {
+            if (error instanceof RangeError)
+              throw new ApiError(400, 'INVALID_REPORT', 'The reported answers are invalid.');
+            throw error;
+          }
+          report = {
+            ...report,
+            agreedPrice: {
+              ...preview.agreedPrice,
+              lines: preview.lines.map(({ id, netCents }) => ({ id, netCents })),
+            },
+          };
+        }
       }
       return tx.leaseRequest.create({
         data: {

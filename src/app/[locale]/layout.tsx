@@ -48,8 +48,12 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
           {t('nav.skipToContent')}
         </a>
 
-        {demo ? <DemoBar {...demo} /> : null}
-        <header className="sticky top-0 z-20 border-b border-hairline bg-canvas/95 backdrop-blur-xl">
+        {demo ? (
+          <div className="print:hidden">
+            <DemoBar {...demo} />
+          </div>
+        ) : null}
+        <header className="sticky top-0 print:hidden z-20 border-b border-hairline bg-canvas/95 backdrop-blur-xl">
           <div>
             <div className="mx-auto flex min-h-18 max-w-[1200px] items-center justify-between gap-x-3 px-4 sm:px-6">
               <Link
@@ -98,17 +102,16 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
         {identity?.role === 'staff' ? (
           <Link
             href={`/${locale}/staff`}
-            className="pressable fixed right-5 bottom-5 z-40 inline-flex min-h-target items-center gap-2 rounded-pill border border-hairline bg-ink px-5 py-3 text-caption font-semibold text-white shadow-lg"
+            className="pressable fixed right-5 bottom-5 print:hidden z-40 inline-flex min-h-target items-center gap-2 rounded-pill border border-hairline bg-ink px-5 py-3 text-caption font-semibold text-white shadow-lg"
           >
             <UiIcon name="settings" className="size-4" />
             {t('flow.admin')}
           </Link>
         ) : null}
-        <footer className="bg-parchment text-ink-muted">
-          <div className="mx-auto max-w-content px-card py-16">
-            <BrandWordmark label={t('brand.name')} className="text-[1.5rem]" />
-            <p className="mt-3 max-w-copy text-caption">{t('brand.tagline')}</p>
-            <p className="mt-8 border-t border-hairline pt-6 text-fine">{t('footer.skeleton')}</p>
+        <footer className="bg-parchment text-ink-muted print:hidden">
+          <div className="mx-auto flex max-w-content flex-wrap items-center gap-x-3 gap-y-1 px-card py-5 text-caption">
+            <BrandWordmark label={t('brand.name')} className="text-[1rem]" />
+            <p>{t('brand.tagline')}</p>
           </div>
         </footer>
       </body>

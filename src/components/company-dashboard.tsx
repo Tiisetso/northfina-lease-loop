@@ -7,7 +7,7 @@ import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import { LineChart, type ChartSeries } from './line-chart';
 
-type Attention = { toAssess: number; toSignOff: number; toRelist: number };
+type Attention = { toAssess: number; toReceive: number; toRelist: number };
 type ViewId = 'revenue' | 'leases' | 'leasesByCategory' | 'revenueByCategory';
 
 const categoryColors = {
@@ -74,7 +74,7 @@ export function CompanyDashboard({
       ];
   const waiting = [
     { key: 'toAssess', value: attention.toAssess, anchor: 'assess' },
-    { key: 'toSignOff', value: attention.toSignOff, anchor: 'progress' },
+    { key: 'toReceive', value: attention.toReceive, anchor: 'progress' },
     { key: 'toRelist', value: attention.toRelist, anchor: 'relist' },
   ] as const;
   const hasWaiting = waiting.some((item) => item.value > 0);

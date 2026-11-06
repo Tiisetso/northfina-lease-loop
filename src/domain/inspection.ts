@@ -30,6 +30,8 @@ export type InspectionCheck = {
   result: CheckResult;
   repairCents: number;
   note: string;
+  /** Whether this repair is new damage the customer answers for. Defaults to yes. */
+  chargeable?: boolean;
 };
 export type InspectionReading = { id: string; value: number | null };
 export type DamageEntry = {
@@ -39,7 +41,8 @@ export type DamageEntry = {
   repairCents: number;
 };
 export type InspectionRecord = {
-  usageSource: UsageSource;
+  /** Only on older records: a professional's own reading needs no provenance. */
+  usageSource?: UsageSource;
   customerPresent: boolean;
   checks: InspectionCheck[];
   readings: InspectionReading[];
@@ -65,12 +68,14 @@ const categoryChecks: Record<AssetCategory, readonly CheckDefinition[]> = {
     { id: 'charging', gate: 'function' },
   ],
   laptop: [
-    { id: 'chassis_hinges', gate: 'structural' },
+    // A laptop hinge is a repairable fault, as in the customer's report, not a damaged structure.
+    { id: 'chassis_hinges', gate: 'function' },
     { id: 'battery_pack', gate: 'safety' },
     { id: 'power_on', gate: 'function' },
     { id: 'display', gate: 'function' },
     { id: 'keyboard', gate: 'function' },
     { id: 'trackpad', gate: 'function' },
+    { id: 'cooling', gate: 'function' },
     { id: 'ports', gate: 'function' },
     { id: 'wireless', gate: 'function' },
     { id: 'camera_audio', gate: 'function' },
@@ -111,7 +116,12 @@ const categoryReadings: Record<AssetCategory, readonly ReadingDefinition[]> = {
 };
 
 export function inspectionChecks(category: AssetCategory): readonly CheckDefinition[] {
-  return [...commonChecks, ...categoryChecks[category]];
+  // A laptop has no service book, so asking for one only creates noise.
+  const common =
+    category === 'laptop'
+      ? commonChecks.filter((check) => check.id !== 'service_records')
+      : commonChecks;
+  return [...common, ...categoryChecks[category]];
 }
 
 export function inspectionReadings(category: AssetCategory): readonly ReadingDefinition[] {
@@ -123,6 +133,11 @@ const issueChecks: Record<string, readonly string[]> = {
   missing_accessories: ['accessories_complete'],
   not_working: ['power_on', 'motor_assist', 'engine'],
   screen_damage: ['display'],
+  cooling_fault: ['cooling'],
+  speed_fault: ['storage', 'power_on'],
+  camera_audio_fault: ['camera_audio'],
+  hinge_fault: ['chassis_hinges'],
+  liquid_fault: ['power_on'],
   keyboard_fault: ['keyboard'],
   network_fault: ['wireless'],
   charging_fault: ['charging'],
@@ -139,6 +154,17 @@ export function reportedCheckIds(category: AssetCategory, issues: readonly strin
   const known = new Set(inspectionChecks(category).map((check) => check.id));
   const reported = issues.flatMap((issue) => issueChecks[issue] ?? []);
   return [...new Set(reported)].filter((id) => known.has(id));
+}
+
+/**
+ * What the customer was quoted for this part, if they reported it. A check maps to the issue whose
+ * first check it is, so one reported fault suggests a cost on one line and is never counted twice.
+ */
+export function reportedRepairCents(
+  checkId: string,
+  lines: readonly { id: string; netCents: number }[]
+): number | null {
+  return lines.find((line) => issueChecks[line.id]?.[0] === checkId)?.netCents ?? null;
 }
 
 const conditionOrder: readonly AssetCondition[] = ['poor', 'fair', 'good', 'like_new', 'new'];
@@ -175,10 +201,8 @@ export type InspectionEvaluation = {
   conditionCap: AssetCondition;
   /** All repair lines, net. Standard tasks such as a data wipe are priced separately. */
   repairNetCents: number;
-  /** The part of the repair lines the customer is responsible for, net. */
+  /** The repairs the customer is responsible for, net, before their share is applied. */
   chargeableNetCents: number;
-  /** Checks that need work or were not tested. Each must pass a re-test before relisting. */
-  openChecks: string[];
 };
 
 /**
@@ -195,9 +219,9 @@ export function evaluateInspection(
   const answered = new Map(record.checks.map((check) => [check.id, check]));
   const missingChecks = definitions.map(({ id }) => id).filter((id) => !answered.has(id));
   const invalidChecks: string[] = [];
-  const openChecks: string[] = [];
   let conditionCap: AssetCondition = 'like_new';
   let repairNetCents = 0;
+  let chargeableNetCents = 0;
   const seen = new Set<string>();
 
   for (const check of record.checks) {
@@ -217,7 +241,7 @@ export function evaluateInspection(
       continue;
     }
     repairNetCents += check.repairCents;
-    if (check.result === 'repair' || check.result === 'not_tested') openChecks.push(check.id);
+    if (check.chargeable !== false) chargeableNetCents += check.repairCents;
     if (check.result === 'wear') conditionCap = lowerOf(conditionCap, 'good');
     if (check.result === 'repair')
       conditionCap = lowerOf(conditionCap, capForRepair[definition.gate]);
@@ -235,7 +259,6 @@ export function evaluateInspection(
     })
     .map((reading) => reading.id);
 
-  let chargeableNetCents = 0;
   const invalidDamage: number[] = [];
   record.damage.forEach((entry, index) => {
     if (!entry.area.trim() || !validCents(entry.repairCents)) {
@@ -260,67 +283,14 @@ export function evaluateInspection(
     conditionCap,
     repairNetCents,
     chargeableNetCents,
-    openChecks,
   };
 }
 
-/** Common refurbisher benchmark, not a standard: below it staff are prompted to consider a new battery. */
-export const batteryHealthBenchmarkPercent = 80;
-
-export function batteryBelowBenchmark(readings: readonly InspectionReading[]): boolean {
-  const battery = readings.find((reading) => reading.id === 'battery_health')?.value;
-  return battery !== undefined && battery !== null && battery < batteryHealthBenchmarkPercent;
-}
-
-/** One record per storage device, using the fields NIST SP 800-88 asks to be documented. */
-export const sanitizationMethods = ['clear', 'purge', 'destroy'] as const;
-export type SanitizationMethod = (typeof sanitizationMethods)[number];
-export type SanitizationRecord = {
-  storageModel: string;
-  storageSerial: string;
-  method: SanitizationMethod;
-  technique: string;
-  tool: string;
-  verification: string;
-};
-
-export type WorkRecord = {
-  completedWork: string[];
-  retestedChecks: string[];
-  sanitization: SanitizationRecord | null;
-  notes: string;
-};
-
-export type RequiredSignoff = { work: string[]; retests: string[]; sanitization: boolean };
-
-/** What must be confirmed after receipt. Legacy assessments have no checks to re-test. */
-export function requiredSignoff(
-  category: AssetCategory,
-  workItems: readonly { id: string }[],
-  record: InspectionRecord | undefined
-): RequiredSignoff {
-  return {
-    work: workItems.map((item) => item.id),
-    retests: record ? evaluateInspection(category, record).openChecks : [],
-    sanitization: workItems.some((item) => item.id === 'certified_data_wipe'),
-  };
-}
-
-function sanitizationComplete(record: SanitizationRecord | null) {
-  return (
-    record !== null &&
-    [record.storageModel, record.storageSerial, record.technique, record.tool, record.verification]
-      .map((field) => field.trim())
-      .every(Boolean)
+/** A battery with its own repair cost replaces the usage-based task, so it is not paid for twice. */
+export function batteryIsRepairLine(record: InspectionRecord | undefined): boolean {
+  return Boolean(
+    record?.checks.some(
+      (check) => check.id === 'battery_pack' && check.result === 'repair' && check.repairCents > 0
+    )
   );
-}
-
-/** Everything still missing. An empty result means the item may be marked ready. */
-export function signoffGaps(required: RequiredSignoff, work: WorkRecord) {
-  const gaps = {
-    work: required.work.filter((id) => !work.completedWork.includes(id)),
-    retests: required.retests.filter((id) => !work.retestedChecks.includes(id)),
-    sanitization: required.sanitization && !sanitizationComplete(work.sanitization),
-  };
-  return { ...gaps, ok: !gaps.work.length && !gaps.retests.length && !gaps.sanitization };
 }

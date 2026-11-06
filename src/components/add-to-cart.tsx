@@ -18,27 +18,32 @@ export function AddToCart({
 }) {
   const t = getT(locale);
   const items = useCart();
-  const added = items.some((item) => item.id === id);
+  const inCart = items.find((item) => item.id === id);
+  // Changing the term or down payment offers to add again, so the cart never keeps an old choice.
+  const upToDate =
+    inCart?.termMonths === termMonths && inCart.downPaymentCents === downPaymentCents;
+  const buttonClass = 'min-h-target rounded-pill bg-primary px-6 font-semibold text-white';
   return (
     <div className="mt-6">
-      <button
-        type="button"
-        disabled={!available || (!added && items.length >= 10)}
-        onClick={() =>
-          setCart([...items.filter((item) => item.id !== id), { id, termMonths, downPaymentCents }])
-        }
-        className="min-h-target rounded-pill bg-primary px-6 font-semibold text-white disabled:opacity-50"
-      >
-        {t(available ? 'cart.add' : 'cart.unavailable')}
-      </button>
-      {added ? (
-        <Link
-          href={`/${locale}/cart`}
-          className="ml-4 inline-flex min-h-target items-center text-primary underline"
-        >
+      {upToDate ? (
+        <Link href={`/${locale}/cart`} className={`${buttonClass} inline-flex items-center`}>
           {t('cart.view')}
         </Link>
-      ) : null}
+      ) : (
+        <button
+          type="button"
+          disabled={!available || (!inCart && items.length >= 10)}
+          onClick={() =>
+            setCart([
+              ...items.filter((item) => item.id !== id),
+              { id, termMonths, downPaymentCents },
+            ])
+          }
+          className={`${buttonClass} disabled:opacity-50`}
+        >
+          {t(available ? 'cart.add' : 'cart.unavailable')}
+        </button>
+      )}
     </div>
   );
 }

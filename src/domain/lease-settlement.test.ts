@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { settlementQuote, type SettlementInput } from './lease-settlement';
+import {
+  agreedReturnTotalCents,
+  buyoutBreakdown,
+  settlementQuote,
+  withAgreedReturnPrice,
+  type SettlementInput,
+} from './lease-settlement';
 
 const input: SettlementInput = {
   monthlyNetCents: 10730,
@@ -23,7 +29,7 @@ describe('settlementQuote', () => {
     expect(result.buyoutNetCents).toBeLessThan(10730 * 29 + 58350);
     expect(result.returnNetCents).toBe(expected - 200000);
     expect(result.buyoutTotalCents).toBe(expected + Math.round(expected * 0.255));
-    expect(result.policyVersion).toBe('settlement-v2');
+    expect(result.policyVersion).toBe('settlement-v3');
   });
 
   it('handles zero interest and rounds half cents upwards', () => {
@@ -106,4 +112,74 @@ it('charges new damage at maturity without adding the same damage twice', () => 
   });
   expect(quote.returnNetCents).toBe(7500);
   expect(quote.returnTotalCents).toBe(9413);
+});
+
+describe('buyoutBreakdown', () => {
+  const finance = {
+    monthlyNetCents: 10000,
+    buyoutCents: 50000,
+    remainingMonths: 24,
+    annualRateBasisPoints: 790,
+    recoveryCents: 0,
+    vatBasisPoints: 2550,
+    outstandingCents: 1929,
+  };
+  it('adds up exactly and shows what paying early saves', () => {
+    const parts = buyoutBreakdown(finance);
+    expect(
+      parts.allPaymentsCents + parts.endPriceCents - parts.interestSavedCents + parts.unpaidCents
+    ).toBe(parts.totalCents);
+    expect(parts.remainingPayments).toBe(24);
+    expect(parts.interestSavedCents).toBeGreaterThan(0);
+  });
+  it('saves nothing when nothing is left to discount', () => {
+    const parts = buyoutBreakdown({ ...finance, remainingMonths: 0 });
+    expect(parts.interestSavedCents).toBe(0);
+    expect(parts.allPaymentsCents).toBe(0);
+  });
+});
+
+describe('agreed return price', () => {
+  const agreed = {
+    vatBasisPoints: 2550,
+    earlyReturnNetCents: 10000,
+    customerRepairNetCents: 5000,
+    repairShareBasisPoints: 9000,
+  };
+
+  it('adds VAT once to the agreed amounts and current unpaid rent as it stands', () => {
+    expect(agreedReturnTotalCents(agreed, 0)).toBe(18825);
+    expect(agreedReturnTotalCents(agreed, 1234)).toBe(20059);
+  });
+
+  it('allows a return that costs nothing', () => {
+    expect(
+      agreedReturnTotalCents({ ...agreed, earlyReturnNetCents: 0, customerRepairNetCents: 0 }, 0)
+    ).toBe(0);
+  });
+
+  it('rejects a negative unpaid amount', () => {
+    expect(() => agreedReturnTotalCents(agreed, -1)).toThrow(RangeError);
+  });
+
+  it('replaces the return figures and leaves the buyout alone', () => {
+    const settlement = settlementQuote({
+      monthlyNetCents: 5000,
+      buyoutCents: 20000,
+      remainingMonths: 12,
+      annualRateBasisPoints: 900,
+      recoveryCents: 1000,
+      vatBasisPoints: 2550,
+      outstandingCents: 0,
+      damageCents: 99999,
+    });
+    expect(withAgreedReturnPrice(settlement, agreed, 100)).toEqual({
+      ...settlement,
+      returnNetCents: 15000,
+      returnTotalCents: 18925,
+      earlyReturnNetCents: 10000,
+      customerRepairNetCents: 5000,
+      repairShareBasisPoints: 9000,
+    });
+  });
 });

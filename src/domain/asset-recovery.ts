@@ -14,6 +14,8 @@ export type RecoveryInput = {
   usageValue: number;
   maintenanceUsageValue: number;
   additionalRepairCents: number;
+  /** The battery is already a separate repair line, so the usage rule must not add it again. */
+  skipBatteryTask?: boolean;
 };
 
 export type RecoveryWorkItem = {
@@ -181,7 +183,8 @@ export function assetRecovery(
         reason = 'required_before_lease';
         break;
       case 'battery_replacement':
-        if (input.category === 'e_bike') count = maintenanceUsage >= 15_000 ? 1 : 0;
+        if (input.skipBatteryTask) count = 0;
+        else if (input.category === 'e_bike') count = maintenanceUsage >= 15_000 ? 1 : 0;
         else if (input.category === 'laptop') count = maintenanceUsage >= 500 ? 1 : 0;
         else throw new RangeError('Unsupported battery service category');
         break;
@@ -218,5 +221,54 @@ export function assetRecovery(
     valueUpliftCents: postRepairValueCents - asReturnedValueCents,
     workItems,
     policyVersion: 'recovery-v1' as const,
+  };
+}
+
+/** What the item is worth to us after the work every return needs, before any repairs for damage. */
+export function valueAfterStandardWork(recovery: {
+  postRepairValueCents: number;
+  workItems: readonly RecoveryWorkItem[];
+}): number {
+  const standard = recovery.workItems
+    .filter(
+      (item) => item.reason === 'required_before_lease' || item.reason === 'maintenance_threshold'
+    )
+    .reduce((sum, item) => sum + item.costCents, 0);
+  return Math.max(0, recovery.postRepairValueCents - standard);
+}
+
+/**
+ * The factors behind a valuation, for showing the formula to people. Display only: these are
+ * rounded-friendly percentages, and the money always comes from the exact calculation above.
+ */
+export function valuationFactors(
+  input: Pick<RecoveryInput, 'category' | 'ageMonths' | 'usageValue'> & {
+    condition: AssetCondition;
+  },
+  curves: ResidualCurves
+) {
+  const points = curves.curves[input.category] ?? [];
+  let agePercent = points.at(-1)?.[1] ?? 0;
+  for (let index = 0; index < points.length; index++) {
+    const [age, percent] = points[index]!;
+    if (input.ageMonths > age) continue;
+    const previous = points[index - 1];
+    agePercent = previous
+      ? previous[1] +
+        ((percent - previous[1]) * (input.ageMonths - previous[0])) / (age - previous[0])
+      : percent;
+    break;
+  }
+  const adjustment = curves.usage_adjustment[input.category];
+  const usageChange = adjustment
+    ? Math.max(
+        adjustment.max_total_percent,
+        Math.floor(input.usageValue / adjustment.step) * adjustment.percent_per_step
+      )
+    : 0;
+  return {
+    agePercent,
+    conditionPercent: (curves.condition_multiplier[input.condition] ?? 0) * 100,
+    usagePercent: 100 + usageChange,
   };
 }

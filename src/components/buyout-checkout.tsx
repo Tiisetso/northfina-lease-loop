@@ -2,13 +2,15 @@
 import Link from 'next/link';
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { SettlementInput, settlementQuote } from '@/domain/lease-settlement';
+import {
+  buyoutBreakdown,
+  type SettlementInput,
+  type settlementQuote,
+} from '@/domain/lease-settlement';
 import { formatEuro } from '@/domain/money';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import { ProductPhoto } from './product-photo';
-import { PriceFormula } from './price-formula';
-import { invoiceAmounts } from '@/domain/lease-billing';
 
 type Props = {
   locale: Locale;
@@ -43,6 +45,7 @@ export function BuyoutCheckout({
   const token = useRef<string | null>(null);
   const [amount, setAmount] = useState(paidTotalCents ?? quote.buyoutTotalCents);
   const money = (cents: number) => formatEuro(cents, intlLocale[locale]);
+  const parts = buyoutBreakdown(finance);
   async function pay() {
     if (busy) return;
     setBusy(true);
@@ -97,28 +100,30 @@ export function BuyoutCheckout({
           {step === 'quote' ? (
             <>
               <h3 className="mt-8 font-semibold">{t('flow.calculation')}</h3>
-              <p className="mt-3 text-caption text-ink-muted">{t('flow.buyoutFormula')}</p>
-              <dl className="mt-5 space-y-4 text-caption">
-                <Row
-                  label={t('flow.discountedRents')}
-                  value={money(
-                    invoiceAmounts(quote.remainingRentNetCents, finance.vatBasisPoints).totalCents
-                  )}
-                />
-                <Row
-                  label={t('flow.discountedResidual')}
-                  value={money(
-                    quote.buyoutTotalCents -
-                      finance.outstandingCents -
-                      invoiceAmounts(quote.remainingRentNetCents, finance.vatBasisPoints).totalCents
-                  )}
-                />
-                {finance.outstandingCents > 0 ? (
-                  <Row label={t('flow.unpaidRent')} value={money(finance.outstandingCents)} />
+              <p className="mt-2 text-caption text-ink-muted">{t('flow.buyoutRule')}</p>
+              <dl className="mt-4 divide-y divide-divider text-caption tabular-nums">
+                {parts.remainingPayments > 0 ? (
+                  <Row
+                    label={t('flow.buyoutPayments', {
+                      count: parts.remainingPayments,
+                      amount: money(parts.monthlyCents),
+                    })}
+                    value={money(parts.allPaymentsCents)}
+                  />
                 ) : null}
+                <Row label={t('flow.discountedResidual')} value={money(parts.endPriceCents)} />
+                {parts.interestSavedCents > 0 ? (
+                  <Row
+                    label={t('flow.buyoutSaved', { rate: parts.annualRatePercent })}
+                    value={`−${money(parts.interestSavedCents)}`}
+                  />
+                ) : null}
+                {parts.unpaidCents > 0 ? (
+                  <Row label={t('flow.unpaidRent')} value={money(parts.unpaidCents)} />
+                ) : null}
+                <Row label={t('flow.buyoutTotal')} value={money(parts.totalCents)} />
               </dl>
-              <p className="mt-3 text-fine text-ink-muted">{t('pricing.includesVat')}</p>
-              <PriceFormula locale={locale} kind="buyout" finance={finance} />
+              <p className="mt-4 text-caption text-ink-muted">{t('flow.endPriceNote')}</p>
             </>
           ) : null}
           {step === 'payment' ? (

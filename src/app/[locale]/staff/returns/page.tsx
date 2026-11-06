@@ -10,9 +10,9 @@ import { listReturnCases } from '@/server/recovery';
 
 /** Grouped by the next thing staff can do, most actionable first. */
 const groups = [
-  { id: 'relist', statuses: ['ready'] },
+  { id: 'relist', statuses: ['ready', 'received'] },
   { id: 'assess', statuses: ['pending'] },
-  { id: 'progress', statuses: ['accepted', 'received'] },
+  { id: 'progress', statuses: ['accepted'] },
   { id: 'waiting', statuses: ['quoted'] },
   { id: 'closed', statuses: ['published', 'retired', 'bought'] },
 ] as const;
@@ -45,12 +45,12 @@ export default async function Page({ params }: PageProps<'/[locale]/staff/return
                 {t(`recovery.group.${group.id}` as MessageKey)}{' '}
                 <span className="text-caption font-normal text-ink-muted">({members.length})</span>
               </h2>
-              <ul className="mt-3 divide-y divide-hairline">
+              <ul className="mt-3 space-y-3">
                 {members.map((request) => (
                   <li key={request.id}>
                     <Link
                       href={`/${locale}/staff/returns/${request.id}`}
-                      className="flex min-h-target flex-wrap items-center justify-between gap-3 rounded-sm px-3 py-5 hover:bg-parchment"
+                      className="flex min-h-target flex-wrap items-center justify-between gap-3 rounded-lg border border-hairline p-4 hover:border-primary hover:bg-parchment focus-visible:bg-parchment"
                     >
                       <div>
                         <p className="font-semibold">
@@ -58,13 +58,15 @@ export default async function Page({ params }: PageProps<'/[locale]/staff/return
                         </p>
                         <p className="mt-1 text-caption text-ink-muted">
                           {request.contract.customer.owner.name} ·{' '}
-                          {t(`dashboard.request.${request.kind as 'return' | 'buyout'}`)} ·{' '}
+                          {t(`recovery.kind.${request.kind}` as MessageKey)} ·{' '}
                           {formatIsoDate(request.createdAt.toISOString().slice(0, 10), locale)}
                         </p>
                       </div>
-                      <span className="rounded-pill bg-parchment px-3 py-1 text-caption">
-                        {t(`recovery.state.${stateOf(request)}` as MessageKey)} →
-                      </span>
+                      {group.statuses.length > 1 ? (
+                        <span className="rounded-pill bg-parchment px-3 py-1 text-caption">
+                          {t(`recovery.state.${stateOf(request)}` as MessageKey)}
+                        </span>
+                      ) : null}
                     </Link>
                   </li>
                 ))}

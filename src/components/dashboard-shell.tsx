@@ -23,12 +23,12 @@ export function DashboardShell({
   return (
     <div className="min-h-full bg-canvas text-ink">
       <div className="mx-auto w-full max-w-[1200px] px-4 pt-7 pb-12 sm:px-6 tablet:pt-9">
-        <h1 className="font-display text-display-sm font-semibold tablet:text-display-lg">
+        <h1 className="font-display text-display-sm font-semibold tablet:text-display-lg print:hidden">
           {t('dashboard.title')}
         </h1>
         <nav
           aria-label={t('dashboard.navigation')}
-          className="mt-5 overflow-x-auto border-b border-hairline"
+          className="mt-5 overflow-x-auto border-b border-hairline print:hidden"
         >
           <ul className="flex min-w-max gap-2">
             {links.map((link) => (

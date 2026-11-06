@@ -6,17 +6,20 @@ import {
   loadVatRates,
 } from '@/data/load';
 import { assetCategorySchema, assetConditionSchema } from '@/data/schemas';
-import { assetRecovery, recoveryAgeMonths, recoveryFirstUseDate } from '@/domain/asset-recovery';
+import { recoveryAgeMonths, recoveryFirstUseDate } from '@/domain/asset-recovery';
 import { conditionDamageCost } from '@/domain/condition-report';
-import { conditionsUpTo, evaluateInspection } from '@/domain/inspection';
+import { batteryIsRepairLine, conditionsUpTo, evaluateInspection } from '@/domain/inspection';
+import { withAgreedReturnPrice } from '@/domain/lease-settlement';
+import { quoteReturn } from '@/domain/return-preview';
 import { monthlyFactorFor } from '@/domain/coefficient';
 import { summarizeLease } from '@/domain/lease-dashboard';
-import { settlementQuote } from '@/domain/lease-settlement';
 import { ApiError } from './api-response';
 import { withAudit, type TransactionClient } from './audit';
+import { leaseActionContext, settleOpenRent } from './lease-actions';
 import {
   inspectionSchema,
   recoveryCalculationSchema,
+  recoveryReportSchema,
   type RecoveryCalculation,
   type RecoveryInspection,
 } from './recovery-input';
@@ -132,31 +135,6 @@ export async function assessReturn(
       );
       if (!vatRate) throw new ApiError(409, 'QUOTE_UNAVAILABLE', 'No tax rate is available.');
       const vatBasisPoints = Math.round(vatRate.rate_percent * 100);
-      let recovery;
-      try {
-        recovery = assetRecovery(
-          {
-            category,
-            originalPriceCents,
-            ageMonths,
-            condition: inspection.condition,
-            targetCondition: inspection.targetCondition,
-            usageValue: inspection.usageValue,
-            maintenanceUsageValue: asset.maintenanceUsageValue,
-            additionalRepairCents: inspection.additionalRepairCents,
-          },
-          curves,
-          costs
-        );
-      } catch (error) {
-        if (error instanceof RangeError)
-          throw new ApiError(
-            400,
-            'INVALID_INSPECTION',
-            'The condition or recovery inputs are invalid.'
-          );
-        throw error;
-      }
       const summary = summarizeLease(contract, vat.rates, input.today);
       if (!summary.forecast.ok)
         throw new ApiError(409, 'QUOTE_UNAVAILABLE', 'The contract schedule is unavailable.');
@@ -182,16 +160,55 @@ export async function assessReturn(
         ),
         findings?.chargeableNetCents ?? 0
       );
-      const settlement = settlementQuote({
-        monthlyNetCents: contract.monthlyNetCents,
-        buyoutCents: contract.buyoutCents,
-        remainingMonths,
-        annualRateBasisPoints,
-        recoveryCents: Math.max(0, recovery.netRecoveryCents),
-        damageCents: damageNetCents,
-        vatBasisPoints,
-        outstandingCents: summary.outstandingCents + accruedUnissuedCents,
-      });
+      let quote;
+      try {
+        quote = quoteReturn(
+          {
+            category,
+            originalPriceCents,
+            ageMonths,
+            maintenanceUsageValue: asset.maintenanceUsageValue,
+          },
+          {
+            monthlyNetCents: contract.monthlyNetCents,
+            buyoutCents: contract.buyoutCents,
+            remainingMonths,
+            annualRateBasisPoints,
+            recoveryCents: 0,
+            vatBasisPoints,
+            outstandingCents: summary.outstandingCents + accruedUnissuedCents,
+            termMonths: contract.termMonths,
+          },
+          {
+            condition: inspection.condition,
+            targetCondition: inspection.targetCondition,
+            usageValue: inspection.usageValue,
+            additionalRepairCents: inspection.additionalRepairCents,
+            damageNetCents,
+            skipBatteryTask: batteryIsRepairLine(inspection.record),
+          },
+          curves,
+          costs
+        );
+      } catch (error) {
+        if (error instanceof RangeError)
+          throw new ApiError(
+            400,
+            'INVALID_INSPECTION',
+            'The condition or recovery inputs are invalid.'
+          );
+        throw error;
+      }
+      const { recovery } = quote;
+      // The price from the return form stands. The inspection only records the item and our costs.
+      const agreed =
+        request.kind !== 'buyout' && request.customerReportJson
+          ? recoveryReportSchema.parse(JSON.parse(request.customerReportJson)).agreedPrice
+          : undefined;
+      const outstandingCents = summary.outstandingCents + accruedUnissuedCents;
+      const settlement = agreed
+        ? withAgreedReturnPrice(quote.settlement, agreed, outstandingCents)
+        : quote.settlement;
       const snapshot = recoveryCalculationSchema.parse({
         quoteDate: input.today,
         originalPriceCents,
@@ -202,13 +219,32 @@ export async function assessReturn(
           contract.annualRateBasisPoints === null
             ? 'legacy_coefficient_table'
             : 'contract_snapshot',
-        vatBasisPoints,
+        vatBasisPoints: agreed?.vatBasisPoints ?? vatBasisPoints,
         outstandingInvoiceCents: summary.outstandingCents,
         accruedUnissuedCents,
-        damageNetCents,
-        chargeableDamage: (inspection.record?.damage ?? [])
-          .filter((entry) => entry.liability === 'chargeable')
-          .map((entry) => ({ area: entry.area, type: entry.type, netCents: entry.repairCents })),
+        damageNetCents: agreed
+          ? agreed.lines.reduce((sum, line) => sum + line.netCents, 0)
+          : damageNetCents,
+        chargeableDamage: agreed
+          ? []
+          : [
+              ...(inspection.record?.checks ?? [])
+                .filter((check) => check.chargeable !== false && check.repairCents > 0)
+                .map((check) => ({
+                  area: check.id,
+                  type: 'repair',
+                  netCents: check.repairCents,
+                  checkId: check.id,
+                })),
+              ...(inspection.record?.damage ?? [])
+                .filter((entry) => entry.liability === 'chargeable')
+                .map((entry) => ({
+                  area: entry.area,
+                  type: entry.type,
+                  netCents: entry.repairCents,
+                })),
+            ],
+        ...(agreed ? { agreedLines: agreed.lines } : {}),
         recovery,
         settlement,
       });
@@ -239,6 +275,8 @@ export async function acceptReturn(
     today: string;
     action: 'accept' | 'buyout';
     expectedAssessmentUpdatedAt: string;
+    /** Required to pay a demo return that costs something. Real leases have no payment service yet. */
+    paymentMethod?: string;
   }
 ) {
   return withAudit(
@@ -294,6 +332,26 @@ export async function acceptReturn(
       }
       if (!['return', 'exchange'].includes(request.kind))
         throw new ApiError(409, 'RETURN_STATE', 'This is not a return request.');
+      const amountCents = calculation(request.assessment.calculationJson).settlement
+        .returnTotalCents;
+      if (amountCents > 0 && request.contract.isDemo) {
+        if (!input.paymentMethod)
+          throw new ApiError(400, 'PAYMENT_METHOD_REQUIRED', 'Choose a payment method.');
+        await tx.leaseActionPayment.create({
+          data: {
+            contractId: input.contractId,
+            // One assessment can be paid once, so a repeated request cannot charge twice.
+            reference: `return-${request.assessment.id}`,
+            kind: 'return',
+            amountCents,
+            paymentMethod: input.paymentMethod,
+            quoteJson: request.assessment.calculationJson,
+            isSimulated: true,
+          },
+        });
+        const data = await leaseActionContext(tx, input.customerId, input.contractId, input.today);
+        await settleOpenRent(tx, data, input.today);
+      }
       return tx.returnAssessment.update({
         where: { id: request.assessment.id },
         data: { status: 'accepted' },
@@ -359,9 +417,10 @@ export async function progressReturn(
         await tx.leaseEvent.create({
           data: { contractId: request.contractId, kind: 'returned', eventDate: input.today },
         });
+        // Nothing else stands between receiving an item and deciding on its relisting.
         return tx.returnAssessment.update({
           where: { id: assessment.id },
-          data: { status: 'received' },
+          data: { status: 'ready' },
         });
       }
       if (

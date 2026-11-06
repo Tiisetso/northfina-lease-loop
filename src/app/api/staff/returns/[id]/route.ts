@@ -7,7 +7,7 @@ import { requireStaff } from '@/server/auth-session';
 import { db } from '@/server/db';
 import { assessReturn, findReturnCase, progressReturn } from '@/server/recovery';
 import { readRecoveryBody, staffRecoveryActionSchema } from '@/server/recovery-input';
-import { completeRefurbishment, publishRelisting } from '@/server/relisting';
+import { publishRelisting } from '@/server/relisting';
 import { requestToday } from '@/server/demo-mode';
 
 /** An itemized inspection is much larger than the other recovery requests. */
@@ -47,8 +47,6 @@ export const POST = handleRoute(
             },
           });
         }
-        case 'complete_work':
-          return completeRefurbishment(db, { requestId: id, staffId: staff.id, work: input.work });
         case 'publish':
           return publishRelisting(db, {
             requestId: id,

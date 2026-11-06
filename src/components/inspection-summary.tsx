@@ -10,30 +10,25 @@ export function InspectionSummary({
   category,
   record,
   notes,
-  currency,
 }: {
   locale: Locale;
   category: AssetCategory;
   record: InspectionRecord;
   notes: string;
-  /** Formats a net amount the way the rest of the page shows it. */
-  currency: (netCents: number) => string;
 }) {
   const t = getT(locale);
-  const findings = record.checks.filter((check) =>
-    ['repair', 'wear', 'not_tested'].includes(check.result)
-  );
+  const findings = record.checks.filter((check) => ['wear', 'not_tested'].includes(check.result));
+  const damage = record.damage.filter((entry) => entry.repairCents === 0);
   const units = new Map(inspectionReadings(category).map((item) => [item.id, item.unit]));
   const unitOf = (id: string) => units.get(id) ?? 'count';
   const readings = record.readings.filter((reading) => reading.value !== null);
   return (
     <section className="rounded-lg border border-hairline p-6">
       <h2 className="text-tagline font-semibold">{t('inspection.summary')}</h2>
-      <p className="mt-3 whitespace-pre-wrap text-body">{notes}</p>
-      <p className="mt-3 text-caption text-ink-muted">
-        {t(`inspection.usageSource.${record.usageSource}`)}
-        {record.customerPresent ? ` · ${t('inspection.customerPresent')}` : ''}
-      </p>
+      {notes ? <p className="mt-3 whitespace-pre-wrap text-body">{notes}</p> : null}
+      {record.customerPresent ? (
+        <p className="mt-3 text-caption text-ink-muted">{t('inspection.customerPresent')}</p>
+      ) : null}
       {findings.length ? (
         <ul className="mt-5 divide-y divide-divider">
           {findings.map((check) => (
@@ -45,15 +40,10 @@ export function InspectionSummary({
                 · {t(`inspection.result.${check.result}`)}
                 {check.note ? <span className="block text-ink-muted">{check.note}</span> : null}
               </span>
-              {check.repairCents ? (
-                <strong className="shrink-0">{currency(check.repairCents)}</strong>
-              ) : null}
             </li>
           ))}
         </ul>
-      ) : (
-        <p className="mt-5 text-caption">{t('inspection.noFindings')}</p>
-      )}
+      ) : null}
       {readings.length ? (
         <dl className="mt-5 grid gap-4 sm:grid-cols-3">
           {readings.map((reading) => (
@@ -71,19 +61,16 @@ export function InspectionSummary({
           ))}
         </dl>
       ) : null}
-      {record.damage.length ? (
+      {damage.length ? (
         <>
           <h3 className="mt-5 text-caption font-semibold">{t('inspection.section.damage')}</h3>
           <ul className="mt-2 divide-y divide-divider">
-            {record.damage.map((entry, index) => (
+            {damage.map((entry, index) => (
               <li key={index} className="flex justify-between gap-4 py-3 text-caption">
                 <span>
                   {entry.area} · {t(`inspection.damage.${entry.type}`)} ·{' '}
                   {t(`inspection.liability.${entry.liability}`)}
                 </span>
-                {entry.repairCents ? (
-                  <strong className="shrink-0">{currency(entry.repairCents)}</strong>
-                ) : null}
               </li>
             ))}
           </ul>
