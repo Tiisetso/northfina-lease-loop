@@ -141,7 +141,7 @@ export async function switchPersona(
     entry.details = { today, scenarioLease, cart: scenario.cart.map((item) => item.id) };
     // The cart lives in the browser, so the bar sets it from this response.
     const response = ok(
-      { personaId: persona.id, cart: scenario.cart },
+      { personaId: persona.id, staff: persona.staff, cart: scenario.cart },
       { headers: { 'Cache-Control': 'no-store' } }
     );
     for (const cookie of signedIn.headers.getSetCookie())

@@ -1,7 +1,8 @@
 'use client';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { setCart, type CartItem } from './cart-store';
+import { landingAfterSwitch } from './demo-landing';
 
 export type DemoBarLabels = {
   badge: string;
@@ -35,12 +36,17 @@ export function DemoBar({
   currentPersonaId: string | null;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [chosenDate, setChosenDate] = useState(date);
   const [persona, setPersona] = useState(currentPersonaId ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function send(path: string, body: unknown, onSuccess?: (data: unknown) => void) {
+  async function send(
+    path: string,
+    body: unknown,
+    onSuccess?: (data: unknown) => string | null | void
+  ) {
     setBusy(true);
     setError(null);
     try {
@@ -51,8 +57,9 @@ export function DemoBar({
       });
       if (!response.ok) setError(response.status === 429 ? labels.rateLimited : labels.error);
       else {
-        onSuccess?.(((await response.json()) as { data: unknown }).data);
-        router.refresh();
+        const landing = onSuccess?.(((await response.json()) as { data: unknown }).data);
+        if (landing) router.push(landing);
+        else router.refresh();
       }
     } catch {
       setError(labels.error);
@@ -68,9 +75,15 @@ export function DemoBar({
     event.preventDefault();
     // Each persona starts with its own scenario cart (often empty), never the previous one's.
     if (persona)
-      void send('/api/demo/persona', { personaId: persona }, (data) =>
-        setCart((data as { cart: CartItem[] }).cart)
-      );
+      void send('/api/demo/persona', { personaId: persona }, (data) => {
+        const { cart, staff } = data as { cart: CartItem[]; staff: boolean };
+        setCart(cart);
+        // A page about the previous persona's application or lease would be "not found".
+        return landingAfterSwitch(pathname, {
+          staff,
+          cartCount: cart.length,
+        });
+      });
   };
 
   const control =
