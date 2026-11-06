@@ -850,5 +850,18 @@
   "audit.intro": "Kes mida ja millal muutis. Iga äriandmete muudatus (allkirjastamine, arved, maksed, tagastused, töötajate otsused, demotoimingud) kirjutab ühe kirje samas tehingus kui muudatus. Viimased {count}, uusim ees.",
   "audit.system": "Süsteem ({name})",
   "audit.details": "Üksikasjad",
-  "audit.empty": "Midagi pole veel salvestatud."
+  "audit.empty": "Midagi pole veel salvestatud.",
+  "review.tab": "Taotlused",
+  "review.title": "Ülevaatamist ootavad taotlused",
+  "review.intro": "Need taotlused vajavad inimest: näiteks suur summa või riikliku taustaga isik. Loe põhjuseid, kirjuta lühike märkus ning kinnita või lükka tagasi. Klient näeb tulemust oma taotluse lehel ja saab pärast kinnitamist allkirjastamisega jätkata.",
+  "review.appliedOn": "Taotletud {date}",
+  "review.down": "sissemakse {amount}",
+  "review.reasons": "Miks peab otsustama inimene",
+  "review.note": "Sinu märkus (kohustuslik, salvestatakse muudatuste logisse)",
+  "review.approve": "Kinnita",
+  "review.reject": "Lükka tagasi",
+  "review.error": "See ei õnnestunud. Värskenda lehte ja proovi uuesti.",
+  "review.empty": "Ükski taotlus ei oota ülevaatamist.",
+  "application.status.awaiting_signatory": "Ootab, et {email} allkirjastaks",
+  "application.outcome.awaiting_signatory": "Sinu taotlus vastab meie nõuetele, kuid sa ei saa ettevõtte nimel allkirjastada. Ettevõttele ei kinnitata midagi enne, kui {email} allkirjastab. Jätkamisel lukustame hinna, broneerime toote ja saad isikliku allkirjastamislingi, mille talle saata. Leping jõustub ja midagi ei võeta tasuks alles pärast tema allkirja."
 }
