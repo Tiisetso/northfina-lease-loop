@@ -52,7 +52,7 @@ Representative merged work, checked against the commits inside each PR:
 | --- | --------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1   | **Catalogue**   | ✅     | All assets with today's price including VAT, from the dated price lists (`listPriceOn`). Reserved and returned items are labelled; returned items come back with a second-life price.                                                                                                                                                                                                                                              |
 | 2   | **Price**       | ✅     | Product-page sliders for term and down payment update the monthly rent live from the coefficient bands (`monthlyFactorFor`, `quoteAmounts`). Amounts outside the bands are explained, not hidden.                                                                                                                                                                                                                                  |
-| 3   | **Application** | ✅     | The `questions.json` question engine gives yes, no or "a person will check", always with reasons (see Smart Problem 4).                                                                                                                                                                                                                                                                                                            |
+| 3   | **Application** | ✅     | The `questions.json` question engine gives yes, no or "a person will check", always with reasons (see Smart Problem 4). Applications that need a person wait in a staff review queue, where staff approve or reject with a note (card 7).                                                                                                                                                                                          |
 | 4   | **Contract**    | ✅     | Signing locks the price list of the signing day and stores the list price, rent, buyout, interest rate and price-list version; later price lists never touch it. A price that differs from the quote is shown and must be accepted (card 2). A company contract waits for its named signatory.                                                                                                                                     |
 | 5   | **Invoices**    | ✅     | Each month's invoice is issued on its due date from the locked contract (`invoicesDue`): net rent, VAT at the rate on that due date stored on the invoice, due dates clamped to month end. Billing runs idempotently when the customer opens their account, with an audit row.                                                                                                                                                     |
 | 6   | **End of term** | ✅     | **Buy** (self-service, priced and paid in one step), **return** (guided condition check, then staff inspection) or **exchange** for another item, which passes the old one on to its next life. Co-leasing splits invoices between participants. When the term ends without a choice, the lease page says so and offers buy (the locked buyout) or return; billing has stopped. A bought item is marked sold and leaves the fleet. |
@@ -77,9 +77,11 @@ early exit)**, also solved **3 (second-life matchmaking)** and **5 (money that a
   - the Finnish business-ID check digit is verified (`validBusinessId`);
   - the consumer affordability rule (rent incl. VAT ≤ 30 % of net income) applies only
     when the bank asks for income, from €2,000 financed;
-  - a PEP, or €50,000 or more financed, always goes to a person;
-  - an applicant who **can't sign** for their company names who can, and the contract
-    waits for that person, who signs by link (card 6, `src/domain/signatory.ts`);
+  - a PEP, or €50,000 or more financed, always goes to a person: staff review it in the
+    **Applications** tab and approve or reject with a note, which the audit trail keeps;
+  - an applicant who **can't sign** for their company names who can. The application
+    page says it's waiting for that person, not "approved", and the contract stays
+    inactive until they sign by their personal link (card 6, `src/domain/signatory.ts`);
   - an applicant **under 18** gets a gentle explanation, the date they can apply and a
     ready-written email to a parent or guardian (card 5).
 
@@ -202,19 +204,22 @@ What we know doesn't work yet, so nothing in the demo surprises you:
 - **Smart Problem 7:** CO₂ is shown per item and per item passport, not fleet-wide.
 - **Second life:** the waiting-list winner is chosen and explained, but staff still
   publish the item to the catalogue rather than assigning it to that person directly.
+- **Card 6:** the signatory signs the contract through a personal, secret-protected link;
+  they don't log in to an account to approve the application itself.
 - Rewinding the demo clock doesn't undo a **completed return**: its inspection already
   changed the item.
 
 ## Engineering
 
 - **Pure, tested domain logic** in `src/domain/`: no I/O, no clock; dates are arguments.
-  Vitest tests sit next to every module (576 tests at the last run; coverage gate 60 %,
+  Vitest tests sit next to every module (579 tests at the last run; coverage gate 60 %,
   currently 95 % of lines), plus **property-based tests** (fast-check) that check the money
   rules over thousands of random contracts on every run.
 - **Money** in integer cents with one deliberate rounding step per amount.
 - **One API envelope**: `ok()` / `fail()` / `handleRoute()`; no raw errors reach the browser.
 - **Audit trail**: every data change goes through `withAudit()` in the same transaction,
-  including demo actions and signatures (the signatory is the actor).
+  including demo actions and signatures (the signatory is the actor). Staff see it in the
+  **Audit trail** tab: who changed what, when, with the details.
 - **Guards**: hooks (secret scan, Prettier, ESLint, conventional commits, pre-push tests),
   CI on every PR (format, lint, types, file size, no-AI, secrets, decision records,
   coverage, build, PR description), files under 600 lines.
