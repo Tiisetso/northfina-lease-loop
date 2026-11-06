@@ -793,5 +793,14 @@
   "signing.sign": "Allekirjoita sopimus",
   "signing.signed": "Allekirjoitettu {date}. Sopimus on nyt voimassa.",
   "signing.invalid": "Tämä allekirjoituslinkki ei ole voimassa. Pyydä lähettäjältä uusi linkki.",
-  "signing.error": "Allekirjoitus ei onnistunut. Yritä uudelleen."
+  "signing.error": "Allekirjoitus ei onnistunut. Yritä uudelleen.",
+  "priceLock.title": "Hinta on muuttunut tarjouksen jälkeen",
+  "priceLock.body": "Sait tarjouksen {date}. Hinnat ovat muuttuneet sen jälkeen, ja allekirjoitus lukitsee tänään voimassa olevan hinnan, joten tarkista uudet summat.",
+  "priceLock.item": "Tarjous {quoted} (hinnasto v{quotedVersion}), tänään {price} (hinnasto v{version}).",
+  "priceLock.monthly": "Kuukausimaksu sis. ALV: {quoted} → {monthly}.",
+  "priceLock.lower": "Hyviä uutisia: tuote on {amount} edullisempi.",
+  "priceLock.higher": "Tuote on {amount} kalliimpi.",
+  "priceLock.accept": "Hyväksyn tämän päivän hinnan. Allekirjoitus lukitsee sen koko sopimuskaudeksi.",
+  "priceLock.locked": "Hinta lukittu hinnastosta v{version}. Myöhemmät hinnastot eivät muuta sitä.",
+  "priceLock.quoted": "Sait tarjouksen {quoted} (hinnasto v{quotedVersion}) {quotedDate}; allekirjoitus lukitsi hinnan {price} sinä päivänä voimassa olleesta hinnastosta."
 }

@@ -2,12 +2,17 @@ import { z } from 'zod';
 import type { PrismaClient } from '@/generated/prisma/client';
 import type { QuestionsFile } from '@/data/schemas';
 import { assetCategorySchema } from '@/data/schemas';
-import { assessApplication } from '@/domain/application';
+import {
+  assessApplication,
+  type ApplicationAnswers,
+  type ApplicationContext,
+} from '@/domain/application';
 import {
   applicationCart,
   sameApplicationItems,
   type ApplicationQuoteItem,
 } from '@/domain/application-cart';
+import { priceChanges, quoteStillValid, sameSelection } from '@/domain/price-lock';
 import { ApiError } from './api-response';
 import type { ApplicationInput } from './application-input';
 import { applicationSelectionSchema } from './application-input';
@@ -78,26 +83,32 @@ export async function findCustomerApplication(
   return database.leaseApplication.findFirst({ where: { id, customerId } });
 }
 
-/** Called inside the checkout write transaction; neither a client flag nor another customer's ID is approval. */
+/**
+ * Called inside the checkout write transaction; neither a client flag nor another customer's ID is
+ * approval. The approval must be recent (QUOTE_VALID_DAYS) and for the same selection. If prices
+ * changed since the quote (card 2), eligibility is checked again with today's amounts and the
+ * changes are returned, so checkout can require the customer to accept today's price.
+ */
 export async function requireApplicationApproval(
   tx: TransactionClient,
   customerId: string,
   id: string,
-  items: readonly ApplicationQuoteItem[],
-  today: string
+  current: { items: readonly ApplicationQuoteItem[]; context: ApplicationContext },
+  today: string,
+  bank: QuestionsFile
 ) {
   const application = await tx.leaseApplication.findFirst({ where: { id, customerId } });
   if (!application || application.status !== 'approved')
     throw new ApiError(403, 'APPLICATION_NOT_APPROVED', 'An approved application is required.');
-  if (
-    application.startDate !== today ||
-    !sameApplicationItems(applicationItemsSchema.parse(JSON.parse(application.itemsJson)), items)
-  ) {
-    throw new ApiError(
-      409,
-      'APPLICATION_CHANGED',
-      'Please apply again for the current cart and price.'
-    );
+  const quoted = applicationItemsSchema.parse(JSON.parse(application.itemsJson));
+  const changed = () =>
+    new ApiError(409, 'APPLICATION_CHANGED', 'Please apply again for the current cart and price.');
+  if (!quoteStillValid(application.startDate, today) || !sameSelection(quoted, current.items))
+    throw changed();
+  if (!sameApplicationItems(quoted, current.items)) {
+    const answers = z.record(z.string(), z.unknown()).parse(JSON.parse(application.answersJson));
+    const again = assessApplication(bank, current.context, answers as ApplicationAnswers);
+    if (again.status !== 'approved') throw changed();
   }
-  return application;
+  return { application, quoted, changes: priceChanges(quoted, current.items) };
 }

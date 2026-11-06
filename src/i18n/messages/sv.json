@@ -793,5 +793,14 @@
   "signing.sign": "Skriv under avtalet",
   "signing.signed": "Undertecknat den {date}. Avtalet är nu aktivt.",
   "signing.invalid": "Den här underskriftslänken är inte giltig. Be personen som skickade den om en ny.",
-  "signing.error": "Underskriften gick inte igenom. Försök igen."
+  "signing.error": "Underskriften gick inte igenom. Försök igen.",
+  "priceLock.title": "Priset har ändrats sedan offerten",
+  "priceLock.body": "Du fick offerten den {date}. Priserna har ändrats sedan dess, och underskriften låser priset som gäller i dag, så kontrollera de nya beloppen.",
+  "priceLock.item": "Offert {quoted} (prislista v{quotedVersion}), i dag {price} (prislista v{version}).",
+  "priceLock.monthly": "Månadsbetalning inkl. moms: {quoted} → {monthly}.",
+  "priceLock.lower": "Goda nyheter: varan är {amount} billigare.",
+  "priceLock.higher": "Varan är {amount} dyrare.",
+  "priceLock.accept": "Jag godkänner dagens pris. Underskriften låser det för hela avtalstiden.",
+  "priceLock.locked": "Priset är låst från prislista v{version}. Senare prislistor ändrar det inte.",
+  "priceLock.quoted": "Du fick offerten {quoted} (prislista v{quotedVersion}) den {quotedDate}; underskriften låste {price} från prislistan som gällde den dagen."
 }

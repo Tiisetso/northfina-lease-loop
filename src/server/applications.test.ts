@@ -215,7 +215,7 @@ describe('application API and checkout approval boundary', () => {
       fixture.db,
       { actor: 'test', action: 'test.expire', entityType: 'application', entityId: data.id },
       (tx) =>
-        tx.leaseApplication.update({ where: { id: data.id }, data: { startDate: '2026-11-04' } })
+        tx.leaseApplication.update({ where: { id: data.id }, data: { startDate: '2026-10-28' } })
     );
     expect((await checkout(cookie, data.id)).status).toBe(409);
     await withAudit(

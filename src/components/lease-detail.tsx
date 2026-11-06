@@ -171,6 +171,21 @@ export function LeaseDetail({
               <p className="mt-2 text-caption text-ink-muted">
                 {t(`condition.${lease.asset.condition}`)} · {lease.asset.model_year}
               </p>
+              <p className="mt-2 text-caption text-ink-muted">
+                {t('priceLock.locked', { version: lease.priceListVersion })}
+              </p>
+              {lease.quotedOn &&
+              lease.quotedPriceCents !== null &&
+              lease.quotedPriceListVersion !== null ? (
+                <p className="mt-1 text-caption text-ink-muted">
+                  {t('priceLock.quoted', {
+                    quoted: formatEuro(lease.quotedPriceCents, intlLocale[locale]),
+                    quotedVersion: lease.quotedPriceListVersion,
+                    quotedDate: formatIsoDate(lease.quotedOn, locale),
+                    price: formatEuro(lease.listPriceCents, intlLocale[locale]),
+                  })}
+                </p>
+              ) : null}
               {lease.signatoryEmail && lease.signedOn ? (
                 <p className="mt-2 text-caption text-ink-muted wrap-anywhere">
                   {t('signing.signedBy', {

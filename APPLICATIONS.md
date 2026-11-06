@@ -24,8 +24,13 @@ setup applies the new `LeaseApplication` migration without resetting existing da
    amount, asset-category and earlier-answer conditions come from `data/questions.json`.
 4. Submit and review the persisted outcome and reasons. Approved applications can
    continue to simulated checkout; rejected/manual-review results cannot.
-5. Changing the basket, term, down payment, price/version or quote day requires a
-   matching new approval. Checkout always verifies this on the server, in its write
+5. Changing the basket, term or down payment requires a new approval. An approval can be
+   signed for 7 days (`QUOTE_VALID_DAYS`). If a newer price list applies by then
+   (scenario card 2), eligibility is checked again with today's amounts and checkout
+   shows the quoted and today's price side by side; **signing locks today's price**, and
+   only after the customer ticks "I accept today's price". The contract keeps the
+   original quote (`quotedOn`, `quotedPriceCents`, `quotedPriceListVersion`) so the lease
+   page can explain it. Checkout always verifies this on the server, in its write
    transaction. A result belonging to another customer is never accepted.
 
 Question answers stay in form memory until submission, not browser storage.

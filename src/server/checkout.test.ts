@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { loadAssets } from '@/data/load';
+import { loadAssets, loadCoefficientTable, loadVatRates } from '@/data/load';
+import { checkoutQuote } from '@/domain/checkout-quote';
 import { createTestDb } from '../../tests/helpers/test-db';
 import { toAssetRowData } from './assets';
 import { withAudit } from './audit';
@@ -43,7 +44,7 @@ const body = {
   address: 'Test address 1',
   payment: 'card',
 };
-function request(cookie: string, value = body, site = origin) {
+function request(cookie: string, value: object = body, site = origin) {
   return new Request(`${origin}/api/checkout`, {
     method: 'POST',
     headers: { origin: site, cookie, 'content-type': 'application/json' },
@@ -231,5 +232,143 @@ describe('simulated checkout', () => {
     });
     expect(audit).toMatchObject({ actor: 'signatory:ceo@norvi.example.com' });
     expect((await sign({ token: valid, confirm: true })).status).toBe(409);
+  });
+  it('card 2: quoted on Thursday (v1), signed on Friday (v2) only after accepting the new price', async () => {
+    const laptop = (await loadAssets()).find((item) => item.id === 'laptop-004')!;
+    await withAudit(
+      fixture.db,
+      { actor: 'test', action: 'test.setup', entityType: 'asset', entityId: laptop.id },
+      (tx) => tx.asset.create({ data: toAssetRowData(laptop) })
+    );
+    const { cookie } = await customer();
+    const on = (date: string) => `${cookie}; lease-loop.demo-date=${date}`;
+    const selection = [{ id: 'laptop-004', termMonths: 36, downPaymentCents: 0 }];
+    const applied = await APPLY(
+      new Request(`${origin}/api/applications`, {
+        method: 'POST',
+        headers: { origin, cookie: on('2026-11-05'), 'content-type': 'application/json' },
+        body: JSON.stringify({
+          items: selection,
+          answers: {
+            q_customer_type: 'consumer',
+            q_full_name: 'Customer',
+            q_birth_date: '1990-01-01',
+            q_email: 'checkout@example.com',
+            q_country: 'FI',
+            q_employment: 'employed',
+            q_monthly_income: 400000,
+          },
+        }),
+      }),
+      undefined
+    );
+    const { data } = await applied.json();
+    expect(data.status).toBe('approved');
+    const [table, vat] = await Promise.all([loadCoefficientTable(), loadVatRates()]);
+    const friday = checkoutQuote(321100, 0, 36, '2026-11-06', table, vat.rates)!;
+    const signFriday = (extra: object = {}, date = '2026-11-06') =>
+      POST(
+        request(on(date), {
+          ...body,
+          token: crypto.randomUUID(),
+          applicationId: data.id,
+          date,
+          items: [
+            {
+              id: 'laptop-004',
+              priceCents: 321100,
+              monthlyTotalCents: friday.monthlyTotalCents,
+              version: 2,
+              termMonths: 36,
+              downPaymentCents: 0,
+            },
+          ],
+          ...extra,
+        }),
+        undefined
+      );
+
+    const refused = await signFriday();
+    expect(refused.status).toBe(409);
+    const { error } = await refused.json();
+    expect(error.code).toBe('PRICE_CHANGED');
+    expect(error.details.changes).toEqual([
+      expect.objectContaining({
+        id: 'laptop-004',
+        quotedPriceCents: 349000,
+        quotedPriceListVersion: 1,
+        priceCents: 321100,
+        priceListVersion: 2,
+        differenceCents: -27900,
+      }),
+    ]);
+    expect(await fixture.db.contract.count()).toBe(0);
+
+    expect((await signFriday({ acceptPriceChange: true })).status).toBe(201);
+    const contract = await fixture.db.contract.findFirstOrThrow({
+      where: { assetId: 'laptop-004' },
+    });
+    expect(contract).toMatchObject({
+      startDate: '2026-11-06',
+      listPriceCents: 321100,
+      priceListVersion: 2,
+      monthlyNetCents: friday.monthlyNetCents,
+      quotedOn: '2026-11-05',
+      quotedPriceCents: 349000,
+      quotedPriceListVersion: 1,
+    });
+    const audit = await fixture.db.auditLog.findFirst({
+      where: { action: 'lease.simulated_checkout', details_json: { contains: 'priceChanges' } },
+    });
+    expect(audit).not.toBeNull();
+  });
+  it('refuses an approval older than the quote validity window', async () => {
+    const { cookie } = await customer();
+    const applied = await APPLY(
+      new Request(`${origin}/api/applications`, {
+        method: 'POST',
+        headers: {
+          origin,
+          cookie: `${cookie}; lease-loop.demo-date=2026-11-05`,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: [{ id: 'ebike-003', termMonths: 36, downPaymentCents: 0 }],
+          answers: {
+            q_customer_type: 'consumer',
+            q_full_name: 'Customer',
+            q_birth_date: '1990-01-01',
+            q_email: 'checkout@example.com',
+            q_country: 'FI',
+            q_employment: 'employed',
+            q_monthly_income: 400000,
+            q_usage_purpose: 'commuting',
+          },
+        }),
+      }),
+      undefined
+    );
+    const { data } = await applied.json();
+    const [table, vat] = await Promise.all([loadCoefficientTable(), loadVatRates()]);
+    const later = checkoutQuote(408400, 0, 36, '2026-11-13', table, vat.rates)!;
+    const response = await POST(
+      request(`${cookie}; lease-loop.demo-date=2026-11-13`, {
+        ...body,
+        applicationId: data.id,
+        date: '2026-11-13',
+        items: [
+          {
+            ...body.items[0]!,
+            priceCents: 408400,
+            version: 2,
+            monthlyTotalCents: later.monthlyTotalCents,
+          },
+        ],
+        acceptPriceChange: true,
+      }),
+      undefined
+    );
+    expect(response.status).toBe(409);
+    expect((await response.json()).error.code).toBe('APPLICATION_CHANGED');
   });
 });

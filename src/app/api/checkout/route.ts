@@ -10,6 +10,7 @@ import { assertSameOrigin } from '@/server/auth-input';
 import { requireIdentity } from '@/server/auth-session';
 import { withAudit, type AuditEntry } from '@/server/audit';
 import { checkoutOptions } from '@/server/checkout-options';
+import { loadQuestions } from '@/data/load';
 import { db } from '@/server/db';
 import { requestToday } from '@/server/demo-mode';
 
@@ -33,6 +34,8 @@ const schema = z.strictObject({
   delivery: z.enum(['delivery', 'pickup']),
   address: z.string().trim().min(3).max(200),
   payment: z.enum(['card', 'invoice']),
+  /** The customer saw and accepted today's price where it differs from their quote (card 2). */
+  acceptPriceChange: z.boolean().optional(),
 });
 
 async function checkoutBody(request: Request) {
@@ -147,14 +150,23 @@ export const POST = handleRoute(async (request) => {
       tx,
       identity.customerId,
       input.applicationId,
-      application.items,
-      today
+      application,
+      today,
+      await loadQuestions()
     );
+    // Card 2: signing locks today's price list. A price that differs from the quote is never
+    // signed silently: the customer must have seen and accepted it.
+    if (approved.changes.length && !input.acceptPriceChange)
+      throw new ApiError(409, 'PRICE_CHANGED', 'The price has changed since your quote.', {
+        changes: approved.changes,
+      });
+    if (approved.changes.length)
+      entry.details = { ...(entry.details as object), priceChanges: approved.changes };
     // Card 6: an applicant who can't sign for the company named who can.
     const signatory = pendingSignatory(
       z
         .record(z.string(), z.unknown())
-        .parse(JSON.parse(approved.answersJson)) as ApplicationAnswers
+        .parse(JSON.parse(approved.application.answersJson)) as ApplicationAnswers
     );
     if (signatory)
       entry.details = { ...(entry.details as object), awaitingSignatureFrom: signatory };
@@ -191,9 +203,18 @@ export const POST = handleRoute(async (request) => {
           firstLeaseDate: asset.firstLeaseDate ?? today,
         },
       });
+      const quotedChange = approved.changes.find((change) => change.id === quote.id);
       await tx.contract.create({
         data: {
           id: ids[index]!,
+          // Kept only when signing used a different price than the quote, to explain it later.
+          ...(quotedChange
+            ? {
+                quotedOn: approved.application.startDate,
+                quotedPriceCents: quotedChange.quotedPriceCents,
+                quotedPriceListVersion: quotedChange.quotedPriceListVersion,
+              }
+            : {}),
           customerId: identity.customerId,
           assetId: quote.id,
           startDate: today,
