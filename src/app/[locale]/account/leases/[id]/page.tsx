@@ -3,14 +3,19 @@ import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { DashboardShell } from '@/components/dashboard-shell';
 import { LeaseDetail } from '@/components/lease-detail';
+import { mailtoHref } from '@/components/mailto';
 import { loadCo2Factors, loadVatRates } from '@/data/load';
-import { isLocale } from '@/i18n/locales';
+import { formatEuro } from '@/domain/money';
+import { AWAITING_SIGNATURE } from '@/domain/signatory';
+import { intlLocale, isLocale } from '@/i18n/locales';
 import { getT } from '@/i18n/get-t';
+import { authSettings } from '@/server/auth-config';
 import { readIdentity } from '@/server/auth-session';
+import { signingLink } from '@/server/contract-signing';
 import { db } from '@/server/db';
 import { findCustomerLease } from '@/server/leases';
 import { leaseActionContext } from '@/server/lease-actions';
-import { appToday } from '@/server/demo-mode';
+import { appToday, demoModeEnabled } from '@/server/demo-mode';
 
 export default async function LeaseDetailPage({
   params,
@@ -26,6 +31,29 @@ export default async function LeaseDetailPage({
   const liveBuyout =
     lease.status === 'active' ? await leaseActionContext(db, identity.customerId, id, today) : null;
   const t = getT(locale);
+  // Card 6: while the company's signatory hasn't signed, offer the link to send them.
+  const link =
+    lease.status === AWAITING_SIGNATURE && lease.signatoryEmail
+      ? signingLink(authSettings(), locale, lease.id)
+      : null;
+  const signing =
+    link && lease.signatoryEmail
+      ? {
+          email: lease.signatoryEmail,
+          emailHref: mailtoHref(
+            t('signing.emailSubject', { item: `${lease.asset.make} ${lease.asset.model}` }),
+            t('signing.emailBody', {
+              company: identity.name,
+              item: `${lease.asset.make} ${lease.asset.model}`,
+              months: t('product.months', { count: lease.termMonths }),
+              monthly: formatEuro(lease.monthlyNetCents, intlLocale[locale]),
+              link,
+            }),
+            lease.signatoryEmail
+          ),
+          demoLink: demoModeEnabled() ? link : null,
+        }
+      : undefined;
   return (
     <DashboardShell locale={locale} active="leases">
       <Link
@@ -41,6 +69,7 @@ export default async function LeaseDetailPage({
         factors={factors}
         today={today}
         liveBuyoutTotalCents={liveBuyout?.quote.buyoutTotalCents}
+        signing={signing}
       />
     </DashboardShell>
   );

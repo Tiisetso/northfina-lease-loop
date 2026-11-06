@@ -99,4 +99,5 @@ export async function requireApplicationApproval(
       'Please apply again for the current cart and price.'
     );
   }
+  return application;
 }

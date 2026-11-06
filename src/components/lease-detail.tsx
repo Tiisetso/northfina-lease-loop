@@ -17,6 +17,7 @@ import {
 } from '@/server/recovery-input';
 import { LeaseRequestControls, ReturnQuoteAccept } from './lease-controls';
 import { AvatarStack } from './person-avatar';
+import { SignatoryStatus, type SigningInfo } from './signatory-status';
 import { ProductPhoto } from './product-photo';
 
 type Props = {
@@ -26,10 +27,20 @@ type Props = {
   factors: Co2Factors;
   today: string;
   liveBuyoutTotalCents?: number;
+  /** Set while the contract waits for the company's signatory (card 6). */
+  signing?: SigningInfo;
 };
 const panel = 'rounded-lg border border-hairline bg-canvas p-5 sm:p-6';
 
-export function LeaseDetail({ locale, lease, rates, factors, today, liveBuyoutTotalCents }: Props) {
+export function LeaseDetail({
+  locale,
+  lease,
+  rates,
+  factors,
+  today,
+  liveBuyoutTotalCents,
+  signing,
+}: Props) {
   const t = getT(locale);
   const info = summarizeLease(lease, rates, today);
   const people = sharesOn(lease.coLeaseShares, today);
@@ -132,6 +143,7 @@ export function LeaseDetail({ locale, lease, rates, factors, today, liveBuyoutTo
             </p>
           </section>
         ) : null}
+        {signing ? <SignatoryStatus t={t} signing={signing} /> : null}
         <section className={panel}>
           <div className="flex items-start gap-5">
             <div className="w-28 shrink-0 sm:w-40">
@@ -145,10 +157,10 @@ export function LeaseDetail({ locale, lease, rates, factors, today, liveBuyoutTo
             </div>
             <div className="min-w-0">
               <span
-                className={`inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1 text-fine font-semibold ${lease.status === 'active' ? 'bg-emerald-50 text-emerald-800' : 'bg-parchment text-ink-muted'}`}
+                className={`inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1 text-fine font-semibold ${lease.status === 'active' ? 'bg-emerald-50 text-emerald-800' : lease.status === 'awaiting_signature' ? 'bg-amber-50 text-amber-900' : 'bg-parchment text-ink-muted'}`}
               >
                 <span
-                  className={`size-1.5 rounded-full ${lease.status === 'active' ? 'bg-emerald-600' : 'bg-ink-muted'}`}
+                  className={`size-1.5 rounded-full ${lease.status === 'active' ? 'bg-emerald-600' : lease.status === 'awaiting_signature' ? 'bg-amber-500' : 'bg-ink-muted'}`}
                   aria-hidden="true"
                 />
                 {t(`dashboard.status.${lease.status}`)}
@@ -159,6 +171,14 @@ export function LeaseDetail({ locale, lease, rates, factors, today, liveBuyoutTo
               <p className="mt-2 text-caption text-ink-muted">
                 {t(`condition.${lease.asset.condition}`)} · {lease.asset.model_year}
               </p>
+              {lease.signatoryEmail && lease.signedOn ? (
+                <p className="mt-2 text-caption text-ink-muted wrap-anywhere">
+                  {t('signing.signedBy', {
+                    email: lease.signatoryEmail,
+                    date: formatIsoDate(lease.signedOn, locale),
+                  })}
+                </p>
+              ) : null}
             </div>
           </div>
           <dl className="mt-5 grid grid-cols-2 gap-5 border-t border-divider pt-5">

@@ -60,7 +60,13 @@ manual review currently records that a person is required and blocks checkout.
   policy of sending every consumer under €2,000 to manual review: with no reviewer
   step, consumers could not lease any item under €2,000.)
 - PEP answers require manual review. A company applicant without signing authority
-  must provide an authorized contact and receives manual review, not automatic approval.
+  must name the person who can sign (`q_signatory_email`). That is not a reason to stop
+  (scenario card 6): the application is approved with the note `signatory_pending`,
+  checkout prepares the contract with its price locked and the item reserved, and the
+  contract stays `awaiting_signature` (no billing) until that person signs. The customer
+  sends them a signing link (an HMAC of the contract ID with the server secret, so it
+  can't be guessed and nothing extra is stored); signing makes the contract active and
+  billing starts on the signing day. The signing is audited with the signatory as actor.
 - At €50,000 financed or more, require a person to review the business due diligence.
   This implements the challenge's large-tractor scenario; it is an explicit demo policy.
 - Missing/invalid answers produce a validation response, not approval. Rejection

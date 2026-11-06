@@ -46,11 +46,11 @@ export function LeaseCard({
         </div>
         <div className="min-w-0 flex-1">
           <span
-            className={`inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1 text-fine font-semibold ${lease.status === 'active' ? 'bg-emerald-50 text-emerald-800' : 'bg-parchment text-ink-muted'}`}
+            className={`inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1 text-fine font-semibold ${lease.status === 'active' ? 'bg-emerald-50 text-emerald-800' : lease.status === 'awaiting_signature' ? 'bg-amber-50 text-amber-900' : 'bg-parchment text-ink-muted'}`}
           >
             <span
               aria-hidden="true"
-              className={`size-1.5 rounded-full ${lease.status === 'active' ? 'bg-emerald-600' : 'bg-ink-muted'}`}
+              className={`size-1.5 rounded-full ${lease.status === 'active' ? 'bg-emerald-600' : lease.status === 'awaiting_signature' ? 'bg-amber-500' : 'bg-ink-muted'}`}
             />
             {t(`dashboard.status.${lease.status}`)}
           </span>

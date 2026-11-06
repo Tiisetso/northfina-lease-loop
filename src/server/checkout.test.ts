@@ -15,6 +15,8 @@ vi.mock('@/server/db', () => ({
 vi.mock('@/server/today', () => ({ todayIso: () => '2026-11-05' }));
 import { POST } from '@/app/api/checkout/route';
 import { POST as APPLY } from '@/app/api/applications/route';
+import { POST as SIGN } from '@/app/api/contracts/[id]/sign/route';
+import { signingToken } from './contract-signing';
 
 const origin = 'http://localhost:3000';
 const settings = {
@@ -146,5 +148,88 @@ describe('simulated checkout', () => {
     expect(
       await fixture.db.auditLog.count({ where: { action: 'lease.simulated_checkout' } })
     ).toBeGreaterThan(0);
+  });
+  it('card 6: a company applicant who cannot sign gets a contract that waits for the signatory', async () => {
+    const { cookie } = await customer();
+    const application = await APPLY(
+      new Request(`${origin}/api/applications`, {
+        method: 'POST',
+        headers: { origin, cookie, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          items: [{ id: 'ebike-003', termMonths: 36, downPaymentCents: 0 }],
+          answers: {
+            q_customer_type: 'company',
+            q_company_name: 'Norvi Logistics Oy',
+            q_email: 'fleet@norvi.example.com',
+            q_business_id: '3299871-7',
+            q_can_sign: 'no',
+            q_signatory_email: 'CEO@norvi.example.com',
+            q_vat_registered: 'yes',
+            q_usage_purpose: 'delivery',
+          },
+        }),
+      }),
+      undefined
+    );
+    const { data } = await application.json();
+    expect(data.status).toBe('approved');
+    const stored = await fixture.db.leaseApplication.findUniqueOrThrow({ where: { id: data.id } });
+    expect(JSON.parse(stored.reasonsJson)).toEqual(['signatory_pending']);
+
+    expect(
+      (await POST(request(cookie, { ...body, applicationId: data.id }), undefined)).status
+    ).toBe(201);
+    const [waiting] = await fixture.db.contract.findMany({
+      include: { events: true, asset: true },
+    });
+    expect(waiting).toMatchObject({
+      status: 'awaiting_signature',
+      signatoryEmail: 'ceo@norvi.example.com',
+      signedOn: null,
+      monthlyNetCents: 10730,
+    });
+    expect(waiting!.events).toEqual([]);
+    expect(waiting!.asset.status).toBe('reserved');
+    const checkoutAudit = await fixture.db.auditLog.findFirst({
+      where: { action: 'lease.simulated_checkout' },
+    });
+    expect(JSON.parse(checkoutAudit!.details_json!)).toMatchObject({
+      awaitingSignatureFrom: 'ceo@norvi.example.com',
+    });
+
+    // The signatory opens the e-mailed link a fortnight later and signs; billing starts then.
+    const sign = (value: unknown, demoDate = '2026-11-19') =>
+      SIGN(
+        new Request(`${origin}/api/contracts/${waiting!.id}/sign`, {
+          method: 'POST',
+          headers: {
+            origin,
+            'content-type': 'application/json',
+            cookie: `lease-loop.demo-date=${demoDate}`,
+          },
+          body: JSON.stringify(value),
+        }),
+        { params: Promise.resolve({ id: waiting!.id }) }
+      );
+    const valid = signingToken(settings.secret, waiting!.id);
+    expect((await sign({ token: valid, confirm: true })).status).toBe(200);
+    const signed = await fixture.db.contract.findUniqueOrThrow({
+      where: { id: waiting!.id },
+      include: { events: true },
+    });
+    expect(signed).toMatchObject({
+      status: 'active',
+      startDate: '2026-11-19',
+      signedOn: '2026-11-19',
+      monthlyNetCents: 10730,
+    });
+    expect(signed.events.map((event) => [event.kind, event.eventDate])).toEqual([
+      ['signed', '2026-11-19'],
+    ]);
+    const audit = await fixture.db.auditLog.findFirst({
+      where: { action: 'contract.signed_by_signatory' },
+    });
+    expect(audit).toMatchObject({ actor: 'signatory:ceo@norvi.example.com' });
+    expect((await sign({ token: valid, confirm: true })).status).toBe(409);
   });
 });

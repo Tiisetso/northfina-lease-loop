@@ -2,11 +2,13 @@ import { z } from 'zod';
 import { applicationCart } from '@/domain/application-cart';
 import { requireApplicationApproval } from '@/server/applications';
 import { checkoutQuote } from '@/domain/checkout-quote';
+import type { ApplicationAnswers } from '@/domain/application';
+import { initialContractStatus, pendingSignatory } from '@/domain/signatory';
 import { ApiError, handleRoute, ok, readJsonBody } from '@/server/api-response';
 import { authSettings } from '@/server/auth-config';
 import { assertSameOrigin } from '@/server/auth-input';
 import { requireIdentity } from '@/server/auth-session';
-import { withAudit } from '@/server/audit';
+import { withAudit, type AuditEntry } from '@/server/audit';
 import { checkoutOptions } from '@/server/checkout-options';
 import { db } from '@/server/db';
 import { requestToday } from '@/server/demo-mode';
@@ -131,79 +133,88 @@ export const POST = handleRoute(async (request) => {
     };
   });
   const ids = quotes.map((quote) => `demo-${input.token}-${quote.id}`);
-  await withAudit(
-    db,
-    {
-      actor: identity.id,
-      action: 'lease.simulated_checkout',
-      entityType: 'customer',
-      entityId: identity.customerId,
-      details: { delivery: input.delivery, payment: input.payment, count: quotes.length },
-    },
-    async (tx) => {
-      const application = applicationCart(data, input.items);
-      if (!application) throw new ApiError(409, 'QUOTE_CHANGED', 'Please review your cart.');
-      await requireApplicationApproval(
-        tx,
-        identity.customerId,
-        input.applicationId,
-        application.items,
-        today
-      );
-      const existing = await tx.contract.findMany({
-        where: { id: { in: ids } },
-        select: { id: true, customerId: true },
-      });
-      if (existing.length) {
-        if (
-          existing.length === ids.length &&
-          existing.every((item) => item.customerId === identity.customerId)
-        )
-          return;
-        throw new ApiError(409, 'CHECKOUT_CONFLICT', 'Checkout cannot be repeated.');
-      }
-      for (const [index, quote] of quotes.entries()) {
-        const asset = await tx.asset.findUnique({
-          where: { id: quote.id },
-          select: {
-            status: true,
-            originalPriceCents: true,
-            firstLeaseDate: true,
-            condition: true,
-            usage_value: true,
-          },
-        });
-        if (!asset || asset.status !== 'available')
-          throw new ApiError(409, 'QUOTE_CHANGED', 'A product is unavailable.');
-        await tx.asset.update({
-          where: { id: quote.id },
-          data: {
-            status: 'reserved',
-            originalPriceCents: asset.originalPriceCents ?? quote.priceCents,
-            firstLeaseDate: asset.firstLeaseDate ?? today,
-          },
-        });
-        await tx.contract.create({
-          data: {
-            id: ids[index]!,
-            customerId: identity.customerId,
-            assetId: quote.id,
-            startDate: today,
-            termMonths: quote.termMonths,
-            listPriceCents: quote.priceCents,
-            downPaymentCents: quote.downPaymentCents,
-            startCondition: asset.condition,
-            startUsageValue: asset.usage_value,
-            annualRateBasisPoints: quote.annualRateBasisPoints,
-            monthlyNetCents: quote.monthlyNetCents,
-            buyoutCents: quote.buyoutCents,
-            priceListVersion: quote.priceListVersion,
-            isDemo: true,
-            events: { create: { kind: 'signed', eventDate: today } },
-          },
-        });
-      }
+  const entry: AuditEntry = {
+    actor: identity.id,
+    action: 'lease.simulated_checkout',
+    entityType: 'customer',
+    entityId: identity.customerId,
+    details: { delivery: input.delivery, payment: input.payment, count: quotes.length },
+  };
+  await withAudit(db, entry, async (tx) => {
+    const application = applicationCart(data, input.items);
+    if (!application) throw new ApiError(409, 'QUOTE_CHANGED', 'Please review your cart.');
+    const approved = await requireApplicationApproval(
+      tx,
+      identity.customerId,
+      input.applicationId,
+      application.items,
+      today
+    );
+    // Card 6: an applicant who can't sign for the company named who can.
+    const signatory = pendingSignatory(
+      z
+        .record(z.string(), z.unknown())
+        .parse(JSON.parse(approved.answersJson)) as ApplicationAnswers
+    );
+    if (signatory)
+      entry.details = { ...(entry.details as object), awaitingSignatureFrom: signatory };
+    const existing = await tx.contract.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, customerId: true },
+    });
+    if (existing.length) {
+      if (
+        existing.length === ids.length &&
+        existing.every((item) => item.customerId === identity.customerId)
+      )
+        return;
+      throw new ApiError(409, 'CHECKOUT_CONFLICT', 'Checkout cannot be repeated.');
     }
-  );
+    for (const [index, quote] of quotes.entries()) {
+      const asset = await tx.asset.findUnique({
+        where: { id: quote.id },
+        select: {
+          status: true,
+          originalPriceCents: true,
+          firstLeaseDate: true,
+          condition: true,
+          usage_value: true,
+        },
+      });
+      if (!asset || asset.status !== 'available')
+        throw new ApiError(409, 'QUOTE_CHANGED', 'A product is unavailable.');
+      await tx.asset.update({
+        where: { id: quote.id },
+        data: {
+          status: 'reserved',
+          originalPriceCents: asset.originalPriceCents ?? quote.priceCents,
+          firstLeaseDate: asset.firstLeaseDate ?? today,
+        },
+      });
+      await tx.contract.create({
+        data: {
+          id: ids[index]!,
+          customerId: identity.customerId,
+          assetId: quote.id,
+          startDate: today,
+          termMonths: quote.termMonths,
+          listPriceCents: quote.priceCents,
+          downPaymentCents: quote.downPaymentCents,
+          startCondition: asset.condition,
+          startUsageValue: asset.usage_value,
+          annualRateBasisPoints: quote.annualRateBasisPoints,
+          monthlyNetCents: quote.monthlyNetCents,
+          buyoutCents: quote.buyoutCents,
+          priceListVersion: quote.priceListVersion,
+          isDemo: true,
+          // The price is locked now; a contract waiting for the company's signatory is only
+          // signed (and billed) once they sign.
+          status: initialContractStatus(signatory),
+          signatoryEmail: signatory,
+          ...(signatory ? {} : { events: { create: { kind: 'signed', eventDate: today } } }),
+        },
+      });
+    }
+  });
   return ok({ ids }, { status: 201, headers: { 'Cache-Control': 'no-store' } });
 });

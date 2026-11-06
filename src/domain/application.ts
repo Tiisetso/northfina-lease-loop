@@ -19,7 +19,7 @@ export type ApplicationReason =
   | 'business_id'
   | 'financed_limits'
   | 'pep'
-  | 'signatory'
+  | 'signatory_pending'
   | 'large_amount'
   | 'income_not_required'
   | 'incomplete'
@@ -143,8 +143,10 @@ export function assessApplication(
       rejected.push('affordability');
   }
   if (answers.q_pep === 'yes') review.push('pep');
+  // An applicant who can't sign for the company named who can (`q_signatory_email` is required
+  // then). That isn't a reason to stop: the contract is prepared and waits for that person.
   if (answers.q_customer_type === 'company' && answers.q_can_sign === 'no')
-    review.push('signatory');
+    notes.push('signatory_pending');
   // Bank asks for business due diligence at €50,000; this demo routes those cases to people.
   if (context.financedCents >= 5_000_000) review.push('large_amount');
   // Informational notes are shown only on approvals; a rejection or review states its own causes.

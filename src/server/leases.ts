@@ -20,7 +20,7 @@ import {
   type RecoveryReport,
 } from './recovery-input';
 
-const contractStatus = z.enum(['active', 'completed', 'returned', 'bought']);
+const contractStatus = z.enum(['awaiting_signature', 'active', 'completed', 'returned', 'bought']);
 const requestStatus = z.enum(['pending', 'approved', 'rejected', 'cancelled']);
 const requestKind = z.enum(['return', 'buyout', 'exchange']);
 const eventKind = z.enum(['signed', 'payment', 'returned', 'refurbished']);
