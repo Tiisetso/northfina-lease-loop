@@ -68,6 +68,7 @@ model User {
   sessions      AuthSession[]
   identities    AuthIdentity[]
   customer      Customer?
+  coLeaseShares CoLeaseShare[]
 }
 
 model Customer {
@@ -106,9 +107,27 @@ model Contract {
   requests              LeaseRequest[]
   events                LeaseEvent[]
   actionPayments        LeaseActionPayment[]
+  coLeaseShares         CoLeaseShare[]
 
   @@index([customerId, status])
   @@index([assetId])
+}
+
+// How a lease's invoices are divided from a date onwards. Rows are never rewritten by a later
+// change, so invoices already due keep the split that applied to them.
+model CoLeaseShare {
+  id            String   @id @default(cuid())
+  contractId    String
+  contract      Contract @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  percent       Int
+  isHolder      Boolean  @default(false)
+  effectiveFrom String
+  createdAt     DateTime @default(now())
+
+  @@unique([contractId, userId, effectiveFrom])
+  @@index([contractId, effectiveFrom])
 }
 
 // Separate simulated settlement receipts from monthly rent invoice payments.

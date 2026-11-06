@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { VatRate } from '@/data/schemas';
+import { sharesOn } from '@/domain/co-lease';
 import { invoiceAmounts } from '@/domain/lease-billing';
 import { summarizeLease } from '@/domain/lease-dashboard';
 import { formatEuro } from '@/domain/money';
@@ -7,6 +8,7 @@ import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
 import type { CustomerLease } from '@/server/leases';
+import { AvatarStack } from './person-avatar';
 import { ProductPhoto } from './product-photo';
 
 export function LeaseCard({
@@ -29,6 +31,7 @@ export function LeaseCard({
     ? invoiceAmounts(lease.monthlyNetCents, Math.round(rate.rate_percent * 100)).totalCents
     : null;
   const money = (cents: number) => formatEuro(cents, intlLocale[locale]);
+  const people = sharesOn(lease.coLeaseShares, today);
   return (
     <article className="h-full rounded-lg border border-hairline bg-canvas p-5">
       <div className="flex items-start gap-4">
@@ -67,13 +70,13 @@ export function LeaseCard({
           <dt className="text-ink-muted">{t('dashboard.nextPayment')}</dt>
           <dd className="mt-1 font-semibold">
             {lease.status === 'active' && info.next
-              ? money(info.next.amountCents)
+              ? money(info.next.shareCents)
               : t('dashboard.noNext')}
           </dd>
           {lease.status === 'active' && info.next ? (
             <dd className="mt-1 text-fine text-ink-muted">
-              {formatIsoDate(info.next.dueDate, locale)} ·{' '}
-              {t(info.next.kind === 'forecast' ? 'dashboard.estimated' : 'dashboard.issued')}
+              {formatIsoDate(info.next.dueDate, locale)}
+              {info.next.kind === 'issued' ? ` · ${t('dashboard.issued')}` : ''}
             </dd>
           ) : null}
         </div>
@@ -88,6 +91,14 @@ export function LeaseCard({
           </dd>
         </div>
       </dl>
+      {people.length > 1 ? (
+        <div className="mt-4 flex items-center gap-3 border-t border-divider pt-4">
+          <AvatarStack people={people.map(({ user }) => user)} />
+          <p className="text-caption text-ink-muted">
+            {t('colease.cardNote', { count: people.length })}
+          </p>
+        </div>
+      ) : null}
       <Link
         className="mt-3 inline-flex min-h-target items-center gap-2 text-caption font-semibold text-primary"
         href={`/${locale}/account/leases/${encodeURIComponent(lease.id)}`}

@@ -47,6 +47,7 @@ const include = {
     orderBy: { createdAt: 'desc' as const },
   },
   events: { orderBy: { eventDate: 'desc' as const } },
+  coLeaseShares: { include: { user: { select: { id: true, name: true } } } },
 };
 
 export async function listCustomerLeases(db: PrismaClient, customerId: string) {

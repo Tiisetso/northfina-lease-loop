@@ -1,9 +1,11 @@
 import type { Co2Factors, VatRate } from '@/data/schemas';
+import { holderShareCents, sharesOn } from '@/domain/co-lease';
 import { invoiceAmounts, paymentStatus } from '@/domain/lease-billing';
 import { paidForInvoice, summarizeLease } from '@/domain/lease-dashboard';
 import { forecastPaymentChanges } from '@/domain/forecast-changes';
 import { reuseEstimate } from '@/domain/lease-insights';
 import { formatEuro } from '@/domain/money';
+import Link from 'next/link';
 import { formatIsoDate, formatNumber } from '@/i18n/format';
 import { getT, type MessageKey } from '@/i18n/get-t';
 import { intlLocale, type Locale } from '@/i18n/locales';
@@ -14,6 +16,7 @@ import {
   type RecoveryCalculation,
 } from '@/server/recovery-input';
 import { LeaseRequestControls, ReturnQuoteAccept } from './lease-controls';
+import { AvatarStack } from './person-avatar';
 import { ProductPhoto } from './product-photo';
 
 type Props = {
@@ -29,6 +32,7 @@ const panel = 'rounded-lg border border-hairline bg-canvas p-5 sm:p-6';
 export function LeaseDetail({ locale, lease, rates, factors, today, liveBuyoutTotalCents }: Props) {
   const t = getT(locale);
   const info = summarizeLease(lease, rates, today);
+  const people = sharesOn(lease.coLeaseShares, today);
   const currency = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const currentRate = rates.find(
     (rate) => rate.valid_from <= today && (rate.valid_to === null || rate.valid_to >= today)
@@ -294,7 +298,6 @@ export function LeaseDetail({ locale, lease, rates, factors, today, liveBuyoutTo
                         </p>
                       </div>
                       <p className="mt-1 text-fine text-ink-muted">
-                        {t('dashboard.estimated')} ·{' '}
                         {t('dashboard.vatRate', {
                           rate: formatNumber(period.vatBasisPoints / 100, locale),
                         })}
@@ -336,6 +339,15 @@ export function LeaseDetail({ locale, lease, rates, factors, today, liveBuyoutTo
                         <p className="mt-2 text-fine text-ink-muted">
                           {t('dashboard.paidAmount', { amount: currency(paid) })}
                         </p>
+                        {sharesOn(lease.coLeaseShares, invoice.dueDate).length > 1 ? (
+                          <p className="mt-1 text-fine text-ink-muted">
+                            {t('colease.yourShare', {
+                              amount: currency(
+                                holderShareCents(total, lease.coLeaseShares, invoice.dueDate)
+                              ),
+                            })}
+                          </p>
+                        ) : null}
                       </li>
                     );
                   })}
@@ -366,10 +378,8 @@ export function LeaseDetail({ locale, lease, rates, factors, today, liveBuyoutTo
           </details>
         </section>
 
-        <details className={panel}>
-          <summary className="cursor-pointer text-body font-semibold">
-            {t('dashboard.passport')}
-          </summary>
+        <section className={panel}>
+          <h3 className="text-tagline font-semibold">{t('dashboard.passport')}</h3>
           <dl className="mt-5 grid grid-cols-2 gap-5">
             <Fact label={t('condition.label')} value={t(`condition.${lease.asset.condition}`)} />
             <Fact label={t('asset.modelYear')} value={String(lease.asset.model_year)} />
@@ -393,7 +403,7 @@ export function LeaseDetail({ locale, lease, rates, factors, today, liveBuyoutTo
               {t(lease.asset.previous_lives ? 'dashboard.impactNote' : 'dashboard.noImpact')}
             </p>
           </div>
-        </details>
+        </section>
         <details className={panel}>
           <summary className="cursor-pointer text-body font-semibold">
             {t('dashboard.timeline')}
@@ -423,13 +433,18 @@ export function LeaseDetail({ locale, lease, rates, factors, today, liveBuyoutTo
         <p className="mt-5 text-caption text-ink-muted">{t('dashboard.nextPayment')}</p>
         <p className="mt-1 text-display-sm font-semibold tabular-nums">
           {lease.status === 'active' && info.next
-            ? currency(info.next.amountCents)
+            ? currency(info.next.shareCents)
             : t('dashboard.noNext')}
         </p>
         {lease.status === 'active' && info.next ? (
           <p className="mt-2 text-caption text-ink-muted">
-            {formatIsoDate(info.next.dueDate, locale)} ·{' '}
-            {t(info.next.kind === 'forecast' ? 'dashboard.estimated' : 'dashboard.issued')}
+            {formatIsoDate(info.next.dueDate, locale)}
+            {info.next.kind === 'issued' ? ` · ${t('dashboard.issued')}` : ''}
+          </p>
+        ) : null}
+        {lease.status === 'active' && info.next && people.length > 1 ? (
+          <p className="mt-1 text-caption text-ink-muted">
+            {t('colease.ofTotal', { amount: currency(info.next.amountCents) })}
           </p>
         ) : null}
         <dl className="mt-5 space-y-4 border-t border-divider pt-5">
@@ -453,6 +468,23 @@ export function LeaseDetail({ locale, lease, rates, factors, today, liveBuyoutTo
         <p className="mt-3 text-fine text-ink-muted">
           {t('dashboard.includesVat')} · {t('dashboard.buyoutEstimate')}
         </p>
+        {lease.status === 'active' ? (
+          <div className="mt-5 border-t border-divider pt-5">
+            <h3 className="text-body font-semibold">{t('colease.title')}</h3>
+            {people.length > 1 ? (
+              <div className="mt-3">
+                <AvatarStack people={people.map(({ user }) => user)} />
+              </div>
+            ) : null}
+            <Link
+              href={`/${locale}/account/leases/${encodeURIComponent(lease.id)}/co-lease`}
+              className="mt-2 inline-flex min-h-target items-center text-caption font-semibold text-primary"
+            >
+              {t(people.length > 1 ? 'colease.manage' : 'colease.start')}{' '}
+              <span aria-hidden="true">&nbsp;→</span>
+            </Link>
+          </div>
+        ) : null}
         <div className="mt-5 border-t border-divider pt-5">
           <h3 className="text-body font-semibold">{t('dashboard.manage')}</h3>
           <LeaseRequestControls
