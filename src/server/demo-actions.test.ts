@@ -175,7 +175,11 @@ describe('persona scenarios', () => {
 
   it('card 1: Aino already has her e-bike, signed on 5 Nov at the v1 price', async () => {
     const response = await switchTo('cust-aino', '2027-01-10');
-    expect((await response.json()).data).toEqual({ personaId: 'cust-aino', cart: [] });
+    expect((await response.json()).data).toEqual({
+      personaId: 'cust-aino',
+      staff: false,
+      cart: [],
+    });
     const [lease] = await ainoLease();
     expect(lease).toMatchObject({
       assetId: 'ebike-003',
@@ -222,7 +226,7 @@ describe('persona scenarios', () => {
       ['cust-lena', []],
     ] as const) {
       const response = await switchTo(id, '2026-11-05');
-      expect((await response.json()).data).toEqual({ personaId: id, cart });
+      expect((await response.json()).data).toEqual({ personaId: id, staff: false, cart });
     }
     expect(await fixture.db.leaseApplication.count()).toBe(0);
     expect(await fixture.db.contract.count()).toBe(0);
