@@ -749,5 +749,16 @@
   "colease.nextTotal": "Next payment in total",
   "colease.yourShare": "Your share: {amount}",
   "colease.ofTotal": "Your share of {amount}",
-  "colease.cardNote": "Shared by {count} people"
+  "colease.cardNote": "Shared by {count} people",
+  "demo.badge": "Demo mode",
+  "demo.date": "Demo date",
+  "demo.setDate": "Set date",
+  "demo.reset": "Use today's date",
+  "demo.active": "The app treats {date} as today.",
+  "demo.persona": "Act as",
+  "demo.choosePersona": "Choose a persona",
+  "demo.switch": "Switch",
+  "demo.staff": "Staff (demo)",
+  "demo.error": "That didn't work. Please try again.",
+  "demo.rateLimited": "Too many switches. Wait a minute and try again."
 }

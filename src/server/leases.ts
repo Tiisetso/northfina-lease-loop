@@ -94,8 +94,11 @@ export async function requestLeaseChange(
     contractId: string;
     kind: RequestKind;
     report?: RecoveryReport;
+    /** The app's "today" (demo date in demo mode); the real Helsinki date when omitted. */
+    today?: string;
   }
 ) {
+  const today = input.today ?? todayIso();
   const market =
     input.kind === 'exchange'
       ? await Promise.all([loadCoefficientTable(), loadPriceLists(), loadVatRates()])
@@ -164,13 +167,13 @@ export async function requestLeaseChange(
           replacement.id === contract.assetId
         )
           throw new ApiError(409, 'REPLACEMENT_UNAVAILABLE', 'The replacement is unavailable.');
-        const price = assetOfferPrice(replacement, market![1], todayIso());
+        const price = assetOfferPrice(replacement, market![1], today);
         const quote = price.ok
           ? checkoutQuote(
               price.priceCents,
               report.replacement.downPaymentCents,
               report.replacement.termMonths,
-              todayIso(),
+              today,
               market![0],
               market![2].rates
             )
@@ -184,7 +187,7 @@ export async function requestLeaseChange(
             monthlyTotalCents: quote.monthlyTotalCents,
             totalCents: quote.totalCents,
             termMonths: report.replacement.termMonths,
-            quoteDate: todayIso(),
+            quoteDate: today,
           },
         };
       }

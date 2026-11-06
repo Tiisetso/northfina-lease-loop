@@ -18,12 +18,15 @@ export function ApplicationForm({
   bank,
   name,
   email,
+  initialAnswers,
 }: {
   locale: Locale;
   data: CheckoutData;
   bank: QuestionsFile;
   name: string;
   email: string;
+  /** Prefilled answers, e.g. a demo persona's data-pack record. */
+  initialAnswers?: ApplicationAnswers;
 }) {
   const router = useRouter();
   const t = getT(locale);
@@ -33,6 +36,7 @@ export function ApplicationForm({
     q_customer_type: 'consumer',
     q_full_name: name,
     q_email: email,
+    ...initialAnswers,
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<'changed' | 'login' | 'incomplete' | 'error' | null>(null);

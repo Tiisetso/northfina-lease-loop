@@ -749,5 +749,16 @@
   "colease.nextTotal": "Seuraava maksu yhteensä",
   "colease.yourShare": "Sinun osuutesi: {amount}",
   "colease.ofTotal": "Sinun osuutesi summasta {amount}",
-  "colease.cardNote": "{count} henkilön jakama"
+  "colease.cardNote": "{count} henkilön jakama",
+  "demo.badge": "Demotila",
+  "demo.date": "Demopäivä",
+  "demo.setDate": "Aseta päivä",
+  "demo.reset": "Käytä tätä päivää",
+  "demo.active": "Sovellus käsittelee päivää {date} tämänpäiväisenä.",
+  "demo.persona": "Toimi henkilönä",
+  "demo.choosePersona": "Valitse henkilö",
+  "demo.switch": "Vaihda",
+  "demo.staff": "Henkilökunta (demo)",
+  "demo.error": "Se ei onnistunut. Yritä uudelleen.",
+  "demo.rateLimited": "Liian monta vaihtoa. Odota hetki ja yritä uudelleen."
 }

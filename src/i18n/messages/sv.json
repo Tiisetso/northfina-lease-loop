@@ -749,5 +749,16 @@
   "colease.nextTotal": "Nästa betalning totalt",
   "colease.yourShare": "Din andel: {amount}",
   "colease.ofTotal": "Din andel av {amount}",
-  "colease.cardNote": "Delas av {count} personer"
+  "colease.cardNote": "Delas av {count} personer",
+  "demo.badge": "Demoläge",
+  "demo.date": "Demodatum",
+  "demo.setDate": "Ange datum",
+  "demo.reset": "Använd dagens datum",
+  "demo.active": "Appen behandlar {date} som i dag.",
+  "demo.persona": "Agera som",
+  "demo.choosePersona": "Välj en persona",
+  "demo.switch": "Byt",
+  "demo.staff": "Personal (demo)",
+  "demo.error": "Det gick inte. Försök igen.",
+  "demo.rateLimited": "För många byten. Vänta en minut och försök igen."
 }

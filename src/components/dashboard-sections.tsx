@@ -12,7 +12,7 @@ import { intlLocale, isLocale, type Locale } from '@/i18n/locales';
 import { readIdentity } from '@/server/auth-session';
 import { db } from '@/server/db';
 import { listCustomerLeases, type CustomerLease } from '@/server/leases';
-import { todayIso } from '@/server/today';
+import { appToday } from '@/server/demo-mode';
 import { DashboardShell, type DashboardSection } from './dashboard-shell';
 import { CancelLeaseRequest } from './cancel-lease-request';
 import { LeaseCard } from './lease-card';
@@ -32,7 +32,7 @@ export async function DashboardSectionPage({
     listCustomerLeases(db, identity.customerId),
     loadVatRates(),
   ]);
-  const today = todayIso();
+  const today = await appToday();
   const t = getT(locale);
   return (
     <DashboardShell locale={locale} active={section}>

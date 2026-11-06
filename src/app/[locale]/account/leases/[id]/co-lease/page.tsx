@@ -11,8 +11,8 @@ import { isLocale } from '@/i18n/locales';
 import { readIdentity } from '@/server/auth-session';
 import { listCoLeaseCandidates } from '@/server/co-lease';
 import { db } from '@/server/db';
+import { appToday } from '@/server/demo-mode';
 import { findCustomerLease } from '@/server/leases';
-import { todayIso } from '@/server/today';
 
 export default async function Page({
   params,
@@ -23,7 +23,7 @@ export default async function Page({
   if (!identity) redirect(`/${locale}/login`);
   const lease = await findCustomerLease(db, identity.customerId, id);
   if (!lease) notFound();
-  const today = todayIso();
+  const today = await appToday();
   const [vat, candidates] = await Promise.all([loadVatRates(), listCoLeaseCandidates(db)]);
   const next = summarizeLease(lease, vat.rates, today).next;
   const current = sharesOn(lease.coLeaseShares, today);

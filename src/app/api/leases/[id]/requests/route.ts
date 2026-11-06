@@ -4,6 +4,7 @@ import { authSettings } from '@/server/auth-config';
 import { assertSameOrigin } from '@/server/auth-input';
 import { requireIdentity } from '@/server/auth-session';
 import { db } from '@/server/db';
+import { requestToday } from '@/server/demo-mode';
 import { requestLeaseChange } from '@/server/leases';
 import { readRecoveryBody, recoveryReportSchema } from '@/server/recovery-input';
 
@@ -24,6 +25,7 @@ export const POST = handleRoute(
       contractId: id,
       kind,
       report,
+      today: requestToday(request),
     });
     return ok(
       { id: created.id, kind: created.kind, status: created.status },

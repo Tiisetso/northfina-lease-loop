@@ -4,8 +4,8 @@ import { assertSameOrigin } from '@/server/auth-input';
 import { requireIdentity } from '@/server/auth-session';
 import { coLeaseInputSchema, saveCoLeaseShares } from '@/server/co-lease';
 import { db } from '@/server/db';
+import { requestToday } from '@/server/demo-mode';
 import { readRecoveryBody } from '@/server/recovery-input';
-import { todayIso } from '@/server/today';
 
 export const POST = handleRoute(
   async (request, { params }: RouteContext<'/api/leases/[id]/co-lease'>) => {
@@ -17,7 +17,7 @@ export const POST = handleRoute(
       customerId: identity.customerId,
       userId: identity.id,
       contractId: id,
-      today: todayIso(),
+      today: requestToday(request),
       shares,
     });
     return ok({ saved: true }, { headers: { 'Cache-Control': 'no-store' } });

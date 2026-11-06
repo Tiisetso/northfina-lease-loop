@@ -7,7 +7,7 @@ import { isLocale } from '@/i18n/locales';
 import { readIdentity } from '@/server/auth-session';
 import { loadCompanyMetrics, staffAttentionCounts } from '@/server/company-metrics';
 import { db } from '@/server/db';
-import { todayIso } from '@/server/today';
+import { appToday } from '@/server/demo-mode';
 
 export default async function Page({ params }: PageProps<'/[locale]/staff'>) {
   const { locale } = await params;
@@ -16,7 +16,7 @@ export default async function Page({ params }: PageProps<'/[locale]/staff'>) {
   const identity = await readIdentity(db, await headers());
   if (!identity) redirect(`/${locale}/login`);
   if (identity.role !== 'staff') notFound();
-  const today = todayIso();
+  const today = await appToday();
   const [metrics, attention, simulated] = await Promise.all([
     loadCompanyMetrics(db, today),
     staffAttentionCounts(db),

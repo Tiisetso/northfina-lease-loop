@@ -749,5 +749,16 @@
   "colease.nextTotal": "Järgmine makse kokku",
   "colease.yourShare": "Sinu osa: {amount}",
   "colease.ofTotal": "Sinu osa summast {amount}",
-  "colease.cardNote": "Jagab {count} inimest"
+  "colease.cardNote": "Jagab {count} inimest",
+  "demo.badge": "Demorežiim",
+  "demo.date": "Demokuupäev",
+  "demo.setDate": "Määra kuupäev",
+  "demo.reset": "Kasuta tänast kuupäeva",
+  "demo.active": "Rakendus käsitleb kuupäeva {date} tänasena.",
+  "demo.persona": "Tegutse kui",
+  "demo.choosePersona": "Vali isik",
+  "demo.switch": "Vaheta",
+  "demo.staff": "Töötaja (demo)",
+  "demo.error": "See ei õnnestunud. Proovi uuesti.",
+  "demo.rateLimited": "Liiga palju vahetusi. Oota minut ja proovi uuesti."
 }

@@ -4,7 +4,7 @@ import { assertSameOrigin } from '@/server/auth-input';
 import { requireIdentity } from '@/server/auth-session';
 import { db } from '@/server/db';
 import { createDemoLease } from '@/server/demo-lease';
-import { todayIso } from '@/server/today';
+import { requestToday } from '@/server/demo-mode';
 
 export const POST = handleRoute(async (request) => {
   if (process.env.NODE_ENV !== 'development') return fail(404, 'NOT_FOUND', 'Not found.');
@@ -13,7 +13,7 @@ export const POST = handleRoute(async (request) => {
   const id = await createDemoLease(db, {
     customerId: identity.customerId,
     userId: identity.id,
-    today: todayIso(),
+    today: requestToday(request),
   });
   return ok({ id }, { status: 201, headers: { 'Cache-Control': 'no-store' } });
 });

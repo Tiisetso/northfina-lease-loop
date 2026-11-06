@@ -5,11 +5,16 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
 import { AccountNavigation } from '@/components/account-navigation';
+import { DemoBar } from '@/components/demo-bar';
 import { UiIcon } from '@/components/ui-icon';
-import { getT } from '@/i18n/get-t';
+import { DEMO_DATE_MAX, DEMO_DATE_MIN } from '@/domain/demo';
+import { getT, type MessageKey } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import { readIdentity } from '@/server/auth-session';
 import { db } from '@/server/db';
+import { DEMO_STAFF, demoPersonas } from '@/server/demo-actions';
+import { appToday, demoModeEnabled } from '@/server/demo-mode';
+import { todayIso } from '@/server/today';
 import '../globals.css';
 
 export async function generateMetadata({ params }: LayoutProps<'/[locale]'>): Promise<Metadata> {
@@ -24,6 +29,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
   if (!isLocale(locale)) notFound();
   const t = getT(locale);
   const identity = await readIdentity(db, await headers());
+  const demo = demoModeEnabled() ? await demoControls(locale, identity?.customerId) : null;
 
   return (
     <html lang={locale}>
@@ -35,6 +41,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
           {t('nav.skipToContent')}
         </a>
 
+        {demo ? <DemoBar {...demo} /> : null}
         <header className="sticky top-0 z-20 border-b border-hairline bg-canvas/95 backdrop-blur-xl">
           <div>
             <div className="mx-auto flex min-h-18 max-w-[1200px] items-center justify-between gap-x-3 px-4 sm:px-6">
@@ -100,6 +107,40 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
       </body>
     </html>
   );
+}
+
+/** Props for the demo bar: today's demo date, the personas, and translated labels. */
+async function demoControls(locale: Parameters<typeof getT>[0], customerId?: string) {
+  const t = getT(locale);
+  const [date, personas] = await Promise.all([appToday(), demoPersonas()]);
+  return {
+    date,
+    demoDateActive: date !== todayIso(),
+    min: DEMO_DATE_MIN,
+    max: DEMO_DATE_MAX,
+    personas: personas.map((persona) => ({
+      id: persona.id,
+      label: persona.staff
+        ? t('demo.staff')
+        : `${persona.name} · ${t(`application.option.${persona.type}` as MessageKey)}`,
+    })),
+    currentPersonaId:
+      customerId === `${DEMO_STAFF.id}-customer`
+        ? DEMO_STAFF.id
+        : (personas.find((persona) => persona.id === customerId)?.id ?? null),
+    labels: {
+      badge: t('demo.badge'),
+      date: t('demo.date'),
+      setDate: t('demo.setDate'),
+      reset: t('demo.reset'),
+      active: t('demo.active', { date }),
+      persona: t('demo.persona'),
+      choosePersona: t('demo.choosePersona'),
+      switchPersona: t('demo.switch'),
+      error: t('demo.error'),
+      rateLimited: t('demo.rateLimited'),
+    },
+  };
 }
 
 /** Two arrows chasing each other: lease, return, lease again. */

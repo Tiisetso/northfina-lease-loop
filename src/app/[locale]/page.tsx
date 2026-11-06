@@ -14,7 +14,7 @@ import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
 import { toAsset } from '@/server/assets';
 import { db } from '@/server/db';
-import { todayIso } from '@/server/today';
+import { appToday } from '@/server/demo-mode';
 
 export default async function CataloguePage({ params }: PageProps<'/[locale]'>) {
   const { locale } = await params;
@@ -24,7 +24,7 @@ export default async function CataloguePage({ params }: PageProps<'/[locale]'>) 
   await connection();
 
   const t = getT(locale);
-  const today = todayIso(); // the page decides what "today" is; domain code never reads the clock
+  const today = await appToday(); // the page decides what "today" is; domain code never reads the clock
   const [rows, priceLists, vat] = await Promise.all([
     db.asset.findMany({
       where: {
