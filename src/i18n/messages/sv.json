@@ -6,7 +6,7 @@
   "nav.skipToContent": "Hoppa till innehållet",
   "nav.language": "Språk",
   "catalogue.title": "Tekniken du vill ha. Utan bindningar.",
-  "catalogue.intro": "Hyr dina favoritenheter. Bekymmersfritt.",
+  "catalogue.intro": "Hyr dina favoriter. Bekymmersfritt.",
   "catalogue.pricesOn": "Priser inklusive moms {date}",
   "catalogue.photosIllustrative": "Produktbilderna är illustrationsbilder.",
   "catalogue.photoCredits": "Bildinformation",
@@ -918,5 +918,7 @@
   "review.error": "Det gick inte. Uppdatera sidan och försök igen.",
   "review.empty": "Inga ansökningar väntar på granskning.",
   "application.status.awaiting_signatory": "Väntar på att {email} signerar",
-  "application.outcome.awaiting_signatory": "Din ansökan uppfyller våra krav, men du kan inte signera för företaget. Inget godkänns för företaget förrän {email} signerar. När du fortsätter låser vi priset, reserverar produkten och du får en personlig signeringslänk att skicka till hen. Avtalet blir aktivt, och inget debiteras, först när hen signerar."
+  "application.outcome.awaiting_signatory": "Din ansökan uppfyller våra krav, men du kan inte signera för företaget. Inget godkänns för företaget förrän {email} signerar. När du fortsätter låser vi priset, reserverar produkten och du får en personlig signeringslänk att skicka till hen. Avtalet blir aktivt, och inget debiteras, först när hen signerar.",
+  "catalogue.pauseMotion": "Pausa animationen",
+  "catalogue.playMotion": "Spela animationen"
 }

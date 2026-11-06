@@ -6,7 +6,7 @@
   "nav.skipToContent": "Liigu sisu juurde",
   "nav.language": "Keel",
   "catalogue.title": "Tehnika, mida soovid. Ilma kohustusteta.",
-  "catalogue.intro": "Rendi oma lemmikseadmed. Muretult.",
+  "catalogue.intro": "Rendi oma lemmikud. Muretult.",
   "catalogue.pricesOn": "Hinnad koos käibemaksuga {date}",
   "catalogue.photosIllustrative": "Tootefotod on illustratiivsed.",
   "catalogue.photoCredits": "Fotode andmed",
@@ -918,5 +918,7 @@
   "review.error": "See ei õnnestunud. Värskenda lehte ja proovi uuesti.",
   "review.empty": "Ükski taotlus ei oota ülevaatamist.",
   "application.status.awaiting_signatory": "Ootab, et {email} allkirjastaks",
-  "application.outcome.awaiting_signatory": "Sinu taotlus vastab meie nõuetele, kuid sa ei saa ettevõtte nimel allkirjastada. Ettevõttele ei kinnitata midagi enne, kui {email} allkirjastab. Jätkamisel lukustame hinna, broneerime toote ja saad isikliku allkirjastamislingi, mille talle saata. Leping jõustub ja midagi ei võeta tasuks alles pärast tema allkirja."
+  "application.outcome.awaiting_signatory": "Sinu taotlus vastab meie nõuetele, kuid sa ei saa ettevõtte nimel allkirjastada. Ettevõttele ei kinnitata midagi enne, kui {email} allkirjastab. Jätkamisel lukustame hinna, broneerime toote ja saad isikliku allkirjastamislingi, mille talle saata. Leping jõustub ja midagi ei võeta tasuks alles pärast tema allkirja.",
+  "catalogue.pauseMotion": "Peata animatsioon",
+  "catalogue.playMotion": "Esita animatsioon"
 }

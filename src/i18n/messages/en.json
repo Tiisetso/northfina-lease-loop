@@ -6,7 +6,7 @@
   "nav.skipToContent": "Skip to content",
   "nav.language": "Language",
   "catalogue.title": "The tech you want. No strings attached.",
-  "catalogue.intro": "Rent your favorite devices. Stress-free.",
+  "catalogue.intro": "Rent your favorites. Stress-free.",
   "catalogue.pricesOn": "Prices including VAT on {date}",
   "catalogue.photosIllustrative": "Product photos are illustrative.",
   "catalogue.photoCredits": "Photo credits",
@@ -918,5 +918,7 @@
   "review.error": "That didn't work. Refresh the page and try again.",
   "review.empty": "No applications are waiting for review.",
   "application.status.awaiting_signatory": "Waiting for {email} to sign",
-  "application.outcome.awaiting_signatory": "Your application meets our requirements, but you can't sign for the company. Nothing is approved for the company until {email} signs. When you continue, we lock the price and reserve the item, and give you a personal signing link to send them. The contract only becomes active, and nothing is charged, once they sign."
+  "application.outcome.awaiting_signatory": "Your application meets our requirements, but you can't sign for the company. Nothing is approved for the company until {email} signs. When you continue, we lock the price and reserve the item, and give you a personal signing link to send them. The contract only becomes active, and nothing is charged, once they sign.",
+  "catalogue.pauseMotion": "Pause animation",
+  "catalogue.playMotion": "Play animation"
 }
